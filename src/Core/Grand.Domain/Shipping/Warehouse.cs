@@ -5,12 +5,12 @@ namespace Grand.Domain.Shipping
     /// <summary>
     /// Represents a shipment
     /// </summary>
-    public partial class Warehouse : BaseEntity
+    public class Warehouse : BaseEntity
     {
-        public Warehouse()
-        {
-            Address = new Address();
-        }
+        /// <summary>
+        /// Gets or sets the warehouse code
+        /// </summary>
+        public string Code { get; set; }
         /// <summary>
         /// Gets or sets the warehouse name
         /// </summary>
@@ -34,7 +34,7 @@ namespace Grand.Domain.Shipping
         /// <summary>
         /// Gets or sets the address identifier of the warehouse
         /// </summary>
-        public Address Address { get; set; }
+        public Address Address { get; set; } = new();
 
         /// <summary>
         /// Gets or sets the display order

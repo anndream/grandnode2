@@ -34,7 +34,8 @@ Advanced personalization, scalability, speed, and high efficiency - these are fe
 <div align="center">
 
 ![Tests on Linux, MacOS and Windows](https://github.com/grandnode/grandnode2/actions/workflows/aspnetcore.yml/badge.svg)
-[![Build Status](https://dev.azure.com/grandnode/grandnode2/_apis/build/status/grandnode.grandnode2?branchName=master)](https://dev.azure.com/grandnode/grandnode2/_build/latest?definitionId=8&branchName=master)
+[![Build Status](https://dev.azure.com/grandnode/grandnode2/_apis/build/status/grandnode.grandnode2?branchName=main)](https://dev.azure.com/grandnode/grandnode2/_build/latest?definitionId=8&branchName=main)
+[![Docker Image CI](https://github.com/grandnode/grandnode2/actions/workflows/docker-image.yml/badge.svg)](https://github.com/grandnode/grandnode2/actions/workflows/docker-image.yml)
 ![License](https://img.shields.io/github/license/grandnode/grandnode2)
 <a href="https://docs.grandnode.com/"><img src="https://img.shields.io/badge/Docs-docs.grandnode.com-brightgreen"></a>
 </div>
@@ -70,7 +71,7 @@ To get a local copy up and running follow these simple steps.
 
 ### Prerequisites (develop version)
 
-GrandNode requires .NET Core 6.0, MongoDB 4.0+, and OS-specific dependency tools. 
+GrandNode requires .NET Core 8.0, MongoDB 4.0+, and OS-specific dependency tools. 
 
 ### Installation
 
@@ -93,7 +94,7 @@ Run the project in the Visual Studio 2022+, extract the source code package down
 
 * Host on Linux server 
 
-Before you start - please install, configure the nginx server, .NET Core 6.0+ and MongoDB 4.0+
+Before you start - please install, configure the nginx server, .NET Core 8.0+ and MongoDB 4.0+
 ```
 mkdir ~/source
 cd ~/source
@@ -105,7 +106,7 @@ dotnet restore GrandNode.sln
 ```
 Now it's time to rebuild all of our plugins and publish application (command is pretty long because we've combined all commands in a single line, to ease up your work):
 ```
-sudo dotnet build src/Plugins/Authentication.Facebook && sudo dotnet build src/Plugins/Authentication.Google && sudo dotnet build src/Plugins/DiscountRules.Standard && sudo dotnet build src/Plugins/ExchangeRate.McExchange && sudo dotnet build src/Plugins/Payments.BrainTree && sudo dotnet build src/Plugins/Payments.CashOnDelivery && sudo dotnet build stc/Plugins/Payments.PayPalStandard && sudo dotnet build src/Plugins/Shipping.ByWeight && sudo dotnet build src/Plugins/Shipping.FixedRateShipping && sudo dotnet build src/Plugins/Shipping.ShippingPoint && sudo dotnet build src/Plugins/Tax.CountryStateZip && sudo dotnet build stc/Plugins/Tax.FixedRate && sudo dotnet build src/Plugins/Widgets.FacebookPixel && sudo dotnet build stc/Plugins/Widgets.GoogleAnalytics && sudo dotnet build src/Plugins/Widgets.Slider && sudo dotnet publish src/Web/Grand.Web -c Release -o /var/webapps/grandnode
+sudo dotnet build src/Plugins/Authentication.Facebook && sudo dotnet build src/Plugins/Authentication.Google && sudo dotnet build src/Plugins/DiscountRules.Standard && sudo dotnet build src/Plugins/ExchangeRate.McExchange && sudo dotnet build src/Plugins/Payments.BrainTree && sudo dotnet build src/Plugins/Payments.CashOnDelivery && sudo dotnet build src/Plugins/Payments.StripeCheckout && sudo dotnet build src/Plugins/Shipping.ByWeight && sudo dotnet build src/Plugins/Shipping.FixedRateShipping && sudo dotnet build src/Plugins/Shipping.ShippingPoint && sudo dotnet build src/Plugins/Tax.CountryStateZip && sudo dotnet build src/Plugins/Tax.FixedRate && sudo dotnet build src/Plugins/Widgets.FacebookPixel && sudo dotnet build src/Plugins/Widgets.GoogleAnalytics && sudo dotnet build src/Plugins/Widgets.Slider && sudo dotnet build src/Plugins/Theme.Modern && sudo dotnet publish src/Web/Grand.Web -c Release -o /var/webapps/grandnode 
 ```
 Optional: Create the service file, to automatically restart your application.
 ```
@@ -134,9 +135,6 @@ sudo systemctl enable grandnode.service
 sudo systemctl start grandnode.service
 ``` 
 Feel free to visit our [detailed guide about GrandNode installation.](https://grandnode.com/how-to-install-grandnode-on-linux-ubuntu-1604/?utm_source=github&utm_medium=link&utm_campaign=readme)
-
-Install GrandNode with one click on [DigitalOcean](https://marketplace.digitalocean.com/apps/grandnode?refcode=8eafb78fb6ae)
-
 
 ### Online demo 
 #### Frontend #### 
@@ -187,4 +185,4 @@ Become a sponsor and get your logo on our README on Github with a link to your s
 To clarify behavior rules in our community, GrandNode has adopted the code of conduct defined by the Contributor Covenant. For more information see the [Code of Conduct.](https://www.contributor-covenant.org/version/2/0/code_of_conduct/)
 
 ## License
-GrandNode is completely free and distributed under the GNU General Public License v3.0. It's available [here](https://github.com/grandnode/grandnode2/blob/master/LICENSE)
+GrandNode is completely free and distributed under the GNU General Public License v3.0. It's available [here](https://github.com/grandnode/grandnode2/blob/main/LICENSE)

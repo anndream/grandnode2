@@ -11,7 +11,7 @@ namespace Grand.Api.Controllers
     [ApiController]
     [Area("Api")]
     [Route("[area]/[controller]/[action]")]
-    [ApiExplorerSettings(IgnoreApi = false)]
+    [ApiExplorerSettings(IgnoreApi = false, GroupName = "v1")]
     [SwaggerTag(description: "Create token")]
     public class TokenController : Controller
     {
@@ -39,7 +39,7 @@ namespace Grand.Api.Controllers
             if (user != null)
                 claims.Add("Token", user.Token);
 
-            var token = await _mediator.Send(new GenerateTokenCommand() { Claims = claims });
+            var token = await _mediator.Send(new GenerateTokenCommand { Claims = claims });
             return Content(token);
         }
     }

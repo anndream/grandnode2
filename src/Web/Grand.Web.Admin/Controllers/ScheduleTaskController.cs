@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.ScheduleTasks)]
-    public partial class ScheduleTaskController : BaseAdminController
+    public class ScheduleTaskController : BaseAdminController
     {
         #region Fields
 
@@ -54,7 +54,7 @@ namespace Grand.Web.Admin.Controllers
         {
             model.AvailableStores.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.Select"), Value = "" });
             foreach (var s in await _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id });
 
             return model;
         }
@@ -62,9 +62,15 @@ namespace Grand.Web.Admin.Controllers
         #endregion
 
         #region Methods
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
@@ -147,7 +153,7 @@ namespace Grand.Web.Admin.Controllers
                 else
                 {
 
-                    Error($"Task {typeofTask.Name} has not been registered");
+                    Error($"Task {typeofTask?.Name} has not been registered");
                 }
             }
             catch (Exception exc)

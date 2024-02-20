@@ -1,22 +1,17 @@
 ﻿using Grand.Domain.Catalog;
 using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
+using Grand.Web.Common.Binders;
+using Grand.Web.Common.Models;
+using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Catalog
 {
-    public partial class ProductAttributeCombinationModel : BaseModel
+    public class ProductAttributeCombinationModel : BaseModel
     {
         public string Id { get; set; }
 
-        public ProductAttributeCombinationModel()
-        {
-            ProductAttributes = new List<ProductAttributeModel>();
-            Warnings = new List<string>();
-            WarehouseInventoryModels = new List<WarehouseInventoryModel>();
-            ProductPictureModels = new List<ProductModel.ProductPictureModel>();
-        }
-        
         [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.StockQuantity")]
         public int StockQuantity { get; set; }
 
@@ -50,44 +45,42 @@ namespace Grand.Web.Admin.Models.Catalog
         public string PictureId { get; set; }
         public string PictureThumbnailUrl { get; set; }
 
-        public IList<ProductModel.ProductPictureModel> ProductPictureModels { get; set; }
+        public IList<ProductModel.ProductPictureModel> ProductPictureModels { get; set; } = new List<ProductModel.ProductPictureModel>();
 
-        public IList<ProductAttributeModel> ProductAttributes { get; set; }
+        public IList<ProductAttributeModel> ProductAttributes { get; set; } = new List<ProductAttributeModel>();
 
-        public IList<string> Warnings { get; set; }
+        [ModelBinder(BinderType = typeof(CustomAttributesBinder))]
+        public IList<CustomAttributeModel> SelectedAttributes { get; set; }
+        
+        public IList<string> Warnings { get; set; } = new List<string>();
 
         public string ProductId { get; set; }
         public string Attributes { get; set; }
 
         public bool UseMultipleWarehouses { get; set; }
 
-        public IList<WarehouseInventoryModel> WarehouseInventoryModels { get; set; }
+        public IList<WarehouseInventoryModel> WarehouseInventoryModels { get; set; } = new List<WarehouseInventoryModel>();
 
         #region Nested classes
 
-        public partial class ProductAttributeModel : BaseEntityModel
+        public class ProductAttributeModel : BaseEntityModel
         {
-            public ProductAttributeModel()
-            {
-                Values = new List<ProductAttributeValueModel>();
-            }
-
             public string ProductAttributeId { get; set; }
             public string Name { get; set; }
             public string TextPrompt { get; set; }
             public bool IsRequired { get; set; }
             public AttributeControlType AttributeControlType { get; set; }
-            public IList<ProductAttributeValueModel> Values { get; set; }
+            public IList<ProductAttributeValueModel> Values { get; set; } = new List<ProductAttributeValueModel>();
         }
 
-        public partial class ProductAttributeValueModel : BaseEntityModel
+        public class ProductAttributeValueModel : BaseEntityModel
         {
             public string Name { get; set; }
 
             public bool IsPreSelected { get; set; }
         }
 
-        public partial class WarehouseInventoryModel : BaseEntityModel
+        public class WarehouseInventoryModel : BaseEntityModel
         {
             [GrandResourceDisplayName("Admin.Catalog.Products.ProductAttributes.AttributeCombination.WarehouseInventory.Fields.Warehouse")]
             public string WarehouseId { get; set; }

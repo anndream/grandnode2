@@ -1,6 +1,6 @@
 using Grand.Business.Core.Interfaces.Catalog.Brands;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
@@ -11,7 +11,7 @@ namespace Grand.Business.Catalog.Services.Brands
     /// <summary>
     /// Brand layout service
     /// </summary>
-    public partial class BrandLayoutService : IBrandLayoutService
+    public class BrandLayoutService : IBrandLayoutService
     {
         #region Fields
 
@@ -64,7 +64,7 @@ namespace Grand.Business.Catalog.Services.Brands
         /// <returns>Brand layout</returns>
         public virtual Task<BrandLayout> GetBrandLayoutById(string brandLayoutId)
         {
-            string key = string.Format(CacheKey.BRAND_LAYOUT_BY_ID_KEY, brandLayoutId);
+            var key = string.Format(CacheKey.BRAND_LAYOUT_BY_ID_KEY, brandLayoutId);
             return _cacheBase.GetAsync(key, () => _brandLayoutRepository.GetByIdAsync(brandLayoutId));
         }
 
@@ -74,8 +74,7 @@ namespace Grand.Business.Catalog.Services.Brands
         /// <param name="brandLayout">Brand layout</param>
         public virtual async Task InsertBrandLayout(BrandLayout brandLayout)
         {
-            if (brandLayout == null)
-                throw new ArgumentNullException(nameof(brandLayout));
+            ArgumentNullException.ThrowIfNull(brandLayout);
 
             await _brandLayoutRepository.InsertAsync(brandLayout);
 
@@ -92,8 +91,7 @@ namespace Grand.Business.Catalog.Services.Brands
         /// <param name="brandLayout">Brand layout</param>
         public virtual async Task UpdateBrandLayout(BrandLayout brandLayout)
         {
-            if (brandLayout == null)
-                throw new ArgumentNullException(nameof(brandLayout));
+            ArgumentNullException.ThrowIfNull(brandLayout);
 
             await _brandLayoutRepository.UpdateAsync(brandLayout);
 
@@ -110,8 +108,7 @@ namespace Grand.Business.Catalog.Services.Brands
         /// <param name="brandLayout">Brand layout</param>
         public virtual async Task DeleteBrandLayout(BrandLayout brandLayout)
         {
-            if (brandLayout == null)
-                throw new ArgumentNullException(nameof(brandLayout));
+            ArgumentNullException.ThrowIfNull(brandLayout);
 
             await _brandLayoutRepository.DeleteAsync(brandLayout);
 

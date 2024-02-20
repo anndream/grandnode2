@@ -3,20 +3,14 @@ using Grand.Web.Models.Common;
 
 namespace Grand.Web.Models.Catalog
 {
-    public partial class CustomerOutOfStockSubscriptionsModel
+    public class CustomerOutOfStockSubscriptionsModel
     {
-        public CustomerOutOfStockSubscriptionsModel()
-        {
-            Subscriptions = new List<OutOfStockSubscriptionModel>();
-            PagerModel = new PagerModel();
-        }
-
-        public IList<OutOfStockSubscriptionModel> Subscriptions { get; set; }
-        public PagerModel PagerModel { get; set; }
+        public IList<OutOfStockSubscriptionModel> Subscriptions { get; set; } = new List<OutOfStockSubscriptionModel>();
+        public PagerModel PagerModel { get; set; } = new();
 
         #region Nested classes
 
-        public partial class OutOfStockSubscriptionModel : BaseEntityModel
+        public class OutOfStockSubscriptionModel : BaseEntityModel
         {
             public string ProductId { get; set; }
             public string ProductName { get; set; }

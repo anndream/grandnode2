@@ -8,7 +8,6 @@ using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
 using Grand.Infrastructure;
-using Microsoft.AspNetCore.Http;
 using Shipping.FixedRateShipping.Models;
 
 namespace Shipping.FixedRateShipping
@@ -44,7 +43,7 @@ namespace Shipping.FixedRateShipping
 
         private double GetRate(string shippingMethodId)
         {
-            string key = string.Format("ShippingRateComputationMethod.FixedRate.Rate.ShippingMethodId{0}", shippingMethodId);
+            var key = $"ShippingRateComputationMethod.FixedRate.Rate.ShippingMethodId{shippingMethodId}";
             var rate = this._settingService.GetSettingByKey<FixedShippingRate>(key)?.Rate;
             return rate ?? 0;
         }
@@ -59,8 +58,7 @@ namespace Shipping.FixedRateShipping
         /// <returns>Represents a response of getting shipping rate options</returns>
         public async Task<GetShippingOptionResponse> GetShippingOptions(GetShippingOptionRequest getShippingOptionRequest)
         {
-            if (getShippingOptionRequest == null)
-                throw new ArgumentNullException(nameof(getShippingOptionRequest));
+            ArgumentNullException.ThrowIfNull(getShippingOptionRequest);
 
             var response = new GetShippingOptionResponse();
 
@@ -70,7 +68,7 @@ namespace Shipping.FixedRateShipping
                 return response;
             }
 
-            string restrictByCountryId = (getShippingOptionRequest.ShippingAddress != null && !String.IsNullOrEmpty(getShippingOptionRequest.ShippingAddress.CountryId)) ? getShippingOptionRequest.ShippingAddress.CountryId : "";
+            var restrictByCountryId = getShippingOptionRequest.ShippingAddress != null && !string.IsNullOrEmpty(getShippingOptionRequest.ShippingAddress.CountryId) ? getShippingOptionRequest.ShippingAddress.CountryId : "";
             var shippingMethods = await _shippingMethodService.GetAllShippingMethods(restrictByCountryId, getShippingOptionRequest.Customer);
             foreach (var shippingMethod in shippingMethods)
             {
@@ -93,16 +91,15 @@ namespace Shipping.FixedRateShipping
         /// <returns>Fixed shipping rate; or null in case there's no fixed shipping rate</returns>
         public async Task<double?> GetFixedRate(GetShippingOptionRequest getShippingOptionRequest)
         {
-            if (getShippingOptionRequest == null)
-                throw new ArgumentNullException(nameof(getShippingOptionRequest));
+            ArgumentNullException.ThrowIfNull(getShippingOptionRequest);
 
-            string restrictByCountryId = (getShippingOptionRequest.ShippingAddress != null && !String.IsNullOrEmpty(getShippingOptionRequest.ShippingAddress.CountryId)) ? getShippingOptionRequest.ShippingAddress.CountryId : "";
+            var restrictByCountryId = getShippingOptionRequest.ShippingAddress != null && !string.IsNullOrEmpty(getShippingOptionRequest.ShippingAddress.CountryId) ? getShippingOptionRequest.ShippingAddress.CountryId : "";
             var shippingMethods = await _shippingMethodService.GetAllShippingMethods(restrictByCountryId);
 
             var rates = new List<double>();
             foreach (var shippingMethod in shippingMethods)
             {
-                double rate = GetRate(shippingMethod.Id);
+                var rate = GetRate(shippingMethod.Id);
                 if (!rates.Contains(rate))
                     rates.Add(rate);
             }
@@ -118,7 +115,7 @@ namespace Shipping.FixedRateShipping
 
         public IShipmentTracker ShipmentTracker => null;
 
-        public async Task<IList<string>> ValidateShippingForm(IFormCollection form)
+        public async Task<IList<string>> ValidateShippingForm(string shippingOption, IDictionary<string, string> data)
         {
             return await Task.FromResult(new List<string>());
         }

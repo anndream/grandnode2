@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Models.Customer
 {
-    public partial class PasswordRecoveryModel : BaseModel
+    public class PasswordRecoveryModel : BaseModel
     {
         [DataType(DataType.EmailAddress)]
         [GrandResourceDisplayName("Account.PasswordRecovery.Email")]
@@ -12,5 +12,6 @@ namespace Grand.Web.Models.Customer
         public string Result { get; set; }
         public bool Send { get; set; }
         public bool DisplayCaptcha { get; set; }
+        public ICaptchaValidModel Captcha { get; set; } = new CaptchaModel();
     }
 }

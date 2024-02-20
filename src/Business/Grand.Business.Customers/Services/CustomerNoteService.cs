@@ -1,6 +1,6 @@
 ﻿using Grand.Business.Core.Interfaces.Customers;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Extensions;
 using MediatR;
 
@@ -20,17 +20,14 @@ namespace Grand.Business.Customers.Services
 
         #region Customer note
 
-        // <summary>
+        /// <summary>
         /// Get note for customer
         /// </summary>
         /// <param name="id">Note identifier</param>
         /// <returns>CustomerNote</returns>
         public virtual Task<CustomerNote> GetCustomerNote(string id)
         {
-            if (string.IsNullOrWhiteSpace(id))
-                return Task.FromResult<CustomerNote>(null);
-
-            return _customerNoteRepository.GetByIdAsync(id);
+            return string.IsNullOrWhiteSpace(id) ? Task.FromResult<CustomerNote>(null) : _customerNoteRepository.GetByIdAsync(id);
         }
 
         /// <summary>
@@ -39,8 +36,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerNote">The customer note</param>
         public virtual async Task InsertCustomerNote(CustomerNote customerNote)
         {
-            if (customerNote == null)
-                throw new ArgumentNullException(nameof(customerNote));
+            ArgumentNullException.ThrowIfNull(customerNote);
 
             await _customerNoteRepository.InsertAsync(customerNote);
 
@@ -54,8 +50,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerNote">The customer note</param>
         public virtual async Task DeleteCustomerNote(CustomerNote customerNote)
         {
-            if (customerNote == null)
-                throw new ArgumentNullException(nameof(customerNote));
+            ArgumentNullException.ThrowIfNull(customerNote);
 
             await _customerNoteRepository.DeleteAsync(customerNote);
 
@@ -67,16 +62,16 @@ namespace Grand.Business.Customers.Services
         /// Get notes for customer
         /// </summary>
         /// <param name="customerId">Customer identifier</param>
-        /// <param name="displaytocustomer">Display to customer</param>
+        /// <param name="displayToCustomer">Display to customer</param>
         /// <returns>OrderNote</returns>
-        public virtual async Task<IList<CustomerNote>> GetCustomerNotes(string customerId, bool? displaytocustomer = null)
+        public virtual async Task<IList<CustomerNote>> GetCustomerNotes(string customerId, bool? displayToCustomer = null)
         {
             var query = from customerNote in _customerNoteRepository.Table
                         where customerNote.CustomerId == customerId
                         select customerNote;
 
-            if (displaytocustomer.HasValue)
-                query = query.Where(x => x.DisplayToCustomer == displaytocustomer.Value);
+            if (displayToCustomer.HasValue)
+                query = query.Where(x => x.DisplayToCustomer == displayToCustomer.Value);
 
             query = query.OrderByDescending(x => x.CreatedOnUtc);
 

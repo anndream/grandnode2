@@ -4,13 +4,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Orders
 {
-    public partial class ShipmentModel : BaseEntityModel
+    public class ShipmentModel : BaseEntityModel
     {
-        public ShipmentModel()
-        {
-            ShipmentStatusEvents = new List<ShipmentStatusEventModel>();
-            Items = new List<ShipmentItemModel>();
-        }
         [GrandResourceDisplayName("Admin.Orders.Shipments.ID")]
         public override string Id { get; set; }
         public int ShipmentNumber { get; set; }
@@ -38,9 +33,9 @@ namespace Grand.Web.Admin.Models.Orders
         [GrandResourceDisplayName("Admin.Orders.Shipments.AdminComment")]
         public string AdminComment { get; set; }
 
-        public List<ShipmentItemModel> Items { get; set; }
+        public List<ShipmentItemModel> Items { get; set; } = new();
 
-        public IList<ShipmentStatusEventModel> ShipmentStatusEvents { get; set; }
+        public IList<ShipmentStatusEventModel> ShipmentStatusEvents { get; set; } = new List<ShipmentStatusEventModel>();
 
         //shipment notes
         [GrandResourceDisplayName("Admin.Orders.Shipments.ShipmentNotes.Fields.DisplayToCustomer")]
@@ -56,13 +51,8 @@ namespace Grand.Web.Admin.Models.Orders
 
         #region Nested classes
 
-        public partial class ShipmentItemModel : BaseEntityModel
+        public class ShipmentItemModel : BaseEntityModel
         {
-            public ShipmentItemModel()
-            {
-                AvailableWarehouses = new List<WarehouseInfo>();
-            }
-
             public string OrderItemId { get; set; }
             public string ProductId { get; set; }
             [GrandResourceDisplayName("Admin.Orders.Shipments.Products.ProductName")]
@@ -87,13 +77,14 @@ namespace Grand.Web.Admin.Models.Orders
             public string ShippedFromWarehouse { get; set; }
             public bool AllowToChooseWarehouse { get; set; }
             //used before a shipment is created
-            public List<WarehouseInfo> AvailableWarehouses { get; set; }
+            public List<WarehouseInfo> AvailableWarehouses { get; set; } = new();
             public string WarehouseId { get; set; }
 
             #region Nested Classes
             public class WarehouseInfo : BaseModel
             {
                 public string WarehouseId { get; set; }
+                public string WarehouseCode { get; set; }
                 public string WarehouseName { get; set; }
                 public int StockQuantity { get; set; }
                 public int ReservedQuantity { get; set; }
@@ -102,7 +93,7 @@ namespace Grand.Web.Admin.Models.Orders
             #endregion
         }
 
-        public partial class ShipmentNote : BaseEntityModel
+        public class ShipmentNote : BaseEntityModel
         {
             public string ShipmentId { get; set; }
             [GrandResourceDisplayName("Admin.Orders.Shipments.ShipmentNotes.Fields.DisplayToCustomer")]
@@ -119,7 +110,7 @@ namespace Grand.Web.Admin.Models.Orders
             public bool CreatedByCustomer { get; set; }
         }
 
-        public partial class ShipmentStatusEventModel : BaseModel
+        public class ShipmentStatusEventModel : BaseModel
         {
             public string EventName { get; set; }
             public string Location { get; set; }

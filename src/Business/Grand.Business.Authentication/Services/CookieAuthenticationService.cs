@@ -5,7 +5,6 @@ using Grand.Business.Core.Interfaces.Customers;
 using Grand.Infrastructure.Configuration;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
-using Grand.SharedKernel.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
@@ -16,11 +15,11 @@ namespace Grand.Business.Authentication.Services
     /// <summary>
     /// Represents service using cookie middleware for the authentication
     /// </summary>
-    public partial class CookieAuthenticationService : IGrandAuthenticationService
+    public class CookieAuthenticationService : IGrandAuthenticationService
     {
         #region Const
 
-        private string CUSTOMER_COOKIE_NAME => $"{_securityConfig.CookiePrefix}Customer";
+        private string CustomerCookieName => $"{_securityConfig.CookiePrefix}Customer";
 
         #endregion
 
@@ -44,9 +43,9 @@ namespace Grand.Business.Authentication.Services
         /// <param name="customerSettings">Customer settings</param>
         /// <param name="customerService">Customer service</param>
         /// <param name="groupService">Group service</param>
-        /// <param name="userFieldService">Generic sttribute service</param>
+        /// <param name="userFieldService">Generic attribute service</param>
         /// <param name="httpContextAccessor">HTTP context accessor</param>
-        /// <param name="SecurityConfig">SecurityConfig</param>
+        /// <param name="securityConfig">SecurityConfig</param>
         public CookieAuthenticationService(
             CustomerSettings customerSettings,
             ICustomerService customerService,
@@ -75,8 +74,7 @@ namespace Grand.Business.Authentication.Services
         /// <param name="isPersistent">Whether the authentication session is persisted across multiple requests</param>
         public virtual async Task SignIn(Customer customer, bool isPersistent)
         {
-            if (customer == null)
-                throw new ArgumentNullException(nameof(customer));
+            ArgumentNullException.ThrowIfNull(customer);
 
             //create claims for customer's username and email
             var claims = new List<Claim>();
@@ -88,15 +86,15 @@ namespace Grand.Business.Authentication.Services
                 claims.Add(new Claim(ClaimTypes.Email, customer.Email, ClaimValueTypes.Email, _securityConfig.CookieClaimsIssuer));
 
             //add token
-            var passwordtoken = await customer.GetUserField<string>(_userFieldService, SystemCustomerFieldNames.PasswordToken);
-            if (string.IsNullOrEmpty(passwordtoken))
+            var passwordToken = await customer.GetUserField<string>(_userFieldService, SystemCustomerFieldNames.PasswordToken);
+            if (string.IsNullOrEmpty(passwordToken))
             {
-                var passwordguid = Guid.NewGuid().ToString();
-                await _userFieldService.SaveField(customer, SystemCustomerFieldNames.PasswordToken, passwordguid);
-                claims.Add(new Claim(ClaimTypes.UserData, passwordguid, ClaimValueTypes.String, _securityConfig.CookieClaimsIssuer));
+                var passwordGuid = Guid.NewGuid().ToString();
+                await _userFieldService.SaveField(customer, SystemCustomerFieldNames.PasswordToken, passwordGuid);
+                claims.Add(new Claim(ClaimTypes.UserData, passwordGuid, ClaimValueTypes.String, _securityConfig.CookieClaimsIssuer));
             }
             else
-                claims.Add(new Claim(ClaimTypes.UserData, passwordtoken, ClaimValueTypes.String, _securityConfig.CookieClaimsIssuer));
+                claims.Add(new Claim(ClaimTypes.UserData, passwordToken, ClaimValueTypes.String, _securityConfig.CookieClaimsIssuer));
 
             //create principal for the present scheme of authentication
             var userIdentity = new ClaimsIdentity(claims, GrandCookieAuthenticationDefaults.AuthenticationScheme);
@@ -106,11 +104,13 @@ namespace Grand.Business.Authentication.Services
             var authenticationProperties = new AuthenticationProperties {
                 IsPersistent = isPersistent,
                 IssuedUtc = DateTime.UtcNow,
-                ExpiresUtc = DateTime.UtcNow.AddHours(CommonHelper.CookieAuthExpires)
+                ExpiresUtc = DateTime.UtcNow.AddHours(_securityConfig.CookieAuthExpires)
             };
 
             //sign in user
-            await _httpContextAccessor.HttpContext.SignInAsync(GrandCookieAuthenticationDefaults.AuthenticationScheme, userPrincipal, authenticationProperties);
+            if (_httpContextAccessor.HttpContext != null)
+                await _httpContextAccessor.HttpContext.SignInAsync(
+                    GrandCookieAuthenticationDefaults.AuthenticationScheme, userPrincipal, authenticationProperties);
 
             //cache authenticated customer
             _cachedCustomer = customer;
@@ -125,9 +125,14 @@ namespace Grand.Business.Authentication.Services
             _cachedCustomer = null;
 
             //and then sign out customer from the present scheme of authentication
-            await _httpContextAccessor.HttpContext.SignOutAsync(GrandCookieAuthenticationDefaults.AuthenticationScheme);
-            //sign out also from other schema
-            await _httpContextAccessor.HttpContext.SignOutAsync(GrandCookieAuthenticationDefaults.ExternalAuthenticationScheme);
+            if (_httpContextAccessor.HttpContext != null)
+            {
+                await _httpContextAccessor.HttpContext.SignOutAsync(GrandCookieAuthenticationDefaults
+                    .AuthenticationScheme);
+                //sign out also from other schema
+                await _httpContextAccessor.HttpContext.SignOutAsync(GrandCookieAuthenticationDefaults
+                    .ExternalAuthenticationScheme);
+            }
         }
 
         /// <summary>
@@ -141,6 +146,7 @@ namespace Grand.Business.Authentication.Services
                 return _cachedCustomer;
 
             //get the authenticated user identity
+            if (_httpContextAccessor.HttpContext == null) return _cachedCustomer;
             var authenticateResult = await _httpContextAccessor.HttpContext.AuthenticateAsync(GrandCookieAuthenticationDefaults.AuthenticationScheme);
             if (!authenticateResult.Succeeded)
                 return null;
@@ -165,19 +171,19 @@ namespace Grand.Business.Authentication.Services
 
             if (customer != null)
             {
-                var passwordtoken = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.PasswordToken);
-                if (!string.IsNullOrEmpty(passwordtoken))
+                var passwordToken = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.PasswordToken);
+                if (!string.IsNullOrEmpty(passwordToken))
                 {
                     var tokenClaim = authenticateResult.Principal.FindFirst(claim => claim.Type == ClaimTypes.UserData
                         && claim.Issuer.Equals(_securityConfig.CookieClaimsIssuer, StringComparison.InvariantCultureIgnoreCase));
-                    if (tokenClaim == null || tokenClaim.Value != passwordtoken)
+                    if (tokenClaim == null || tokenClaim.Value != passwordToken)
                     {
                         customer = null;
                     }
                 }
             }
             //Check if the found customer is available
-            if (customer == null || !customer.Active || customer.Deleted || !await _groupService.IsRegistered(customer))
+            if (customer is not { Active: true } || customer.Deleted || !await _groupService.IsRegistered(customer))
                 return null;
 
             //Cache the authenticated customer
@@ -192,10 +198,7 @@ namespace Grand.Business.Authentication.Services
         /// <returns>String value of cookie</returns>
         public virtual Task<string> GetCustomerGuid()
         {
-            if (_httpContextAccessor.HttpContext == null || _httpContextAccessor.HttpContext.Request == null)
-                return Task.FromResult<string>(null);
-
-            return Task.FromResult(_httpContextAccessor.HttpContext.Request.Cookies[CUSTOMER_COOKIE_NAME]);
+            return _httpContextAccessor.HttpContext?.Request == null ? Task.FromResult<string>(null) : Task.FromResult(_httpContextAccessor.HttpContext.Request.Cookies[CustomerCookieName]);
         }
 
         /// <summary>
@@ -204,14 +207,14 @@ namespace Grand.Business.Authentication.Services
         /// <param name="customerGuid">Guid of the customer</param>
         public virtual Task SetCustomerGuid(Guid customerGuid)
         {
-            if (_httpContextAccessor.HttpContext == null || _httpContextAccessor.HttpContext.Response == null)
+            if (_httpContextAccessor.HttpContext?.Response == null)
                 return Task.CompletedTask;
 
             //Delete existing cookie value
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete(CUSTOMER_COOKIE_NAME);
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete(CustomerCookieName);
 
             //Get the date date of current cookie expiration
-            var cookieExpiresDate = DateTime.UtcNow.AddHours(CommonHelper.CookieAuthExpires);
+            var cookieExpiresDate = DateTime.UtcNow.AddHours(_securityConfig.CookieAuthExpires);
 
             //If provided guid is empty (only remove cookies)
             if (customerGuid == Guid.Empty)
@@ -222,7 +225,7 @@ namespace Grand.Business.Authentication.Services
                 HttpOnly = true,
                 Expires = cookieExpiresDate
             };
-            _httpContextAccessor.HttpContext.Response.Cookies.Append(CUSTOMER_COOKIE_NAME, customerGuid.ToString(), options);
+            _httpContextAccessor.HttpContext.Response.Cookies.Append(CustomerCookieName, customerGuid.ToString(), options);
 
             return Task.CompletedTask;
         }

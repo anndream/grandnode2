@@ -1,5 +1,4 @@
-﻿@inject Grand.Infrastructure.Configuration.PerformanceConfig config
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html use-lang="true">
 <head>
     <title asp-default-title="true"></title>
@@ -8,20 +7,16 @@
     <meta-keywords>
     <meta name="generator" content="grandnode">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    @RenderSection("meta", required: false)    
+    @await RenderSectionAsync("meta", required: false)
     <head-custom>
     <partial name="Partials/Head" />
     <vc:widget widget-zone="head_html_tag" additional-data="null"></vc:widget>
     <canonical-urls>
     @*Favicon - upload favicon.ico file to the wwwroot directory*@
     <partial name="Partials/Favicons" />
-    @if (config.DisplayMiniProfilerInPublicStore)
-    {
-        <mini-profiler />
-    }
     <resources asp-type="HeadLink" />
     <resources asp-type="HeadScript" />
-    @RenderSection("head", required: false)    
+    @await RenderSectionAsync("head", required: false)
 </head>
 <body>
 
@@ -40,7 +35,7 @@
             @await Component.InvokeAsync("Widget", new { widgetZone = "content_before" })
             @if (IsSectionDefined("Breadcrumb"))
             {
-                @RenderSection("Breadcrumb")
+                @await RenderSectionAsync("Breadcrumb")
             }
             @RenderBody()
             @await Component.InvokeAsync("Widget", new { widgetZone = "content_after" })

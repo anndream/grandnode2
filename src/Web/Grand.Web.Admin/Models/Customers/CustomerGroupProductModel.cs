@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Customers
 {
-    public partial class CustomerGroupProductModel: BaseEntityModel
+    public class CustomerGroupProductModel: BaseEntityModel
     {
         [GrandResourceDisplayName("Admin.Customers.CustomerGroups.Products.Fields.Name")]
         
@@ -18,15 +18,8 @@ namespace Grand.Web.Admin.Models.Customers
 
 
 
-        public partial class AddProductModel : BaseModel
+        public class AddProductModel : BaseModel
         {
-            public AddProductModel()
-            {
-                AvailableStores = new List<SelectListItem>();
-                AvailableVendors = new List<SelectListItem>();
-                AvailableProductTypes = new List<SelectListItem>();
-            }
-
             [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchProductName")]
             
             public string SearchProductName { get; set; }
@@ -46,9 +39,9 @@ namespace Grand.Web.Admin.Models.Customers
             [GrandResourceDisplayName("Admin.Catalog.Products.List.SearchProductType")]
             public int SearchProductTypeId { get; set; }
 
-            public IList<SelectListItem> AvailableStores { get; set; }
-            public IList<SelectListItem> AvailableVendors { get; set; }
-            public IList<SelectListItem> AvailableProductTypes { get; set; }
+            public IList<SelectListItem> AvailableStores { get; set; } = new List<SelectListItem>();
+            public IList<SelectListItem> AvailableVendors { get; set; } = new List<SelectListItem>();
+            public IList<SelectListItem> AvailableProductTypes { get; set; } = new List<SelectListItem>();
 
             public string CustomerGroupId { get; set; }
 

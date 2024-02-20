@@ -1,11 +1,11 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
-using Grand.Infrastructure.Mapper;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
+using Grand.Infrastructure.Mapper;
 using Grand.Web.Admin.Models.Common;
 
-namespace Grand.Web.Admin.Extensions
+namespace Grand.Web.Admin.Extensions.Mapping
 {
     public static class AddressMappingExtensions
     {
@@ -40,12 +40,9 @@ namespace Grand.Web.Admin.Extensions
             IAddressAttributeService addressAttributeService,
             IAddressAttributeParser addressAttributeParser)
         {
-            //this method is very similar to the same one in Grand.Web project
-            if (addressAttributeService == null)
-                throw new ArgumentNullException(nameof(addressAttributeService));
-
-            if (addressAttributeParser == null)
-                throw new ArgumentNullException(nameof(addressAttributeParser));
+           
+            ArgumentNullException.ThrowIfNull(addressAttributeService);
+            ArgumentNullException.ThrowIfNull(addressAttributeParser);
 
             var attributes = await addressAttributeService.GetAllAddressAttributes();
             foreach (var attribute in attributes)
@@ -55,7 +52,7 @@ namespace Grand.Web.Admin.Extensions
                     Id = attribute.Id,
                     Name = attribute.Name,
                     IsRequired = attribute.IsRequired,
-                    AttributeControlType = attribute.AttributeControlType,
+                    AttributeControlType = attribute.AttributeControlType
                 };
 
                 if (attribute.ShouldHaveValues())

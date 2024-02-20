@@ -4,7 +4,7 @@ using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Commands.Customers;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Infrastructure;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Vendors;
 using Grand.Web.Common.DataSource;
@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.Vendors)]
-    public partial class VendorController : BaseAdminController
+    public class VendorController : BaseAdminController
     {
         #region Fields
 
@@ -49,7 +49,10 @@ namespace Grand.Web.Admin.Controllers
         #region Methods
 
         //list
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
         public IActionResult List()
         {
@@ -69,7 +72,7 @@ namespace Grand.Web.Admin.Controllers
                     var vendorModel = x.ToModel();
                     return vendorModel;
                 }),
-                Total = vendors.TotalCount,
+                Total = vendors.TotalCount
             };
             return Json(gridModel);
         }
@@ -192,8 +195,7 @@ namespace Grand.Web.Admin.Controllers
                 return RedirectToAction("Edit", new { id = vendor.Id });
             }
 
-            var activate = await _mediator.Send(new ActiveVendorCommand()
-            {
+            var activate = await _mediator.Send(new ActiveVendorCommand {
                 Vendor = vendor,
                 Active = activatevendor == "active",
                 CustomerIds = associatedCustomers.Select(x => x.Id).ToList()
@@ -283,10 +285,6 @@ namespace Grand.Web.Admin.Controllers
             if (vendor == null)
                 throw new ArgumentException("No vendor found with the specified id");
 
-            //a vendor should have access only to his own profile
-            if (workContext.CurrentVendor != null && vendor.Id != workContext.CurrentVendor.Id)
-                return Content("This is not your vendor");
-
             var vendorReviews = await _vendorService.GetAllVendorReviews("", null,
                 null, null, "", vendorId, command.Page - 1, command.PageSize);
             var items = new List<VendorReviewModel>();
@@ -299,7 +297,7 @@ namespace Grand.Web.Admin.Controllers
             var gridModel = new DataSourceResult
             {
                 Data = items,
-                Total = vendorReviews.TotalCount,
+                Total = vendorReviews.TotalCount
             };
 
             return Json(gridModel);

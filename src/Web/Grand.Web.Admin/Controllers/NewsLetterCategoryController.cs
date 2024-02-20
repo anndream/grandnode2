@@ -2,7 +2,7 @@
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Interfaces.Marketing.Newsletters;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Models.Messages;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Filters;
@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.NewsletterCategories)]
-    public partial class NewsletterCategoryController : BaseAdminController
+    public class NewsletterCategoryController : BaseAdminController
     {
         #region Fields 
 
@@ -38,9 +38,15 @@ namespace Grand.Web.Admin.Controllers
 
         #region Methods
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
@@ -49,15 +55,12 @@ namespace Grand.Web.Admin.Controllers
             var newslettercategories = await _newsletterCategoryService.GetAllNewsletterCategory();
             var gridModel = new DataSourceResult
             {
-                Data = newslettercategories.Select(x =>
+                Data = newslettercategories.Select(x => new
                 {
-                    return new
-                    {
-                        Id = x.Id,
-                        Name = x.Name,
-                        Selected = x.Selected,
-                        DisplayOrder = x.DisplayOrder
-                    };
+                    x.Id,
+                    x.Name,
+                    x.Selected,
+                    x.DisplayOrder
                 }).OrderBy(x => x.DisplayOrder),
                 Total = newslettercategories.Count
             };

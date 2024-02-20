@@ -64,7 +64,6 @@
         /// <summary>
         /// Key for caching
         /// </summary>
-        /// <remarks>
         public static string PRODUCTS_CUSTOMER_PERSONAL_PATTERN => "Grand.product.personal";
 
         /// <summary>
@@ -90,7 +89,7 @@
         /// <remarks>
         /// {0} : store ID
         /// </remarks>
-        public static string PRODUCTTAG_COUNT_KEY => "Grand.producttag.count-{0}";
+        public static string PRODUCTTAG_COUNT_KEY => "Grand.producttag.count";
 
         /// <summary>
         /// Key for all tags

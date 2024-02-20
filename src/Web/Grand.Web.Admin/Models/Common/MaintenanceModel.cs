@@ -4,27 +4,16 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class MaintenanceModel : BaseModel
+    public class MaintenanceModel : BaseModel
     {
-        public MaintenanceModel()
-        {
-            DeleteGuests = new DeleteGuestsModel();
-            DeleteAbandonedCarts = new DeleteAbandonedCartsModel();
-            DeleteExportedFiles = new DeleteExportedFilesModel();
-            ConvertedPictureModel = new ConvertPictureModel() { NumberOfConvertItems = -1 };
-        }
-
-        public DeleteGuestsModel DeleteGuests { get; set; }
-        public DeleteAbandonedCartsModel DeleteAbandonedCarts { get; set; }
-        public DeleteExportedFilesModel DeleteExportedFiles { get; set; }
-        public ConvertPictureModel ConvertedPictureModel { get; set; }
-
-        public bool DeleteActivityLog { get; set; }
-        public bool DeleteSystemLog { get; set; }
+        public DeleteGuestsModel DeleteGuests { get; set; } = new();
+        public DeleteAbandonedCartsModel DeleteAbandonedCarts { get; set; } = new();
+        public DeleteExportedFilesModel DeleteExportedFiles { get; set; } = new();
+        public ConvertPictureModel ConvertedPictureModel { get; set; } = new() { NumberOfConvertItems = -1 };
 
         #region Nested classes
 
-        public partial class DeleteGuestsModel : BaseModel
+        public class DeleteGuestsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.System.Maintenance.DeleteGuests.StartDate")]
             [UIHint("DateNullable")]
@@ -40,7 +29,7 @@ namespace Grand.Web.Admin.Models.Common
             public int? NumberOfDeletedCustomers { get; set; }
         }
 
-        public partial class DeleteAbandonedCartsModel : BaseModel
+        public class DeleteAbandonedCartsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.System.Maintenance.DeleteAbandonedCarts.OlderThan")]
             [UIHint("Date")]
@@ -49,7 +38,7 @@ namespace Grand.Web.Admin.Models.Common
             public int? NumberOfDeletedItems { get; set; }
         }
 
-        public partial class DeleteExportedFilesModel : BaseModel
+        public class DeleteExportedFilesModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.System.Maintenance.DeleteExportedFiles.StartDate")]
             [UIHint("DateNullable")]
@@ -62,7 +51,7 @@ namespace Grand.Web.Admin.Models.Common
             public int? NumberOfDeletedFiles { get; set; }
         }
 
-        public partial class ConvertPictureModel : BaseModel
+        public class ConvertPictureModel : BaseModel
         {
             public int NumberOfConvertItems { get; set; }
         }

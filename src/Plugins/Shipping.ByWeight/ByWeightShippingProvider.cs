@@ -25,11 +25,11 @@ namespace Shipping.ByWeight
 
         private readonly IShippingMethodService _shippingMethodService;
         private readonly IWorkContext _workContext;
-        private readonly IServiceProvider _serviceProvider;
         private readonly ITranslationService _translationService;
         private readonly IProductService _productService;
         private readonly ICheckoutAttributeParser _checkoutAttributeParser;
         private readonly ICurrencyService _currencyService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ByWeightShippingSettings _byWeightShippingSettings;
 
         #endregion
@@ -40,18 +40,18 @@ namespace Shipping.ByWeight
             IWorkContext workContext,
             ITranslationService translationService,
             IProductService productService,
-            IServiceProvider serviceProvider,
             ICheckoutAttributeParser checkoutAttributeParser,
             ICurrencyService currencyService,
+            IHttpContextAccessor httpContextAccessor,
             ByWeightShippingSettings byWeightShippingSettings)
         {
             _shippingMethodService = shippingMethodService;
             _workContext = workContext;
             _translationService = translationService;
             _productService = productService;
-            _serviceProvider = serviceProvider;
             _checkoutAttributeParser = checkoutAttributeParser;
             _currencyService = currencyService;
+            _httpContextAccessor = httpContextAccessor;
             _byWeightShippingSettings = byWeightShippingSettings;
         }
         #endregion
@@ -62,21 +62,20 @@ namespace Shipping.ByWeight
             string storeId, string warehouseId, string countryId, string stateProvinceId, string zip)
         {
 
-            var shippingByWeightService = _serviceProvider.GetRequiredService<IShippingByWeightService>();
-            var shippingByWeightSettings = _serviceProvider.GetRequiredService<ByWeightShippingSettings>();
+            var shippingByWeightService = _httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<IShippingByWeightService>();
 
             var shippingByWeightRecord = await shippingByWeightService.FindRecord(shippingMethodId,
                 storeId, warehouseId, countryId, stateProvinceId, zip, weight);
             if (shippingByWeightRecord == null)
             {
-                if (shippingByWeightSettings.LimitMethodsToCreated)
+                if (_byWeightShippingSettings.LimitMethodsToCreated)
                     return null;
 
                 return 0;
             }
 
             //additional fixed cost
-            double shippingTotal = shippingByWeightRecord.AdditionalFixedCost;
+            var shippingTotal = shippingByWeightRecord.AdditionalFixedCost;
             //charge amount per weight unit
             if (shippingByWeightRecord.RatePerWeightUnit > 0)
             {
@@ -88,7 +87,7 @@ namespace Shipping.ByWeight
             //percentage rate of subtotal
             if (shippingByWeightRecord.PercentageRateOfSubtotal > 0)
             {
-                shippingTotal += Math.Round((double)((((float)subTotal) * ((float)shippingByWeightRecord.PercentageRateOfSubtotal)) / 100f), 2);
+                shippingTotal += Math.Round((float)subTotal * (float)shippingByWeightRecord.PercentageRateOfSubtotal / 100f, 2);
             }
 
             if (shippingTotal < 0)
@@ -107,8 +106,7 @@ namespace Shipping.ByWeight
         /// <returns>Shopping cart item weight</returns>
         private async Task<double> GetShoppingCartItemWeight(ShoppingCartItem shoppingCartItem)
         {
-            if (shoppingCartItem == null)
-                throw new ArgumentNullException(nameof(shoppingCartItem));
+            ArgumentNullException.ThrowIfNull(shoppingCartItem);
 
             var product = await _productService.GetProductById(shoppingCartItem.ProductId);
             if (product == null)
@@ -133,7 +131,7 @@ namespace Shipping.ByWeight
                             {
                                 //bundled product
                                 var associatedProduct = await _productService.GetProductById(attributeValue.AssociatedProductId);
-                                if (associatedProduct != null && associatedProduct.IsShipEnabled)
+                                if (associatedProduct is { IsShipEnabled: true })
                                 {
                                     attributesTotalWeight += associatedProduct.Weight * attributeValue.Quantity;
                                 }
@@ -149,12 +147,11 @@ namespace Shipping.ByWeight
         /// Gets shopping cart weight
         /// </summary>
         /// <param name="request">Request</param>
-        /// <param name="includeCheckoutAttributes">A value indicating whether we should calculate weights of selected checkotu attributes</param>
+        /// <param name="includeCheckoutAttributes">A value indicating whether we should calculate weights of selected checkout attributes</param>
         /// <returns>Total weight</returns>
         private async Task<double> GetTotalWeight(GetShippingOptionRequest request, bool includeCheckoutAttributes = true)
         {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
+            ArgumentNullException.ThrowIfNull(request);
 
             Customer customer = request.Customer;
 
@@ -186,8 +183,7 @@ namespace Shipping.ByWeight
         /// <returns>Represents a response of getting shipping rate options</returns>
         public async Task<GetShippingOptionResponse> GetShippingOptions(GetShippingOptionRequest getShippingOptionRequest)
         {
-            if (getShippingOptionRequest == null)
-                throw new ArgumentNullException(nameof(getShippingOptionRequest));
+            ArgumentNullException.ThrowIfNull(getShippingOptionRequest);
 
             var response = new GetShippingOptionResponse();
 
@@ -203,16 +199,16 @@ namespace Shipping.ByWeight
             }
 
             var storeId = getShippingOptionRequest.StoreId;
-            if (String.IsNullOrEmpty(storeId))
+            if (string.IsNullOrEmpty(storeId))
                 storeId = _workContext.CurrentStore.Id;
-            string countryId = getShippingOptionRequest.ShippingAddress.CountryId;
-            string stateProvinceId = getShippingOptionRequest.ShippingAddress.StateProvinceId;
+            var countryId = getShippingOptionRequest.ShippingAddress.CountryId;
+            var stateProvinceId = getShippingOptionRequest.ShippingAddress.StateProvinceId;
 
             //string warehouseId = getShippingOptionRequest.WarehouseFrom != null ? getShippingOptionRequest.WarehouseFrom.Id : "";
 
-            string zip = getShippingOptionRequest.ShippingAddress.ZipPostalCode;
+            var zip = getShippingOptionRequest.ShippingAddress.ZipPostalCode;
             double subTotal = 0;
-            var priceCalculationService = _serviceProvider.GetRequiredService<IPricingService>();
+            var priceCalculationService = _httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<IPricingService>();
 
             foreach (var packageItem in getShippingOptionRequest.Items)
             {
@@ -224,7 +220,7 @@ namespace Shipping.ByWeight
                     subTotal += (await priceCalculationService.GetSubTotal(packageItem.ShoppingCartItem, product)).subTotal;
             }
 
-            double weight = await GetTotalWeight(getShippingOptionRequest);
+            var weight = await GetTotalWeight(getShippingOptionRequest);
 
             var shippingMethods = await _shippingMethodService.GetAllShippingMethods(countryId, _workContext.CurrentCustomer);
             foreach (var shippingMethod in shippingMethods)
@@ -235,19 +231,19 @@ namespace Shipping.ByWeight
                     var _rate = await GetRate(subTotal, weight, shippingMethod.Id, storeId, item, countryId, stateProvinceId, zip);
                     if (_rate.HasValue)
                     {
-                        if (rate == null)
-                            rate = 0;
+                        rate ??= 0;
 
                         rate += _rate.Value;
                     }
                 }
 
-                if (rate != null && rate.HasValue)
+                if (rate is { })
                 {
-                    var shippingOption = new ShippingOption();
-                    shippingOption.Name = shippingMethod.GetTranslation(x => x.Name, _workContext.WorkingLanguage.Id);
-                    shippingOption.Description = shippingMethod.GetTranslation(x => x.Description, _workContext.WorkingLanguage.Id);
-                    shippingOption.Rate = await _currencyService.ConvertFromPrimaryStoreCurrency(rate.Value, _workContext.WorkingCurrency);
+                    var shippingOption = new ShippingOption {
+                        Name = shippingMethod.GetTranslation(x => x.Name, _workContext.WorkingLanguage.Id),
+                        Description = shippingMethod.GetTranslation(x => x.Description, _workContext.WorkingLanguage.Id),
+                        Rate = await _currencyService.ConvertFromPrimaryStoreCurrency(rate.Value, _workContext.WorkingCurrency)
+                    };
                     response.ShippingOptions.Add(shippingOption);
                 }
             }
@@ -269,7 +265,7 @@ namespace Shipping.ByWeight
         /// <summary>
         /// Returns a value indicating whether shipping methods should be hidden during checkout
         /// </summary>
-        /// <param name="cart">Shoping cart</param>
+        /// <param name="cart">Shopping cart</param>
         /// <returns>true - hide; false - display.</returns>
         public async Task<bool> HideShipmentMethods(IList<ShoppingCartItem> cart)
         {
@@ -303,7 +299,7 @@ namespace Shipping.ByWeight
 
         public IList<string> LimitedToGroups => new List<string>();
 
-        public async Task<IList<string>> ValidateShippingForm(IFormCollection form)
+        public async Task<IList<string>> ValidateShippingForm(string shippingOption, IDictionary<string, string> data)
         {
             //you can implement here any validation logic
             return await Task.FromResult(new List<string>());

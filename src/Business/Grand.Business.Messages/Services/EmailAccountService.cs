@@ -2,7 +2,7 @@
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Messages;
 using Grand.SharedKernel;
 using Grand.SharedKernel.Extensions;
@@ -10,7 +10,7 @@ using MediatR;
 
 namespace Grand.Business.Messages.Services
 {
-    public partial class EmailAccountService : IEmailAccountService
+    public class EmailAccountService : IEmailAccountService
     {
         private readonly IRepository<EmailAccount> _emailAccountRepository;
         private readonly ICacheBase _cacheBase;
@@ -38,8 +38,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="emailAccount">Email account</param>
         public virtual async Task InsertEmailAccount(EmailAccount emailAccount)
         {
-            if (emailAccount == null)
-                throw new ArgumentNullException(nameof(emailAccount));
+            ArgumentNullException.ThrowIfNull(emailAccount);
 
             emailAccount.Email = CommonHelper.EnsureNotNull(emailAccount.Email);
             emailAccount.DisplayName = CommonHelper.EnsureNotNull(emailAccount.DisplayName);
@@ -74,8 +73,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="emailAccount">Email account</param>
         public virtual async Task UpdateEmailAccount(EmailAccount emailAccount)
         {
-            if (emailAccount == null)
-                throw new ArgumentNullException(nameof(emailAccount));
+            ArgumentNullException.ThrowIfNull(emailAccount);
 
             emailAccount.Email = CommonHelper.EnsureNotNull(emailAccount.Email);
             emailAccount.DisplayName = CommonHelper.EnsureNotNull(emailAccount.DisplayName);
@@ -110,8 +108,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="emailAccount">Email account</param>
         public virtual async Task DeleteEmailAccount(EmailAccount emailAccount)
         {
-            if (emailAccount == null)
-                throw new ArgumentNullException(nameof(emailAccount));
+            ArgumentNullException.ThrowIfNull(emailAccount);
             var emailAccounts = await GetAllEmailAccounts();
             if (emailAccounts.Count == 1)
                 throw new GrandException("You cannot delete this email account. At least one account is required.");
@@ -132,11 +129,8 @@ namespace Grand.Business.Messages.Services
         /// <returns>Email account</returns>
         public virtual async Task<EmailAccount> GetEmailAccountById(string emailAccountId)
         {
-            string key = string.Format(CacheKey.EMAILACCOUNT_BY_ID_KEY, emailAccountId);
-            return await _cacheBase.GetAsync(key, () =>
-            {
-                return _emailAccountRepository.GetByIdAsync(emailAccountId);
-            });
+            var key = string.Format(CacheKey.EMAILACCOUNT_BY_ID_KEY, emailAccountId);
+            return await _cacheBase.GetAsync(key, () => _emailAccountRepository.GetByIdAsync(emailAccountId));
 
         }
 

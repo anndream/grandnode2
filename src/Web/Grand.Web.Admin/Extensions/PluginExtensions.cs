@@ -7,13 +7,10 @@ namespace Grand.Web.Admin.Extensions
     {
         public static string GetLogoUrl(this PluginInfo pluginDescriptor, IWorkContext workContext)
         {
-            if (pluginDescriptor == null)
-                throw new ArgumentNullException(nameof(pluginDescriptor));
+            ArgumentNullException.ThrowIfNull(pluginDescriptor);
+            ArgumentNullException.ThrowIfNull(workContext);
 
-            if (workContext == null)
-                throw new ArgumentNullException(nameof(workContext));
-
-            if (pluginDescriptor.OriginalAssemblyFile == null || pluginDescriptor.OriginalAssemblyFile.Directory == null)
+            if (pluginDescriptor.OriginalAssemblyFile?.Directory == null)
             {
                 return null;
             }
@@ -22,12 +19,12 @@ namespace Grand.Web.Admin.Extensions
             var logoPluginJpg = Path.Combine(pluginDirectory.FullName, "logo.jpg");
             if (File.Exists(logoPluginJpg))
             {
-                return string.Format("{0}/{1}/{2}/logo.jpg", storeLocation, pluginDirectory.Parent.Name, pluginDirectory.Name);
+                return $"{storeLocation}/{pluginDirectory.Parent.Name}/{pluginDirectory.Name}/logo.jpg";
             }
             var logoPluginPng = Path.Combine(pluginDirectory.FullName, "logo.png");
             if (File.Exists(logoPluginPng))
             {
-                return string.Format("{0}/{1}/{2}/logo.png", storeLocation, pluginDirectory.Parent.Name, pluginDirectory.Name);
+                return $"{storeLocation}/{pluginDirectory.Parent.Name}/{pluginDirectory.Name}/logo.png";
             }
             return null;
 

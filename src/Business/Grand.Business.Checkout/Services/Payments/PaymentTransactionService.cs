@@ -1,14 +1,14 @@
 ﻿using Grand.Business.Core.Interfaces.Checkout.Payments;
 using Grand.Business.Core.Queries.Checkout.Orders;
 using Grand.Domain;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Payments;
 using Grand.Infrastructure.Extensions;
 using MediatR;
 
 namespace Grand.Business.Checkout.Services.Payments
 {
-    public partial class PaymentTransactionService : IPaymentTransactionService
+    public class PaymentTransactionService : IPaymentTransactionService
     {
         private readonly IRepository<PaymentTransaction> _repositoryPaymentTransaction;
         private readonly IMediator _mediator;
@@ -26,8 +26,7 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <param name="paymentTransaction">payment transaction</param>
         public virtual async Task InsertPaymentTransaction(PaymentTransaction paymentTransaction)
         {
-            if (paymentTransaction == null)
-                throw new ArgumentNullException(nameof(paymentTransaction));
+            ArgumentNullException.ThrowIfNull(paymentTransaction);
 
             await _repositoryPaymentTransaction.InsertAsync(paymentTransaction);
 
@@ -41,8 +40,7 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <param name="paymentTransaction">payment transaction</param>
         public virtual async Task UpdatePaymentTransaction(PaymentTransaction paymentTransaction)
         {
-            if (paymentTransaction == null)
-                throw new ArgumentNullException(nameof(paymentTransaction));
+            ArgumentNullException.ThrowIfNull(paymentTransaction);
 
             await _repositoryPaymentTransaction.UpdateAsync(paymentTransaction);
 
@@ -57,8 +55,7 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <param name="paymentTransaction">payment transaction</param>
         public virtual async Task DeletePaymentTransaction(PaymentTransaction paymentTransaction)
         {
-            if (paymentTransaction == null)
-                throw new ArgumentNullException(nameof(paymentTransaction));
+            ArgumentNullException.ThrowIfNull(paymentTransaction);
 
             await _repositoryPaymentTransaction.DeleteAsync(paymentTransaction);
 
@@ -92,11 +89,11 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <summary>
         /// Gets an payment transactions for order guid
         /// </summary>
-        /// <param name="orderguid">The order guid</param>
+        /// <param name="orderGuid">The order guid</param>
         /// <returns>PaymentTransaction</returns>
-        public virtual async Task<PaymentTransaction> GetByOrdeGuid(Guid orderguid)
+        public virtual async Task<PaymentTransaction> GetOrderByGuid(Guid orderGuid)
         {
-            return await Task.FromResult(_repositoryPaymentTransaction.Table.Where(x => x.OrderGuid == orderguid).FirstOrDefault());
+            return await Task.FromResult(_repositoryPaymentTransaction.Table.FirstOrDefault(x => x.OrderGuid == orderGuid));
         }
 
         /// <summary>
@@ -122,7 +119,7 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <summary>
         /// Search payment transactions
         /// </summary>
-        /// <param name="orderguid">Order ident by guid</param>
+        /// <param name="orderGuid">Order ident by guid</param>
         /// <param name="storeId">Store ident</param>
         /// <param name="customerEmail">Customer email</param>
         /// <param name="ts">Transaction status</param>
@@ -132,7 +129,7 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>        
         /// <returns>Page list payment transaction</returns>
         public virtual async Task<IPagedList<PaymentTransaction>> SearchPaymentTransactions(
-              Guid? orderguid = null,
+              Guid? orderGuid = null,
               string storeId = "",
               string customerEmail = "",
               TransactionStatus? ts = null,
@@ -140,15 +137,15 @@ namespace Grand.Business.Checkout.Services.Payments
               DateTime? createdFromUtc = null,
               DateTime? createdToUtc = null)
         {
-            var model = new GetPaymentTransactionQuery() {
+            var model = new GetPaymentTransactionQuery {
                 CreatedFromUtc = createdFromUtc,
                 CreatedToUtc = createdToUtc,
                 PageIndex = pageIndex,
                 PageSize = pageSize,
-                OrderGuid = orderguid,
+                OrderGuid = orderGuid,
                 CustomerEmail = customerEmail,
                 StoreId = storeId,
-                Ts = ts,
+                Ts = ts
             };
 
             var query = await _mediator.Send(model);
@@ -158,9 +155,9 @@ namespace Grand.Business.Checkout.Services.Payments
         /// <summary>
         /// Set payment error for transaction
         /// </summary>
-        public virtual async Task SetError(string paymenttransactionId, List<string> errors)
+        public virtual async Task SetError(string paymentTransactionId, List<string> errors)
         {
-            await _repositoryPaymentTransaction.UpdateField(paymenttransactionId, x => x.Errors, errors);
+            await _repositoryPaymentTransaction.UpdateField(paymentTransactionId, x => x.Errors, errors);
         }
     }
 }

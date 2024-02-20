@@ -1,9 +1,6 @@
 ﻿using Grand.Business.Core.Extensions;
-using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Knowledgebase;
 using Grand.Web.Common.DataSource;
@@ -12,6 +9,7 @@ using Grand.Web.Common.Security.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Grand.Business.Core.Interfaces.Cms;
+using Grand.Web.Admin.Extensions.Mapping;
 
 namespace Grand.Web.Admin.Controllers
 {
@@ -22,27 +20,28 @@ namespace Grand.Web.Admin.Controllers
         private readonly ITranslationService _translationService;
         private readonly IKnowledgebaseService _knowledgebaseService;
         private readonly ILanguageService _languageService;
-        private readonly IGroupService _groupService;
-        private readonly IStoreService _storeService;
 
-        public KnowledgebaseController(IKnowledgebaseViewModelService knowledgebaseViewModelService,
+        public KnowledgebaseController(
+            IKnowledgebaseViewModelService knowledgebaseViewModelService,
             ITranslationService translationService,
             IKnowledgebaseService knowledgebaseService,
-            ILanguageService languageService,
-            IGroupService groupService,
-            IStoreService storeService)
+            ILanguageService languageService)
         {
             _knowledgebaseViewModelService = knowledgebaseViewModelService;
             _translationService = translationService;
             _knowledgebaseService = knowledgebaseService;
             _languageService = languageService;
-            _groupService = groupService;
-            _storeService = storeService;
         }
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         public async Task<IActionResult> NodeList()
         {
@@ -59,35 +58,6 @@ namespace Grand.Web.Admin.Controllers
                 Total = totalCount
             };
 
-            return Json(gridModel);
-        }
-
-        [PermissionAuthorizeAction(PermissionActionName.List)]
-        [HttpPost]
-        public async Task<IActionResult> ListCategoryActivityLog(DataSourceRequest command, string categoryId)
-        {
-            var (activityLogModels, totalCount) = await _knowledgebaseViewModelService.PrepareCategoryActivityLogModels(categoryId, command.Page, command.PageSize);
-
-            var gridModel = new DataSourceResult
-            {
-                Data = activityLogModels.ToList(),
-                Total = totalCount
-            };
-
-            return Json(gridModel);
-        }
-
-        [PermissionAuthorizeAction(PermissionActionName.List)]
-        [HttpPost]
-        public async Task<IActionResult> ListArticleActivityLog(DataSourceRequest command, string articleId)
-        {
-            var (activityLogModels, totalCount) = await _knowledgebaseViewModelService.PrepareArticleActivityLogModels(articleId, command.Page, command.PageSize);
-
-            var gridModel = new DataSourceResult
-            {
-                Data = activityLogModels.ToList(),
-                Total = totalCount
-            };
             return Json(gridModel);
         }
 
@@ -284,7 +254,7 @@ namespace Grand.Web.Admin.Controllers
             model.AvailableArticles.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
             var articles = await _knowledgebaseService.GetKnowledgebaseArticles();
             foreach (var a in articles)
-                model.AvailableArticles.Add(new SelectListItem { Text = a.Name, Value = a.Id.ToString() });
+                model.AvailableArticles.Add(new SelectListItem { Text = a.Name, Value = a.Id });
 
             return View(model);
         }

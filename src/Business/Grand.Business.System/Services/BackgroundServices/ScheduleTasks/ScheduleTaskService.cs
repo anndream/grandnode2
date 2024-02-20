@@ -1,5 +1,5 @@
 using Grand.Business.Core.Interfaces.System.ScheduleTasks;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Tasks;
 
 namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
@@ -51,7 +51,6 @@ namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
         /// <summary>
         /// Gets all tasks
         /// </summary>
-        /// <param name="showHidden">A value indicating whether to show hidden records</param>
         /// <returns>Tasks</returns>
         public virtual async Task<IList<ScheduleTask>> GetAllTasks()
         {
@@ -64,8 +63,7 @@ namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
         /// <param name="task">Task</param>
         public virtual async Task<ScheduleTask> InsertTask(ScheduleTask task)
         {
-            if (task == null)
-                throw new ArgumentNullException(nameof(task));
+            ArgumentNullException.ThrowIfNull(task);
 
             return await _taskRepository.InsertAsync(task);
         }
@@ -76,8 +74,7 @@ namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
         /// <param name="task">Task</param>
         public virtual async Task UpdateTask(ScheduleTask task)
         {
-            if (task == null)
-                throw new ArgumentNullException(nameof(task));
+            ArgumentNullException.ThrowIfNull(task);
 
             await _taskRepository.UpdateAsync(task);
         }
@@ -88,8 +85,7 @@ namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
         /// <param name="task">Task</param>
         public virtual async Task DeleteTask(ScheduleTask task)
         {
-            if (task == null)
-                throw new ArgumentNullException(nameof(task));
+            ArgumentNullException.ThrowIfNull(task);
 
             await _taskRepository.DeleteAsync(task);
         }

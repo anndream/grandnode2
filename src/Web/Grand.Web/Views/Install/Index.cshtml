@@ -1,6 +1,5 @@
-﻿@model InstallModel
-@using Grand.Web.Models.Install;
-@using Grand.Business.Core.Interfaces.System.Installation;
+﻿@using Grand.Business.Core.Interfaces.System.Installation
+@model Grand.Web.Models.Install.InstallModel
 @inject IInstallationLocalizedService LocalizedService
 @{
     Layout = null;
@@ -179,7 +178,7 @@
                     </span>
                     <span class="hint">
                         @LocalizedService.GetResource(Model.SelectedLanguage, "Example"):<br />
-                        For MongoDB: @Html.Raw("mongodb://[username:password@]host1[:port1]/databaseName")
+                        For MongoDB: @Html.Raw("mongodb+srv://<username>:<password>@cluster0.abc.mongodb.net/?retryWrites=true&w=majority")
                         (Find more info <a href="https://docs.mongodb.org/manual/reference/connection-string/" target="_blank">here</a>)
                     </span>
                 </div>

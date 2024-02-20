@@ -4,7 +4,7 @@ using Grand.Infrastructure.Extensions;
 using Grand.Domain;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Catalog.Services.Products
@@ -12,7 +12,7 @@ namespace Grand.Business.Catalog.Services.Products
     /// <summary>
     /// Out of stock subscription service
     /// </summary>
-    public partial class OutOfStockSubscriptionService : IOutOfStockSubscriptionService
+    public class OutOfStockSubscriptionService : IOutOfStockSubscriptionService
     {
         #region Fields
 
@@ -26,9 +26,6 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Ctor
         /// </summary>
-        /// <param name="outOfStockSubscriptionRepository">Out of stock subscription repository</param>
-        /// <param name="messageProviderService">Message provider service</param>
-        /// <param name="IMediator">Mediator</param>
         public OutOfStockSubscriptionService(IRepository<OutOfStockSubscription> outOfStockSubscriptionRepository,
             IMediator mediator)
         {
@@ -54,14 +51,13 @@ namespace Grand.Business.Catalog.Services.Products
         {
             var query = from p in _outOfStockSubscriptionRepository.Table
                         select p;
-
             //customer
-            query = query.Where(biss => biss.CustomerId == customerId);
+            query = query.Where(x => x.CustomerId == customerId);
             //store
-            if (!String.IsNullOrEmpty(storeId))
-                query = query.Where(biss => biss.StoreId == storeId);
+            if (!string.IsNullOrEmpty(storeId))
+                query = query.Where(x => x.StoreId == storeId);
 
-            query = query.OrderByDescending(biss => biss.CreatedOnUtc);
+            query = query.OrderByDescending(x => x.CreatedOnUtc);
 
             return await PagedList<OutOfStockSubscription>.Create(query, pageIndex, pageSize);
         }
@@ -111,8 +107,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="subscription">Subscription</param>
         public virtual async Task InsertSubscription(OutOfStockSubscription subscription)
         {
-            if (subscription == null)
-                throw new ArgumentNullException(nameof(subscription));
+            ArgumentNullException.ThrowIfNull(subscription);
 
             await _outOfStockSubscriptionRepository.InsertAsync(subscription);
 
@@ -126,8 +121,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="subscription">Subscription</param>
         public virtual async Task UpdateSubscription(OutOfStockSubscription subscription)
         {
-            if (subscription == null)
-                throw new ArgumentNullException(nameof(subscription));
+            ArgumentNullException.ThrowIfNull(subscription);
 
             await _outOfStockSubscriptionRepository.UpdateAsync(subscription);
 
@@ -140,8 +134,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="subscription">Subscription</param>
         public virtual async Task DeleteSubscription(OutOfStockSubscription subscription)
         {
-            if (subscription == null)
-                throw new ArgumentNullException(nameof(subscription));
+            ArgumentNullException.ThrowIfNull(subscription);
 
             await _outOfStockSubscriptionRepository.DeleteAsync(subscription);
 
@@ -157,13 +150,11 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Number of sent email</returns>
         public virtual async Task SendNotificationsToSubscribers(Product product, string warehouse)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
-            var subscriptions = await _mediator.Send(new SendNotificationsToSubscribersCommand()
-            {
+            var subscriptions = await _mediator.Send(new SendNotificationsToSubscribersCommand {
                 Product = product,
-                Warehouse = warehouse,
+                Warehouse = warehouse
             });
 
             for (var i = 0; i <= subscriptions.Count - 1; i++)
@@ -179,11 +170,9 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Number of sent email</returns>
         public virtual async Task SendNotificationsToSubscribers(Product product, IList<CustomAttribute> attributes, string warehouse)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
-            var subscriptions = await _mediator.Send(new SendNotificationsToSubscribersCommand()
-            {
+            var subscriptions = await _mediator.Send(new SendNotificationsToSubscribersCommand {
                 Product = product,
                 Warehouse = warehouse,
                 Attributes = attributes

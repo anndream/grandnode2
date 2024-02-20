@@ -6,13 +6,8 @@ using Grand.Web.Common.Models;
 
 namespace Grand.Web.Admin.Models.Blogs
 {
-    public partial class BlogPostModel : BaseEntityModel, ILocalizedModel<BlogLocalizedModel>, IStoreLinkModel
+    public class BlogPostModel : BaseEntityModel, ILocalizedModel<BlogLocalizedModel>, IStoreLinkModel
     {
-        public BlogPostModel()
-        {
-            Locales = new List<BlogLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Content.Blog.BlogPosts.Fields.Title")]
         public string Title { get; set; }
 
@@ -66,7 +61,7 @@ namespace Grand.Web.Admin.Models.Blogs
 
         public string SeName { get; set; }
 
-        public IList<BlogLocalizedModel> Locales { get; set; }
+        public IList<BlogLocalizedModel> Locales { get; set; } = new List<BlogLocalizedModel>();
 
         [GrandResourceDisplayName("Admin.Content.Blog.BlogPosts.Fields.CreatedOn")]
         public DateTime CreatedOn { get; set; }
@@ -78,7 +73,7 @@ namespace Grand.Web.Admin.Models.Blogs
 
     }
 
-    public partial class BlogLocalizedModel : ILocalizedModelLocal, ISlugModelLocal
+    public class BlogLocalizedModel : ILocalizedModelLocal, ISlugModelLocal
     {
         public string LanguageId { get; set; }
 

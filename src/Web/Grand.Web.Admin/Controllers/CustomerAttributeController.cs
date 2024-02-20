@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.Settings)]
-    public partial class CustomerAttributeController : BaseAdminController
+    public class CustomerAttributeController : BaseAdminController
     {
         #region Fields
         private readonly ICustomerAttributeService _customerAttributeService;
@@ -38,9 +38,15 @@ namespace Grand.Web.Admin.Controllers
 
         #region Customer attributes
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.List)]

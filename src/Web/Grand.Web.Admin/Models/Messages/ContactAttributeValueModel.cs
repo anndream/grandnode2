@@ -4,13 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Messages
 {
-    public partial class ContactAttributeValueModel : BaseEntityModel, ILocalizedModel<ContactAttributeValueLocalizedModel>
+    public class ContactAttributeValueModel : BaseEntityModel, ILocalizedModel<ContactAttributeValueLocalizedModel>
     {
-        public ContactAttributeValueModel()
-        {
-            Locales = new List<ContactAttributeValueLocalizedModel>();
-        }
-
         public string ContactAttributeId { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ContactAttributes.Values.Fields.Name")]
@@ -26,11 +21,10 @@ namespace Grand.Web.Admin.Models.Messages
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ContactAttributes.Values.Fields.DisplayOrder")]
         public int DisplayOrder { get; set; }
 
-        public IList<ContactAttributeValueLocalizedModel> Locales { get; set; }
-
+        public IList<ContactAttributeValueLocalizedModel> Locales { get; set; } = new List<ContactAttributeValueLocalizedModel>();
     }
 
-    public partial class ContactAttributeValueLocalizedModel : ILocalizedModelLocal
+    public class ContactAttributeValueLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

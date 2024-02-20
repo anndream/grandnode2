@@ -1,23 +1,22 @@
 ﻿using Grand.Business.Core.Interfaces.Messages;
 using Grand.Business.Core.Interfaces.System.ScheduleTasks;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Business.Core.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
 {
     /// <summary>
     /// Represents a task for sending queued message 
     /// </summary>
-    public partial class QueuedMessagesSendScheduleTask : IScheduleTask
+    public class QueuedMessagesSendScheduleTask : IScheduleTask
     {
         private readonly IQueuedEmailService _queuedEmailService;
         private readonly IEmailSender _emailSender;
-        private readonly ILogger _logger;
+        private readonly ILogger<QueuedMessagesSendScheduleTask> _logger;
         private readonly IEmailAccountService _emailAccountService;
 
 
         public QueuedMessagesSendScheduleTask(IQueuedEmailService queuedEmailService,
-            IEmailSender emailSender, ILogger logger, IEmailAccountService emailAccountService)
+            IEmailSender emailSender, ILogger<QueuedMessagesSendScheduleTask> logger, IEmailAccountService emailAccountService)
         {
             _queuedEmailService = queuedEmailService;
             _emailSender = emailSender;
@@ -30,14 +29,14 @@ namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
         /// </summary>
         public async Task Execute()
         {
-            var maxTries = 3;
+            const int maxTries = 3;
             var queuedEmails = await _queuedEmailService.SearchEmails(null, null, null, null, null, true, true, maxTries, false, -1, null, 0, 500);
             foreach (var queuedEmail in queuedEmails)
             {
-                var bcc = String.IsNullOrWhiteSpace(queuedEmail.Bcc)
+                var bcc = string.IsNullOrWhiteSpace(queuedEmail.Bcc)
                             ? null
                             : queuedEmail.Bcc.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                var cc = String.IsNullOrWhiteSpace(queuedEmail.CC)
+                var cc = string.IsNullOrWhiteSpace(queuedEmail.CC)
                             ? null
                             : queuedEmail.CC.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -63,7 +62,7 @@ namespace Grand.Business.System.Services.BackgroundServices.ScheduleTasks
                 }
                 catch (Exception exc)
                 {
-                    _ = _logger.Error(string.Format("Error sending e-mail. {0}", exc.Message), exc);
+                    _logger.LogError(exc, "Error sending e-mail. {ExcMessage}", exc.Message);
                 }
                 finally
                 {

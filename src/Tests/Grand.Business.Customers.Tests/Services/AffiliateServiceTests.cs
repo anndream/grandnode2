@@ -1,7 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Customers.Services;
 using Grand.Domain.Affiliates;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Orders;
 using Grand.Infrastructure.Events;
 using MediatR;
@@ -25,6 +25,13 @@ namespace Grand.Business.Customers.Tests.Services
             _orderRepository = new Mock<IRepository<Order>>();
             _mediatorMock = new Mock<IMediator>();
             _affiliateService = new AffiliateService(_affiliateRepository.Object, _orderRepository.Object, _mediatorMock.Object);
+        }
+        [TestMethod()]
+        public async Task GetAffiliateByIdTest()
+        {
+            await _affiliateService.GetAffiliateById("");
+            _affiliateRepository.Verify(c => c.GetByIdAsync(It.IsAny<string>()), Times.Once);
+           
         }
 
         [TestMethod()]

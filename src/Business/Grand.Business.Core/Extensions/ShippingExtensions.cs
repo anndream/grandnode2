@@ -8,46 +8,35 @@ namespace Grand.Business.Core.Extensions
         public static bool IsShippingRateMethodActive(this IShippingRateCalculationProvider srcm,
             ShippingProviderSettings shippingProviderSettings)
         {
-            if (srcm == null)
-                throw new ArgumentNullException(nameof(srcm));
+            ArgumentNullException.ThrowIfNull(srcm);
+            ArgumentNullException.ThrowIfNull(shippingProviderSettings);
 
-            if (shippingProviderSettings == null)
-                throw new ArgumentNullException(nameof(shippingProviderSettings));
-
-            if (shippingProviderSettings.ActiveSystemNames == null)
-                return false;
-            foreach (string activeMethodSystemName in shippingProviderSettings.ActiveSystemNames)
-                if (srcm.SystemName.Equals(activeMethodSystemName, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            return false;
+            return shippingProviderSettings.ActiveSystemNames != null && shippingProviderSettings.ActiveSystemNames.Any(activeMethodSystemName => srcm.SystemName.Equals(activeMethodSystemName, StringComparison.OrdinalIgnoreCase));
         }
 
         public static bool CountryRestrictionExists(this ShippingMethod shippingMethod,
             string countryId)
         {
-            if (shippingMethod == null)
-                throw new ArgumentNullException(nameof(shippingMethod));
+            ArgumentNullException.ThrowIfNull(shippingMethod);
 
-            bool result = shippingMethod.RestrictedCountries.ToList().Find(c => c.Id == countryId) != null;
+            var result = shippingMethod.RestrictedCountries.ToList().Find(c => c.Id == countryId) != null;
             return result;
         }
         public static bool CustomerGroupRestrictionExists(this ShippingMethod shippingMethod,
            string roleId)
         {
-            if (shippingMethod == null)
-                throw new ArgumentNullException(nameof(shippingMethod));
+            ArgumentNullException.ThrowIfNull(shippingMethod);
 
-            bool result = shippingMethod.RestrictedGroups.ToList().Find(c => c == roleId) != null;
+            var result = shippingMethod.RestrictedGroups.ToList().Find(c => c == roleId) != null;
             return result;
         }
 
         public static bool CustomerGroupRestrictionExists(this ShippingMethod shippingMethod,
            List<string> roleIds)
         {
-            if (shippingMethod == null)
-                throw new ArgumentNullException(nameof(shippingMethod));
+            ArgumentNullException.ThrowIfNull(shippingMethod);
 
-            bool result = shippingMethod.RestrictedGroups.ToList().Find(c => roleIds.Contains(c)) != null;
+            var result = shippingMethod.RestrictedGroups.ToList().Find(roleIds.Contains) != null;
             return result;
         }
     }

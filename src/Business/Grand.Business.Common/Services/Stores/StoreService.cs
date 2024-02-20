@@ -2,7 +2,7 @@ using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Stores;
 using MediatR;
 
@@ -11,7 +11,7 @@ namespace Grand.Business.Common.Services.Stores
     /// <summary>
     /// Store service
     /// </summary>
-    public partial class StoreService : IStoreService
+    public class StoreService : IStoreService
     {
         #region Fields
 
@@ -50,14 +50,10 @@ namespace Grand.Business.Common.Services.Stores
         /// <returns>Stores</returns>
         public virtual async Task<IList<Store>> GetAllStores()
         {
-            if (_allStores == null)
+            return _allStores ??= await _cacheBase.GetAsync(CacheKey.STORES_ALL_KEY, async () =>
             {
-                _allStores = await _cacheBase.GetAsync(CacheKey.STORES_ALL_KEY, async () =>
-                {
-                    return await Task.FromResult(_storeRepository.Table.OrderBy(x => x.DisplayOrder).ToList());
-                });
-            }
-            return _allStores;
+                return await Task.FromResult(_storeRepository.Table.OrderBy(x => x.DisplayOrder).ToList());
+            });
         }
 
         /// <summary>
@@ -66,14 +62,10 @@ namespace Grand.Business.Common.Services.Stores
         /// <returns>Stores</returns>
         public virtual IList<Store> GetAll()
         {
-            if (_allStores == null)
+            return _allStores ??= _cacheBase.Get(CacheKey.STORES_ALL_KEY, () =>
             {
-                _allStores = _cacheBase.Get(CacheKey.STORES_ALL_KEY, () =>
-                {
-                    return _storeRepository.Table.OrderBy(x => x.DisplayOrder).ToList();
-                });
-            }
-            return _allStores;
+                return _storeRepository.Table.OrderBy(x => x.DisplayOrder).ToList();
+            });
         }
 
         /// <summary>
@@ -83,7 +75,7 @@ namespace Grand.Business.Common.Services.Stores
         /// <returns>Store</returns>
         public virtual Task<Store> GetStoreById(string storeId)
         {
-            string key = string.Format(CacheKey.STORES_BY_ID_KEY, storeId);
+            var key = string.Format(CacheKey.STORES_BY_ID_KEY, storeId);
             return _cacheBase.GetAsync(key, () => _storeRepository.GetByIdAsync(storeId));
         }
 
@@ -93,8 +85,7 @@ namespace Grand.Business.Common.Services.Stores
         /// <param name="store">Store</param>
         public virtual async Task InsertStore(Store store)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store));
+            ArgumentNullException.ThrowIfNull(store);
 
             await _storeRepository.InsertAsync(store);
 
@@ -111,8 +102,7 @@ namespace Grand.Business.Common.Services.Stores
         /// <param name="store">Store</param>
         public virtual async Task UpdateStore(Store store)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store));
+            ArgumentNullException.ThrowIfNull(store);
 
             await _storeRepository.UpdateAsync(store);
 
@@ -129,8 +119,7 @@ namespace Grand.Business.Common.Services.Stores
         /// <param name="store">Store</param>
         public virtual async Task DeleteStore(Store store)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store));
+            ArgumentNullException.ThrowIfNull(store);
 
             var allStores = await GetAllStores();
             if (allStores.Count == 1)

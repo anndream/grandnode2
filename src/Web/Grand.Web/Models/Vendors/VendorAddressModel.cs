@@ -5,14 +5,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Models.Vendors
 {
-    public partial class VendorAddressModel : BaseEntityModel
+    public class VendorAddressModel : BaseEntityModel
     {
-        public VendorAddressModel()
-        {
-            AvailableCountries = new List<SelectListItem>();
-            AvailableStates = new List<SelectListItem>();
-        }
-
         public bool CompanyEnabled { get; set; }
         public bool CompanyRequired { get; set; }
         [GrandResourceDisplayName("Account.VendorInfo.Company")]
@@ -54,7 +48,7 @@ namespace Grand.Web.Models.Vendors
         public string FaxNumber { get; set; }
         [GrandResourceDisplayName("Account.VendorInfo.Note")]
         public string Note { get; set; }
-        public IList<SelectListItem> AvailableCountries { get; set; }
-        public IList<SelectListItem> AvailableStates { get; set; }
+        public IList<SelectListItem> AvailableCountries { get; set; } = new List<SelectListItem>();
+        public IList<SelectListItem> AvailableStates { get; set; } = new List<SelectListItem>();
     }
 }

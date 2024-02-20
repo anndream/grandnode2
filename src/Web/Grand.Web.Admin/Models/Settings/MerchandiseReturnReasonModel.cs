@@ -4,13 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Settings
 {
-    public partial class MerchandiseReturnReasonModel : BaseEntityModel, ILocalizedModel<MerchandiseReturnReasonLocalizedModel>
+    public class MerchandiseReturnReasonModel : BaseEntityModel, ILocalizedModel<MerchandiseReturnReasonLocalizedModel>
     {
-        public MerchandiseReturnReasonModel()
-        {
-            Locales = new List<MerchandiseReturnReasonLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Settings.Order.MerchandiseReturnReasons.Name")]
 
         public string Name { get; set; }
@@ -18,10 +13,10 @@ namespace Grand.Web.Admin.Models.Settings
         [GrandResourceDisplayName("Admin.Settings.Order.MerchandiseReturnReasons.DisplayOrder")]
         public int DisplayOrder { get; set; }
 
-        public IList<MerchandiseReturnReasonLocalizedModel> Locales { get; set; }
+        public IList<MerchandiseReturnReasonLocalizedModel> Locales { get; set; } = new List<MerchandiseReturnReasonLocalizedModel>();
     }
 
-    public partial class MerchandiseReturnReasonLocalizedModel : ILocalizedModelLocal
+    public class MerchandiseReturnReasonLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

@@ -31,22 +31,16 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
 
         protected virtual async Task<bool> ValidateMinOrderSubtotalAmount(IList<ShoppingCartItem> cart)
         {
-            if (cart == null)
-                throw new ArgumentNullException(nameof(cart));
+            ArgumentNullException.ThrowIfNull(cart);
 
             if (!cart.Any())
                 return false;
 
             //min order amount sub-total validation
-            if (cart.Any() && _orderSettings.MinOrderSubtotalAmount > 0)
-            {
-                //subtotal
-                var (_, _, subTotalWithoutDiscount, _, _) = await _orderTotalCalculationService.GetShoppingCartSubTotal(cart, false);
-                if (subTotalWithoutDiscount < _orderSettings.MinOrderSubtotalAmount)
-                    return false;
-            }
-
-            return true;
+            if (!cart.Any() || !(_orderSettings.MinOrderSubtotalAmount > 0)) return true;
+            //subtotal
+            var (_, _, subTotalWithoutDiscount, _, _) = await _orderTotalCalculationService.GetShoppingCartSubTotal(cart, false);
+            return !(subTotalWithoutDiscount < _orderSettings.MinOrderSubtotalAmount);
         }
 
     }

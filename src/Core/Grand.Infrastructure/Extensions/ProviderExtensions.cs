@@ -2,6 +2,7 @@
 using Grand.Domain.Stores;
 using Grand.Infrastructure.Plugins;
 using Grand.SharedKernel.Extensions;
+using System.Text.Json;
 
 namespace Grand.Infrastructure.Extensions
 {
@@ -12,10 +13,7 @@ namespace Grand.Infrastructure.Extensions
             if (method == null)
                 throw new ArgumentNullException(nameof(method));
 
-            if (store == null)
-                return true;
-
-            return IsAuthenticateStore(method, store.Id);
+            return store == null || IsAuthenticateStore(method, store.Id);
         }
 
         public static bool IsAuthenticateStore(this IProvider method, string storeId)
@@ -29,10 +27,7 @@ namespace Grand.Infrastructure.Extensions
             if (method.LimitedToStores == null || !method.LimitedToStores.Any())
                 return true;
 
-            if (!method.LimitedToStores.Contains(storeId))
-                return false;
-
-            return true;
+            return method.LimitedToStores.Contains(storeId);
         }
 
         public static bool IsAuthenticateGroup(this IProvider method, Customer customer)
@@ -46,10 +41,15 @@ namespace Grand.Infrastructure.Extensions
             if (method.LimitedToGroups == null || !method.LimitedToGroups.Any())
                 return true;
 
-            if (!method.LimitedToGroups.ContainsAny(customer.Groups.Select(x => x)))
-                return false;
-
-            return true;
+            return method.LimitedToGroups.ContainsAny(customer.Groups.Select(x => x));
+        }
+        
+        public static class JsonSerializerOptionsProvider
+        {
+            public static JsonSerializerOptions Options { get; } = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
         }
     }
 }

@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.ProductReviews)]
-    public partial class ProductReviewController : BaseAdminController
+    public class ProductReviewController : BaseAdminController
     {
         #region Fields
 
@@ -46,7 +46,10 @@ namespace Grand.Web.Admin.Controllers
         #region Methods
 
         //list
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
         public async Task<IActionResult> List()
         {
@@ -65,7 +68,7 @@ namespace Grand.Web.Admin.Controllers
             var (productReviewModels, totalCount) = await _productReviewViewModelService.PrepareProductReviewsModel(model, command.Page, command.PageSize);
             var gridModel = new DataSourceResult {
                 Data = productReviewModels.ToList(),
-                Total = totalCount,
+                Total = totalCount
             };
 
             return Json(gridModel);
@@ -109,7 +112,7 @@ namespace Grand.Web.Admin.Controllers
             {
                 productReview = await _productReviewViewModelService.UpdateProductReview(productReview, model);
                 Success(_translationService.GetResource("Admin.Catalog.ProductReviews.Updated"));
-                return continueEditing ? RedirectToAction("Edit", new { id = productReview.Id, ProductId = productReview.ProductId }) : RedirectToAction("List");
+                return continueEditing ? RedirectToAction("Edit", new { id = productReview.Id, productReview.ProductId }) : RedirectToAction("List");
             }
 
             //If we got this far, something failed, redisplay form

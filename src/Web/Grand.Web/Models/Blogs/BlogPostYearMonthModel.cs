@@ -2,16 +2,12 @@
 
 namespace Grand.Web.Models.Blogs
 {
-    public partial class BlogPostYearModel : BaseModel
+    public class BlogPostYearModel : BaseModel
     {
-        public BlogPostYearModel()
-        {
-            Months = new List<BlogPostMonthModel>();
-        }
         public int Year { get; set; }
-        public IList<BlogPostMonthModel> Months { get; set; }
+        public IList<BlogPostMonthModel> Months { get; set; } = new List<BlogPostMonthModel>();
     }
-    public partial class BlogPostMonthModel : BaseModel
+    public class BlogPostMonthModel : BaseModel
     {
         public int Month { get; set; }
 

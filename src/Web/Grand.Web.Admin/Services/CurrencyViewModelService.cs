@@ -1,12 +1,12 @@
 ﻿using Grand.Domain.Directory;
 using Grand.Business.Core.Interfaces.Common.Directory;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Directory;
 
 namespace Grand.Web.Admin.Services
 {
-    public partial class CurrencyViewModelService : ICurrencyViewModelService
+    public class CurrencyViewModelService : ICurrencyViewModelService
     {
         #region Fields
 
@@ -25,18 +25,17 @@ namespace Grand.Web.Admin.Services
 
         public virtual CurrencyModel PrepareCurrencyModel()
         {
-            var model = new CurrencyModel();
-            //default values
-            model.Published = true;
-            model.Rate = 1;
+            var model = new CurrencyModel {
+                //default values
+                Published = true,
+                Rate = 1
+            };
             return model;
         }
 
         public virtual async Task<Currency> InsertCurrencyModel(CurrencyModel model)
         {
             var currency = model.ToEntity();
-            currency.CreatedOnUtc = DateTime.UtcNow;
-            currency.UpdatedOnUtc = DateTime.UtcNow;
             await _currencyService.InsertCurrency(currency);
 
             return currency;
@@ -45,7 +44,6 @@ namespace Grand.Web.Admin.Services
         public virtual async Task<Currency> UpdateCurrencyModel(Currency currency, CurrencyModel model)
         {
             currency = model.ToEntity(currency);
-            currency.UpdatedOnUtc = DateTime.UtcNow;
             await _currencyService.UpdateCurrency(currency);
             return currency;
         }

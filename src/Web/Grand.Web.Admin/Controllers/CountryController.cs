@@ -1,9 +1,10 @@
-﻿using Grand.Business.Core.Extensions;
+﻿using Grand.Business.Core.Dto;
+using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
+using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Business.Core.Interfaces.System.ExportImport;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Country;
 using Grand.Web.Admin.Models.Directory;
@@ -16,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.Countries)]
-    public partial class CountryController : BaseAdminController
+    public class CountryController : BaseAdminController
     {
         #region Fields
 
@@ -24,8 +25,8 @@ namespace Grand.Web.Admin.Controllers
         private readonly ICountryViewModelService _countryViewModelService;
         private readonly ITranslationService _translationService;
         private readonly ILanguageService _languageService;
-        private readonly IExportManager _exportManager;
-        private readonly IImportManager _importManager;
+        private readonly IExportManager<CountryStatesDto> _exportManager;
+        private readonly IImportManager<CountryStatesDto> _importManager;
 
         #endregion
 
@@ -35,8 +36,8 @@ namespace Grand.Web.Admin.Controllers
             ICountryViewModelService countryViewModelService,
             ITranslationService translationService,
             ILanguageService languageService,
-            IExportManager exportManager,
-            IImportManager importManager)
+            IExportManager<CountryStatesDto> exportManager,
+            IImportManager<CountryStatesDto> importManager)
         {
             _countryService = countryService;
             _countryViewModelService = countryViewModelService;
@@ -50,7 +51,10 @@ namespace Grand.Web.Admin.Controllers
 
         #region Countries
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
         public IActionResult List()
         {
@@ -167,7 +171,7 @@ namespace Grand.Web.Admin.Controllers
                     return RedirectToAction("List");
                 }
                 Error(ModelState);
-                return RedirectToAction("Edit", new { id = id });
+                return RedirectToAction("Edit", new { id });
             }
             catch (Exception exc)
             {
@@ -225,7 +229,12 @@ namespace Grand.Web.Admin.Controllers
             var states = country.StateProvinces.ToList();
 
             var gridModel = new DataSourceResult {
-                Data = states.Select(x => new { Id = x.Id, Name = x.Name, Abbreviation = x.Abbreviation, Published = x.Published, DisplayOrder = x.DisplayOrder }),
+                Data = states.Select(x => new {
+                    x.Id,
+                    x.Name,
+                    x.Abbreviation,
+                    x.Published,
+                    x.DisplayOrder }),
                 Total = states.Count
             };
             return Json(gridModel);
@@ -339,10 +348,18 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> ExportExcel()
         {
             var countries = await _countryService.GetAllCountries();
-            var bytes = _exportManager.ExportStatesToXlsx(countries);
+            var query = from p in countries
+                        from s in p.StateProvinces
+                        select new CountryStatesDto {
+                            Country = p.TwoLetterIsoCode,
+                            StateProvinceName = s.Name,
+                            Abbreviation = s.Abbreviation,
+                            DisplayOrder = s.DisplayOrder,
+                            Published = s.Published
+                        };
 
-            return File(bytes, "text/xls", "states.xlsx");
-
+            var bytes = await _exportManager.Export(query);
+            return File(bytes, "text/xls", "country.xlsx");
         }
 
         [PermissionAuthorizeAction(PermissionActionName.Import)]
@@ -351,9 +368,9 @@ namespace Grand.Web.Admin.Controllers
         {
             try
             {
-                if (importexcelfile != null && importexcelfile.Length > 0)
+                if (importexcelfile is { Length: > 0 })
                 {
-                    await _importManager.ImportCountryStatesFromXlsx(importexcelfile.OpenReadStream());
+                    await _importManager.Import(importexcelfile.OpenReadStream());
 
                     Success(_translationService.GetResource("Admin.Configuration.Countries.ImportSuccess"));
                     return RedirectToAction("List");

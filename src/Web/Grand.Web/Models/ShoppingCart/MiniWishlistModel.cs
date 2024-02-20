@@ -3,14 +3,9 @@ using Grand.Web.Models.Media;
 
 namespace Grand.Web.Models.ShoppingCart
 {
-    public partial class MiniWishlistModel : BaseModel
+    public class MiniWishlistModel : BaseModel
     {
-        public MiniWishlistModel()
-        {
-            Items = new List<WishlistItemModel>();
-        }
-
-        public IList<WishlistItemModel> Items { get; set; }
+        public IList<WishlistItemModel> Items { get; set; } = new List<WishlistItemModel>();
         public int TotalProducts { get; set; }
         public bool ShowProductImages { get; set; }
 
@@ -18,13 +13,8 @@ namespace Grand.Web.Models.ShoppingCart
 
         #region Nested Classes
 
-        public partial class WishlistItemModel : BaseEntityModel
+        public class WishlistItemModel : BaseEntityModel
         {
-            public WishlistItemModel()
-            {
-                Picture = new PictureModel();
-            }
-
             public string ProductId { get; set; }
 
             public string ProductName { get; set; }
@@ -41,7 +31,7 @@ namespace Grand.Web.Models.ShoppingCart
 
             public string AttributeInfo { get; set; }
 
-            public PictureModel Picture { get; set; }
+            public PictureModel Picture { get; set; } = new();
         }
 
         #endregion

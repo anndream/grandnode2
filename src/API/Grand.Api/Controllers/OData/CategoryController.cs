@@ -6,14 +6,16 @@ using Grand.Business.Core.Utilities.Common.Security;
 using MediatR;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Formatter;
 using Microsoft.AspNetCore.OData.Query;
+using MongoDB.AspNetCore.OData;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 
 namespace Grand.Api.Controllers.OData
 {
-    public partial class CategoryController : BaseODataController
+    [Route("odata/Category")]
+    [ApiExplorerSettings(IgnoreApi = false, GroupName = "v1")]
+    public class CategoryController : BaseODataController
     {
         private readonly IMediator _mediator;
         private readonly IPermissionService _permissionService;
@@ -30,27 +32,24 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Get(string key)
+        public async Task<IActionResult> Get([FromRoute] string key)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Categories))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Categories)) return Forbid();
 
             var category = await _mediator.Send(new GetGenericQuery<CategoryDto, Domain.Catalog.Category>(key));
-            if (!category.Any())
-                return NotFound();
+            if (!category.Any()) return NotFound();
 
             return Ok(category.FirstOrDefault());
         }
 
         [SwaggerOperation(summary: "Get entities from Category", OperationId = "GetCategories")]
         [HttpGet]
-        [EnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
+        [MongoEnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Get()
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Categories))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Categories)) return Forbid();
 
             return Ok(await _mediator.Send(new GetGenericQuery<CategoryDto, Domain.Catalog.Category>()));
         }
@@ -62,15 +61,10 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Post([FromBody] CategoryDto model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Categories))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Categories)) return Forbid();
 
-            if (ModelState.IsValid)
-            {
-                model = await _mediator.Send(new AddCategoryCommand() { Model = model });
-                return Ok(model);
-            }
-            return BadRequest(ModelState);
+            model = await _mediator.Send(new AddCategoryCommand { Model = model });
+            return Ok(model);
         }
 
         [SwaggerOperation(summary: "Update entity in Category", OperationId = "UpdateCategory")]
@@ -81,47 +75,34 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Put([FromBody] CategoryDto model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Categories))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Categories)) return Forbid();
 
             var category = await _mediator.Send(new GetGenericQuery<CategoryDto, Domain.Catalog.Category>(model.Id));
-            if (!category.Any())
-            {
-                return NotFound();
-            }
+            if (!category.Any()) return NotFound();
 
-            if (ModelState.IsValid)
-            {
-                model = await _mediator.Send(new UpdateCategoryCommand() { Model = model });
-                return Ok(model);
-            }
-            return BadRequest(ModelState);
+            model = await _mediator.Send(new UpdateCategoryCommand { Model = model });
+            return Ok(model);
         }
         [SwaggerOperation(summary: "Update entity in Category (delta)", OperationId = "UpdateCategoryPatch")]
-        [HttpPatch]
+        [HttpPatch("{key}")]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Patch([FromODataUri] string key, [FromBody] JsonPatchDocument<CategoryDto> model)
+        public async Task<IActionResult> Patch([FromRoute] string key, [FromBody] JsonPatchDocument<CategoryDto> model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Categories))
-                return Forbid();
+            if (string.IsNullOrEmpty(key))
+                return BadRequest("Key is null or empty");
+            
+            if (!await _permissionService.Authorize(PermissionSystemName.Categories)) return Forbid();
 
             var category = await _mediator.Send(new GetGenericQuery<CategoryDto, Domain.Catalog.Category>(key));
-            if (!category.Any())
-            {
-                return NotFound();
-            }
+            if (!category.Any()) return NotFound();
+
             var cat = category.FirstOrDefault();
             model.ApplyTo(cat);
-
-            if (ModelState.IsValid)
-            {
-                await _mediator.Send(new UpdateCategoryCommand() { Model = cat });
-                return Ok();
-            }
-            return BadRequest(ModelState);
+            await _mediator.Send(new UpdateCategoryCommand { Model = cat });
+            return Ok();
         }
         [SwaggerOperation(summary: "Delete entity from Category", OperationId = "DeleteCategory")]
         [HttpDelete]
@@ -130,17 +111,12 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Delete(string key)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Categories))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Categories)) return Forbid();
 
             var category = await _mediator.Send(new GetGenericQuery<CategoryDto, Domain.Catalog.Category>(key));
-            if (!category.Any())
-            {
-                return NotFound();
-            }
+            if (!category.Any()) return NotFound();
 
-            await _mediator.Send(new DeleteCategoryCommand() { Model = category.FirstOrDefault() });
-
+            await _mediator.Send(new DeleteCategoryCommand { Model = category.FirstOrDefault() });
             return Ok();
         }
     }

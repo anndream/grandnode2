@@ -1,5 +1,4 @@
 using Grand.Business.Core.Extensions;
-using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
@@ -13,16 +12,13 @@ namespace Grand.Business.Customers.Services
     /// <summary>
     /// Customer attribute parser
     /// </summary>
-    public partial class CustomerAttributeParser : ICustomerAttributeParser
+    public class CustomerAttributeParser : ICustomerAttributeParser
     {
         private readonly ICustomerAttributeService _customerAttributeService;
-        private readonly ITranslationService _translationService;
 
-        public CustomerAttributeParser(ICustomerAttributeService customerAttributeService,
-            ITranslationService translationService)
+        public CustomerAttributeParser(ICustomerAttributeService customerAttributeService)
         {
             _customerAttributeService = customerAttributeService;
-            _translationService = translationService;
         }
 
         /// <summary>
@@ -65,15 +61,7 @@ namespace Grand.Business.Customers.Services
                     continue;
 
                 var valuesStr = customAttributes.Where(x => x.Key == attribute.Id).Select(x => x.Value);
-                foreach (string valueStr in valuesStr)
-                {
-                    if (!string.IsNullOrEmpty(valueStr))
-                    {
-                        var value = attribute.CustomerAttributeValues.FirstOrDefault(x => x.Id == valueStr);
-                        if (value != null)
-                            values.Add(value);
-                    }
-                }
+                values.AddRange(from valueStr in valuesStr where !string.IsNullOrEmpty(valueStr) select attribute.CustomerAttributeValues.FirstOrDefault(x => x.Id == valueStr) into value where value != null select value);
             }
             return values;
         }
@@ -88,11 +76,8 @@ namespace Grand.Business.Customers.Services
         /// <returns>Attributes</returns>
         public virtual IList<CustomAttribute> AddCustomerAttribute(IList<CustomAttribute> customAttributes, CustomerAttribute ca, string value)
         {
-            if (customAttributes == null)
-                customAttributes = new List<CustomAttribute>();
-
-            customAttributes.Add(new CustomAttribute() { Key = ca.Id, Value = value });
-
+            customAttributes ??= new List<CustomAttribute>();
+            customAttributes.Add(new CustomAttribute { Key = ca.Id, Value = value });
             return customAttributes;
         }
 
@@ -115,34 +100,23 @@ namespace Grand.Business.Customers.Services
             var attributes2 = await _customerAttributeService.GetAllCustomerAttributes();
             foreach (var a2 in attributes2)
             {
-                if (a2.IsRequired)
+                if (!a2.IsRequired) continue;
+                var found = false;
+                //selected customer attributes
+                foreach (var a1 in attributes1)
                 {
-                    bool found = false;
-                    //selected customer attributes
-                    foreach (var a1 in attributes1)
+                    if (a1.Id != a2.Id) continue;
+                    var valuesStr = customAttributes.Where(x => x.Key == a1.Id).Select(x => x.Value);
+                    if (valuesStr.Any(str1 => !string.IsNullOrEmpty(str1.Trim())))
                     {
-                        if (a1.Id == a2.Id)
-                        {
-                            var valuesStr = customAttributes.Where(x => x.Key == a1.Id).Select(x => x.Value);
-                            foreach (var str1 in valuesStr)
-                            {
-                                if (!string.IsNullOrEmpty(str1.Trim()))
-                                {
-                                    found = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    //if not found
-                    if (!found)
-                    {
-                        var notFoundWarning = string.Format(_translationService.GetResource("ShoppingCart.SelectAttribute"), a2.GetTranslation(a => a.Name, ""));
-
-                        warnings.Add(notFoundWarning);
+                        found = true;
                     }
                 }
+
+                //if not found
+                if (found) continue;
+
+                warnings.Add("Selected attribute not found");
             }
 
             return warnings;
@@ -153,16 +127,16 @@ namespace Grand.Business.Customers.Services
         /// </summary>
         /// <param name="language">Language</param>
         /// <param name="customAttributes">Attributes</param>
-        /// <param name="serapator">Serapator</param>
+        /// <param name="separator">Separator</param>
         /// <param name="htmlEncode">A value indicating whether to encode (HTML) values</param>
         /// <returns>Attributes</returns>
         public virtual async Task<string> FormatAttributes(Language language,
-            IList<CustomAttribute> customAttributes, string serapator = "<br />", bool htmlEncode = true)
+            IList<CustomAttribute> customAttributes, string separator = "<br />", bool htmlEncode = true)
         {
             var result = new StringBuilder();
 
             var attributes = await ParseCustomerAttributes(customAttributes);
-            for (int i = 0; i < attributes.Count; i++)
+            for (var i = 0; i < attributes.Count; i++)
             {
                 var attribute = attributes[i];
                 var valuesStr = customAttributes.Where(x => x.Key == attribute.Id).Select(x => x.Value).ToList();
@@ -172,52 +146,53 @@ namespace Grand.Business.Customers.Services
                     var formattedAttribute = "";
                     if (!attribute.ShouldHaveValues())
                     {
-                        //no values
-                        if (attribute.AttributeControlTypeId == AttributeControlType.MultilineTextbox)
+                        switch (attribute.AttributeControlTypeId)
                         {
-                            //multiline textbox
-                            var attributeName = attribute.GetTranslation(a => a.Name, language.Id);
-                            //encode (if required)
-                            if (htmlEncode)
-                                attributeName = WebUtility.HtmlEncode(attributeName);
-                            formattedAttribute = string.Format("{0}: {1}", attributeName, FormatText.ConvertText(valueStr));
-                            //we never encode multiline textbox input
-                        }
-                        else if (attribute.AttributeControlTypeId == AttributeControlType.FileUpload)
-                        {
-                            //file upload
-                            //not supported for customer attributes
-                        }
-                        else
-                        {
-                            //other attributes (textbox, datepicker)
-                            formattedAttribute = string.Format("{0}: {1}", attribute.GetTranslation(a => a.Name, language.Id), valueStr);
-                            //encode (if required)
-                            if (htmlEncode)
-                                formattedAttribute = WebUtility.HtmlEncode(formattedAttribute);
+                            //no values
+                            case AttributeControlType.MultilineTextbox:
+                            {
+                                //multiline text box
+                                var attributeName = attribute.GetTranslation(a => a.Name, language.Id);
+                                //encode (if required)
+                                if (htmlEncode)
+                                    attributeName = WebUtility.HtmlEncode(attributeName);
+                                formattedAttribute = $"{attributeName}: {FormatText.ConvertText(valueStr)}";
+                                break;
+                            }
+                            case AttributeControlType.FileUpload:
+                                //file upload
+                                //not supported for customer attributes
+                                break;
+                            default:
+                            {
+                                //other attributes (text box, datepicker)
+                                formattedAttribute = $"{attribute.GetTranslation(a => a.Name, language.Id)}: {valueStr}";
+                                //encode (if required)
+                                if (htmlEncode)
+                                    formattedAttribute = WebUtility.HtmlEncode(formattedAttribute);
+                                break;
+                            }
                         }
                     }
                     else
                     {
 
-                        string attributeValueId = valueStr;
+                        var attributeValueId = valueStr;
                         var attributeValue = attribute.CustomerAttributeValues.FirstOrDefault(x => x.Id == attributeValueId);
                         if (attributeValue != null)
                         {
-                            formattedAttribute = string.Format("{0}: {1}", attribute.GetTranslation(a => a.Name, language.Id), attributeValue.GetTranslation(a => a.Name, language.Id));
+                            formattedAttribute =
+                                $"{attribute.GetTranslation(a => a.Name, language.Id)}: {attributeValue.GetTranslation(a => a.Name, language.Id)}";
                         }
                         //encode (if required)
                         if (htmlEncode)
                             formattedAttribute = WebUtility.HtmlEncode(formattedAttribute);
 
                     }
-
-                    if (!string.IsNullOrEmpty(formattedAttribute))
-                    {
-                        if (i != 0 || j != 0)
-                            result.Append(serapator);
-                        result.Append(formattedAttribute);
-                    }
+                    if (string.IsNullOrEmpty(formattedAttribute)) continue;
+                    if (i != 0 || j != 0)
+                        result.Append(separator);
+                    result.Append(formattedAttribute);
                 }
             }
 

@@ -3,13 +3,8 @@ using Grand.Web.Models.Common;
 
 namespace Grand.Web.Models.Customer
 {
-    public partial class CustomerAddressListModel : BaseModel
+    public class CustomerAddressListModel : BaseModel
     {
-        public CustomerAddressListModel()
-        {
-            Addresses = new List<AddressModel>();
-        }
-
-        public IList<AddressModel> Addresses { get; set; }
+        public IList<AddressModel> Addresses { get; set; } = new List<AddressModel>();
     }
 }

@@ -1,8 +1,9 @@
 ﻿using Grand.Domain.Customers;
+using Microsoft.AspNetCore.Http;
 
 namespace Grand.Business.Core.Interfaces.Authentication
 {
-    public partial interface IApiAuthenticationService
+    public interface IApiAuthenticationService
     {
         /// <summary>
         /// Get authenticated customer

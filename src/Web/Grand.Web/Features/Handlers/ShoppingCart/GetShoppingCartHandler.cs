@@ -1,33 +1,32 @@
-﻿using Grand.Business.Core.Extensions;
+﻿using Grand.Business.Core.Commands.Checkout.Orders;
+using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Catalog.Discounts;
 using Grand.Business.Core.Interfaces.Catalog.Prices;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Catalog.Tax;
-using Grand.Business.Core.Utilities.Catalog;
-using Grand.Business.Core.Commands.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.CheckoutAttributes;
 using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Security;
-using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Storage;
+using Grand.Business.Core.Utilities.Catalog;
+using Grand.Business.Core.Utilities.Checkout;
+using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using Grand.Domain.Media;
 using Grand.Domain.Orders;
+using Grand.Web.Extensions;
 using Grand.Web.Features.Models.ShoppingCart;
 using Grand.Web.Models.Media;
 using Grand.Web.Models.ShoppingCart;
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Grand.Business.Core.Utilities.Checkout;
-using Grand.Web.Extensions;
 
 namespace Grand.Web.Features.Handlers.ShoppingCart
 {
@@ -53,7 +52,6 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
         private readonly IGroupService _groupService;
         private readonly IMediator _mediator;
         private readonly IShoppingCartValidator _shoppingCartValidator;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly LinkGenerator _linkGenerator;
         private readonly MediaSettings _mediaSettings;
         private readonly OrderSettings _orderSettings;
@@ -82,7 +80,6 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
             IGroupService groupService,
             IMediator mediator,
             IShoppingCartValidator shoppingCartValidator,
-            IHttpContextAccessor httpContextAccessor,
             LinkGenerator linkGenerator,
             MediaSettings mediaSettings,
             OrderSettings orderSettings,
@@ -110,7 +107,6 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
             _groupService = groupService;
             _mediator = mediator;
             _shoppingCartValidator = shoppingCartValidator;
-            _httpContextAccessor = httpContextAccessor;
             _linkGenerator = linkGenerator;
             _mediaSettings = mediaSettings;
             _orderSettings = orderSettings;
@@ -148,20 +144,20 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
             model.ShowCheckoutAsGuestButton = model.IsGuest && _orderSettings.AnonymousCheckoutAllowed;
             var checkoutAttributes = request.Customer.GetUserFieldFromEntity<List<CustomAttribute>>(SystemCustomerFieldNames.CheckoutAttributes, request.Store.Id);
             model.CheckoutAttributeInfo = await _checkoutAttributeFormatter.FormatAttributes(checkoutAttributes, request.Customer);
-            if (!request.Cart.Where(x => x.ShoppingCartTypeId == ShoppingCartType.ShoppingCart || x.ShoppingCartTypeId == ShoppingCartType.Auctions).ToList().Any())
+            if (!request.Cart.Where(x => x.ShoppingCartTypeId is ShoppingCartType.ShoppingCart or ShoppingCartType.Auctions).ToList().Any())
             {
                 model.MinOrderSubtotalWarning = _translationService.GetResource("Checkout.MinOrderOneProduct");
             }
             else
             {
-                var minOrderSubtotalAmountOk = await _mediator.Send(new ValidateMinShoppingCartSubtotalAmountCommand() {
+                var minOrderSubtotalAmountOk = await _mediator.Send(new ValidateMinShoppingCartSubtotalAmountCommand {
                     Customer = request.Customer,
-                    Cart = request.Cart.Where(x => x.ShoppingCartTypeId == ShoppingCartType.ShoppingCart || x.ShoppingCartTypeId == ShoppingCartType.Auctions).ToList()
+                    Cart = request.Cart.Where(x => x.ShoppingCartTypeId is ShoppingCartType.ShoppingCart or ShoppingCartType.Auctions).ToList()
                 });
                 if (!minOrderSubtotalAmountOk)
                 {
-                    double minOrderSubtotalAmount = await _currencyService.ConvertFromPrimaryStoreCurrency(_orderSettings.MinOrderSubtotalAmount, request.Currency);
-                    model.MinOrderSubtotalWarning = string.Format(_translationService.GetResource("Checkout.MinOrderSubtotalAmount"), _priceFormatter.FormatPrice(minOrderSubtotalAmount, false));
+                    var minOrderSubtotalAmount = await _currencyService.ConvertFromPrimaryStoreCurrency(_orderSettings.MinOrderSubtotalAmount, request.Currency);
+                    model.MinOrderSubtotalWarning = string.Format(_translationService.GetResource("Checkout.MinOrderSubtotalAmount"), _priceFormatter.FormatPrice(minOrderSubtotalAmount, request.Currency));
                 }
             }
             model.TermsOfServiceOnShoppingCartPage = _orderSettings.TermsOfServiceOnShoppingCartPage;
@@ -172,11 +168,10 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
             foreach (var couponCode in discountCouponCodes)
             {
                 var discount = await _discountService.GetDiscountByCouponCode(couponCode);
-                if (discount != null &&
-                    discount.RequiresCouponCode &&
+                if (discount is { RequiresCouponCode: true } &&
                     (await _discountService.ValidateDiscount(discount, request.Customer, request.Currency)).IsValid)
                 {
-                    model.DiscountBox.AppliedDiscountsWithCodes.Add(new ShoppingCartModel.DiscountBoxModel.DiscountInfoModel() {
+                    model.DiscountBox.AppliedDiscountsWithCodes.Add(new ShoppingCartModel.DiscountBoxModel.DiscountInfoModel {
                         Id = discount.Id,
                         CouponCode = couponCode
                     });
@@ -186,7 +181,7 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
             model.GiftVoucherBox.Display = _shoppingCartSettings.ShowGiftVoucherBox;
 
             //cart warnings
-            var cartWarnings = await _shoppingCartValidator.GetShoppingCartWarnings(request.Cart, checkoutAttributes, request.ValidateCheckoutAttributes);
+            var cartWarnings = await _shoppingCartValidator.GetShoppingCartWarnings(request.Cart, checkoutAttributes, request.ValidateCheckoutAttributes, true);
             foreach (var warning in cartWarnings)
                 model.Warnings.Add(warning);
 
@@ -208,7 +203,7 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                     AttributeControlType = attribute.AttributeControlTypeId,
                     DefaultValue = attribute.DefaultValue
                 };
-                if (!String.IsNullOrEmpty(attribute.ValidationFileAllowedExtensions))
+                if (!string.IsNullOrEmpty(attribute.ValidationFileAllowedExtensions))
                 {
                     attributeModel.AllowedFileExtensions = attribute.ValidationFileAllowedExtensions
                         .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
@@ -225,19 +220,22 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                             Id = attributeValue.Id,
                             Name = attributeValue.GetTranslation(x => x.Name, request.Language.Id),
                             ColorSquaresRgb = attributeValue.ColorSquaresRgb,
-                            IsPreSelected = attributeValue.IsPreSelected,
+                            IsPreSelected = attributeValue.IsPreSelected
                         };
                         attributeModel.Values.Add(attributeValueModel);
 
                         //display price if allowed
-                        if (await _permissionService.Authorize(StandardPermission.DisplayPrices))
+                        if (!await _permissionService.Authorize(StandardPermission.DisplayPrices)) continue;
+                        var priceAdjustmentBase = (await _taxService.GetCheckoutAttributePrice(attribute, attributeValue)).checkoutPrice;
+                        var priceAdjustment = await _currencyService.ConvertFromPrimaryStoreCurrency(priceAdjustmentBase, request.Currency);
+                        switch (priceAdjustmentBase)
                         {
-                            double priceAdjustmentBase = (await _taxService.GetCheckoutAttributePrice(attribute, attributeValue)).checkoutPrice;
-                            double priceAdjustment = await _currencyService.ConvertFromPrimaryStoreCurrency(priceAdjustmentBase, request.Currency);
-                            if (priceAdjustmentBase > 0)
+                            case > 0:
                                 attributeValueModel.PriceAdjustment = "+" + _priceFormatter.FormatPrice(priceAdjustment);
-                            else if (priceAdjustmentBase < 0)
+                                break;
+                            case < 0:
                                 attributeValueModel.PriceAdjustment = "-" + _priceFormatter.FormatPrice(-priceAdjustment);
+                                break;
                         }
                     }
                 }
@@ -290,15 +288,12 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                             if (selectedCheckoutAttributes != null && selectedCheckoutAttributes.Any())
                             {
                                 var downloadGuidStr = selectedCheckoutAttributes.Where(x => x.Key == attribute.Id).Select(x => x.Value).FirstOrDefault();
-                                Guid downloadGuid;
-                                Guid.TryParse(downloadGuidStr, out downloadGuid);
+                                Guid.TryParse(downloadGuidStr, out var downloadGuid);
                                 var download = await _downloadService.GetDownloadByGuid(downloadGuid);
                                 if (download != null)
                                     attributeModel.DefaultValue = download.DownloadGuid.ToString();
                             }
                         }
-                        break;
-                    default:
                         break;
                 }
 
@@ -325,20 +320,22 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                     WarehouseId = sci.WarehouseId,
                     ProductName = product.GetTranslation(x => x.Name, request.Language.Id),
                     ProductSeName = sename,
-                    ProductUrl = _linkGenerator.GetUriByRouteValues(_httpContextAccessor.HttpContext, "Product", new { SeName = sename }),
+                    ProductUrl = _linkGenerator.GetPathByRouteValues("Product", new { SeName = sename }),
                     Quantity = sci.Quantity,
                     AttributeInfo = await _productAttributeFormatter.FormatAttributes(product, sci.Attributes),
+                    AllowItemEditing = _shoppingCartSettings.AllowCartItemEditing && product.VisibleIndividually
                 };
-
-                cartItemModel.AllowItemEditing = _shoppingCartSettings.AllowCartItemEditing && product.VisibleIndividually;
 
                 if (product.RequireOtherProducts)
                     cartItemModel.DisableRemoval = product.RequireOtherProducts && product.ParseRequiredProductIds().Intersect(request.Cart.Select(x => x.ProductId)).Any();
 
                 //warehouse
                 if (!string.IsNullOrEmpty(cartItemModel.WarehouseId))
-                    cartItemModel.WarehouseName = (await _warehouseService.GetWarehouseById(cartItemModel.WarehouseId))?.Name;
-
+                {
+                    var warehouse = await _warehouseService.GetWarehouseById(cartItemModel.WarehouseId);
+                    cartItemModel.WarehouseName = warehouse?.Name;
+                    cartItemModel.WarehouseCode = warehouse?.Code;
+                }
                 //vendor
                 if (!string.IsNullOrEmpty(product.VendorId))
                 {
@@ -393,7 +390,7 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                 if (sci.ShoppingCartTypeId == ShoppingCartType.Auctions)
                 {
                     cartItemModel.DisableRemoval = true;
-                    cartItemModel.AuctionInfo = _translationService.GetResource("ShoppingCart.auctionwonon") + " " + _dateTimeService.ConvertToUserTime(product.AvailableEndDateTimeUtc.Value, DateTimeKind.Utc).ToString();
+                    cartItemModel.AuctionInfo = _translationService.GetResource("ShoppingCart.auctionwonon") + " " + _dateTimeService.ConvertToUserTime(product.AvailableEndDateTimeUtc.Value, DateTimeKind.Utc);
                 }
 
                 //unit prices
@@ -405,11 +402,9 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                 }
                 else
                 {
-                    var unitprices = await _pricingService.GetUnitPrice(sci, product, true);
-                    double discountAmount = unitprices.discountAmount;
+                    var unitprices = await _pricingService.GetUnitPrice(sci, product);
                     List<ApplyDiscount> appliedDiscounts = unitprices.appliedDiscounts;
                     var productprices = await _taxService.GetProductPrice(product, unitprices.unitprice);
-                    double taxRate = productprices.taxRate;
 
                     cartItemModel.UnitPriceWithoutDiscountValue =
                         (await _taxService.GetProductPrice(product, (await _pricingService.GetUnitPrice(sci, product, false)).unitprice)).productprice;
@@ -420,15 +415,14 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
                     if (appliedDiscounts != null && appliedDiscounts.Any())
                     {
                         var discount = await _discountService.GetDiscountById(appliedDiscounts.FirstOrDefault().DiscountId);
-                        if (discount != null && discount.MaximumDiscountedQuantity.HasValue)
+                        if (discount is { MaximumDiscountedQuantity: { } })
                             cartItemModel.DiscountedQty = discount.MaximumDiscountedQuantity.Value;
 
                         appliedDiscounts.ForEach(x => cartItemModel.Discounts.Add(x.DiscountId));
                     }
                     //sub total
-                    var subtotal = await _pricingService.GetSubTotal(sci, product, true);
-                    double shoppingCartItemDiscountBase = subtotal.discountAmount;
-                    List<ApplyDiscount> scDiscounts = subtotal.appliedDiscounts;
+                    var subtotal = await _pricingService.GetSubTotal(sci, product);
+                    var shoppingCartItemDiscountBase = subtotal.discountAmount;
                     var shoppingCartItemSubTotalWithDiscount = (await _taxService.GetProductPrice(product, subtotal.subTotal)).productprice;
                     cartItemModel.SubTotal = _priceFormatter.FormatPrice(shoppingCartItemSubTotalWithDiscount);
                     cartItemModel.SubTotalValue = shoppingCartItemSubTotalWithDiscount;
@@ -466,9 +460,9 @@ namespace Grand.Web.Features.Handlers.ShoppingCart
             var sciPicture = await product.GetProductPicture(attributes, _productService, _pictureService);
             return new PictureModel {
                 Id = sciPicture?.Id,
-                ImageUrl = await _pictureService.GetPictureUrl(sciPicture, _mediaSettings.CartThumbPictureSize, true),
+                ImageUrl = await _pictureService.GetPictureUrl(sciPicture, _mediaSettings.CartThumbPictureSize),
                 Title = string.Format(_translationService.GetResource("Media.Product.ImageLinkTitleFormat"), product.Name),
-                AlternateText = string.Format(_translationService.GetResource("Media.Product.ImageAlternateTextFormat"), product.Name),
+                AlternateText = string.Format(_translationService.GetResource("Media.Product.ImageAlternateTextFormat"), product.Name)
             };
         }
 

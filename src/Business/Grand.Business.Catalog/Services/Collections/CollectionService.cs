@@ -3,12 +3,12 @@ using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Domain;
 using Grand.Domain.Catalog;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
+using Grand.Infrastructure.Configuration;
 using Grand.Infrastructure.Extensions;
-using Grand.SharedKernel.Extensions;
 using MediatR;
 
 namespace Grand.Business.Catalog.Services.Collections
@@ -16,7 +16,7 @@ namespace Grand.Business.Catalog.Services.Collections
     /// <summary>
     /// Collection service
     /// </summary>
-    public partial class CollectionService : ICollectionService
+    public class CollectionService : ICollectionService
     {
         #region Fields
 
@@ -25,7 +25,8 @@ namespace Grand.Business.Catalog.Services.Collections
         private readonly IMediator _mediator;
         private readonly ICacheBase _cacheBase;
         private readonly IAclService _aclService;
-
+        private readonly AccessControlConfig _accessControlConfig;
+        
         #endregion
 
         #region Ctor
@@ -37,13 +38,14 @@ namespace Grand.Business.Catalog.Services.Collections
             IRepository<Collection> collectionRepository,
             IWorkContext workContext,
             IMediator mediator,
-            IAclService aclService)
+            IAclService aclService, AccessControlConfig accessControlConfig)
         {
             _cacheBase = cacheBase;
             _collectionRepository = collectionRepository;
             _workContext = workContext;
             _mediator = mediator;
             _aclService = aclService;
+            _accessControlConfig = accessControlConfig;
         }
 
         #endregion
@@ -70,12 +72,12 @@ namespace Grand.Business.Catalog.Services.Collections
 
             if (!showHidden)
                 query = query.Where(m => m.Published);
-            if (!String.IsNullOrWhiteSpace(collectionName))
+            if (!string.IsNullOrWhiteSpace(collectionName))
                 query = query.Where(m => m.Name != null && m.Name.ToLower().Contains(collectionName.ToLower()));
 
-            if ((!CommonHelper.IgnoreAcl || (!String.IsNullOrEmpty(storeId) && !CommonHelper.IgnoreStoreLimitations)))
+            if (!_accessControlConfig.IgnoreAcl || (!string.IsNullOrEmpty(storeId) && !_accessControlConfig.IgnoreStoreLimitations))
             {
-                if (!showHidden && !CommonHelper.IgnoreAcl)
+                if (!showHidden && !_accessControlConfig.IgnoreAcl)
                 {
                     //Limited to customer groups rules
                     var allowedCustomerGroupsIds = _workContext.CurrentCustomer.GetCustomerGroupIds();
@@ -84,7 +86,7 @@ namespace Grand.Business.Catalog.Services.Collections
                             select p;
 
                 }
-                if (!String.IsNullOrEmpty(storeId) && !CommonHelper.IgnoreStoreLimitations)
+                if (!string.IsNullOrEmpty(storeId) && !_accessControlConfig.IgnoreStoreLimitations)
                 {
                     //Limited to stores rules
                     query = from p in query
@@ -124,7 +126,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <returns>Collection</returns>
         public virtual Task<Collection> GetCollectionById(string collectionId)
         {
-            string key = string.Format(CacheKey.COLLECTIONS_BY_ID_KEY, collectionId);
+            var key = string.Format(CacheKey.COLLECTIONS_BY_ID_KEY, collectionId);
             return _cacheBase.GetAsync(key, () => _collectionRepository.GetByIdAsync(collectionId));
         }
 
@@ -134,8 +136,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <param name="collection">Collection</param>
         public virtual async Task InsertCollection(Collection collection)
         {
-            if (collection == null)
-                throw new ArgumentNullException(nameof(collection));
+            ArgumentNullException.ThrowIfNull(collection);
 
             await _collectionRepository.InsertAsync(collection);
 
@@ -153,8 +154,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <param name="collection">Collection</param>
         public virtual async Task UpdateCollection(Collection collection)
         {
-            if (collection == null)
-                throw new ArgumentNullException(nameof(collection));
+            ArgumentNullException.ThrowIfNull(collection);
 
             await _collectionRepository.UpdateAsync(collection);
 
@@ -171,8 +171,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <param name="collection">Collection</param>
         public virtual async Task DeleteCollection(Collection collection)
         {
-            if (collection == null)
-                throw new ArgumentNullException(nameof(collection));
+            ArgumentNullException.ThrowIfNull(collection);
 
             await _cacheBase.RemoveByPrefix(CacheKey.COLLECTIONS_PATTERN_KEY);
 

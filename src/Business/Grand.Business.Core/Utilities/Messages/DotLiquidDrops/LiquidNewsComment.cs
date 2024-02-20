@@ -5,7 +5,7 @@ using Grand.Domain.Stores;
 
 namespace Grand.Business.Core.Utilities.Messages.DotLiquidDrops
 {
-    public partial class LiquidNewsComment : Drop
+    public class LiquidNewsComment : Drop
     {
         private readonly NewsComment _newsComment;
         private readonly NewsItem _newsItem;
@@ -28,21 +28,13 @@ namespace Grand.Business.Core.Utilities.Messages.DotLiquidDrops
             AdditionalTokens = new Dictionary<string, string>();
         }
 
-        public string NewsTitle {
-            get { return _newsItem.Title; }
-        }
+        public string NewsTitle => _newsItem.Title;
 
-        public string CommentText {
-            get { return _newsComment.CommentText; }
-        }
+        public string CommentText => _newsComment.CommentText;
 
-        public string CommentTitle {
-            get { return _newsComment.CommentTitle; }
-        }
+        public string CommentTitle => _newsComment.CommentTitle;
 
-        public string NewsURL {
-            get { return $"{url}/{_newsItem.SeName}"; }
-        }
+        public string NewsURL => $"{url}/{_newsItem.SeName}";
 
         public IDictionary<string, string> AdditionalTokens { get; set; }
     }

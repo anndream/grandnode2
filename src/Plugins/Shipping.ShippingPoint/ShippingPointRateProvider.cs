@@ -8,7 +8,6 @@ using Grand.Domain.Customers;
 using Grand.Domain.Orders;
 using Grand.Domain.Shipping;
 using Grand.Infrastructure;
-using Microsoft.AspNetCore.Http;
 using Shipping.ShippingPoint.Services;
 using System.Xml.Serialization;
 
@@ -59,14 +58,12 @@ namespace Shipping.ShippingPoint
         /// <returns>Represents a response of getting shipping rate options</returns>
         public async Task<GetShippingOptionResponse> GetShippingOptions(GetShippingOptionRequest getShippingOptionRequest)
         {
-            if (getShippingOptionRequest == null)
-                throw new ArgumentNullException(nameof(getShippingOptionRequest));
+            ArgumentNullException.ThrowIfNull(getShippingOptionRequest);
 
             var response = new GetShippingOptionResponse();
 
 
-            response.ShippingOptions.Add(new ShippingOption()
-            {
+            response.ShippingOptions.Add(new ShippingOption {
                 Name = _translationService.GetResource("Shipping.ShippingPoint.PluginName"),
                 Description = _translationService.GetResource("Shipping.ShippingPoint.PluginDescription"),
                 Rate = 0,
@@ -91,20 +88,21 @@ namespace Shipping.ShippingPoint
             return await Task.FromResult(false);
         }
 
-        public async Task<IList<string>> ValidateShippingForm(IFormCollection form)
+        public async Task<IList<string>> ValidateShippingForm(string shippingOption, IDictionary<string, string> data)
         {
-            var shippingMethodName = form["shippingoption"].ToString().Replace("___", "_").Split(new[] { '_' })[0];
-            var shippingOptionId = form["selectedShippingOption"].ToString();
+            data.TryGetValue("selectedShippingOption", out var shippingOptionId);
+            
+            var shippingMethodName = shippingOption?.Split([':'])[0];
 
             if (string.IsNullOrEmpty(shippingOptionId))
-                return new List<string>() { _translationService.GetResource("Shipping.ShippingPoint.SelectBeforeProceed") };
+                return new List<string> { _translationService.GetResource("Shipping.ShippingPoint.SelectBeforeProceed") };
 
             if (shippingMethodName != _translationService.GetResource("Shipping.ShippingPoint.PluginName"))
                 throw new ArgumentException("shippingMethodName");
 
             var chosenShippingOption = await _shippingPointService.GetStoreShippingPointById(shippingOptionId);
             if (chosenShippingOption == null)
-                return new List<string>() { _translationService.GetResource("Shipping.ShippingPoint.SelectBeforeProceed") };
+                return new List<string> { _translationService.GetResource("Shipping.ShippingPoint.SelectBeforeProceed") };
 
             //override price 
             var offeredShippingOptions = await _workContext.CurrentCustomer.GetUserField<List<ShippingOption>>(_userFieldService, SystemCustomerFieldNames.OfferedShippingOptions, _workContext.CurrentStore.Id);
@@ -117,10 +115,7 @@ namespace Shipping.ShippingPoint
                 _workContext.CurrentStore.Id);
 
             var forCustomer =
-            string.Format("<strong>{0}:</strong> {1}<br><strong>{2}:</strong> {3}<br>",
-                _translationService.GetResource("Shipping.ShippingPoint.Fields.ShippingPointName"), chosenShippingOption.ShippingPointName,
-                _translationService.GetResource("Shipping.ShippingPoint.Fields.Description"), chosenShippingOption.Description
-            );
+                $"<strong>{_translationService.GetResource("Shipping.ShippingPoint.Fields.ShippingPointName")}:</strong> {chosenShippingOption.ShippingPointName}<br><strong>{_translationService.GetResource("Shipping.ShippingPoint.Fields.Description")}:</strong> {chosenShippingOption.Description}<br>";
 
             await _userFieldService.SaveField(
                 _workContext.CurrentCustomer,
@@ -128,8 +123,7 @@ namespace Shipping.ShippingPoint
                 forCustomer,
                     _workContext.CurrentStore.Id);
 
-            var serializedObject = new Domain.ShippingPointSerializable()
-            {
+            var serializedObject = new Domain.ShippingPointSerializable {
                 Id = chosenShippingOption.Id,
                 ShippingPointName = chosenShippingOption.ShippingPointName,
                 Description = chosenShippingOption.Description,
@@ -139,12 +133,12 @@ namespace Shipping.ShippingPoint
                 City = chosenShippingOption.City,
                 Address1 = chosenShippingOption.Address1,
                 ZipPostalCode = chosenShippingOption.ZipPostalCode,
-                StoreId = chosenShippingOption.StoreId,
+                StoreId = chosenShippingOption.StoreId
             };
 
             var stringBuilder = new StringBuilder();
             string serializedAttribute;
-            using (var tw = new StringWriter(stringBuilder))
+            await using (var tw = new StringWriter(stringBuilder))
             {
                 var xmlS = new XmlSerializer(typeof(Domain.ShippingPointSerializable));
                 xmlS.Serialize(tw, serializedObject);

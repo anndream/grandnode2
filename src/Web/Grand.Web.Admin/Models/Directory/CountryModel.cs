@@ -6,12 +6,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Directory
 {
-    public partial class CountryModel : BaseEntityModel, ILocalizedModel<CountryLocalizedModel>, IStoreLinkModel
+    public class CountryModel : BaseEntityModel, ILocalizedModel<CountryLocalizedModel>, IStoreLinkModel
     {
-        public CountryModel()
-        {
-            Locales = new List<CountryLocalizedModel>();
-        }
         [GrandResourceDisplayName("Admin.Configuration.Countries.Fields.Name")]
 
         public string Name { get; set; }
@@ -46,7 +42,7 @@ namespace Grand.Web.Admin.Models.Directory
         [GrandResourceDisplayName("Admin.Configuration.Countries.Fields.NumberOfStates")]
         public int NumberOfStates { get; set; }
 
-        public IList<CountryLocalizedModel> Locales { get; set; }
+        public IList<CountryLocalizedModel> Locales { get; set; } = new List<CountryLocalizedModel>();
 
         //Store acl
         [GrandResourceDisplayName("Admin.Configuration.Countries.Fields.LimitedToStores")]
@@ -54,7 +50,7 @@ namespace Grand.Web.Admin.Models.Directory
         public string[] Stores { get; set; }
     }
 
-    public partial class CountryLocalizedModel : ILocalizedModelLocal
+    public class CountryLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

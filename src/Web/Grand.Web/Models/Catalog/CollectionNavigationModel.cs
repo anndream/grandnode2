@@ -2,19 +2,14 @@
 
 namespace Grand.Web.Models.Catalog
 {
-    public partial class CollectionNavigationModel : BaseModel
+    public class CollectionNavigationModel : BaseModel
     {
-        public CollectionNavigationModel()
-        {
-            Collections = new List<CollectionBriefInfoModel>();
-        }
-
-        public IList<CollectionBriefInfoModel> Collections { get; set; }
+        public IList<CollectionBriefInfoModel> Collections { get; set; } = new List<CollectionBriefInfoModel>();
 
         public int TotalCollections { get; set; }
     }
 
-    public partial class CollectionBriefInfoModel : BaseEntityModel
+    public class CollectionBriefInfoModel : BaseEntityModel
     {
         public string Name { get; set; }
         public string SeName { get; set; }

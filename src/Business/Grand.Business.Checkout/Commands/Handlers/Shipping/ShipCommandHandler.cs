@@ -50,10 +50,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Shipping
             else
             {
                 var shipments = await _shipmentService.GetShipmentsByOrder(request.Shipment.OrderId);
-                if (!shipments.Where(x => x.ShippedDateUtc == null).Any())
-                    order.ShippingStatusId = ShippingStatus.Shipped;
-                else
-                    order.ShippingStatusId = ShippingStatus.PartiallyShipped;
+                order.ShippingStatusId = shipments.All(x => x.ShippedDateUtc != null) ? ShippingStatus.Shipped : ShippingStatus.PartiallyShipped;
             }
             await _orderService.UpdateOrder(order);
 
@@ -61,8 +58,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Shipping
             await _orderService.InsertOrderNote(new OrderNote {
                 Note = $"Shipment #{request.Shipment.ShipmentNumber} has been sent",
                 DisplayToCustomer = false,
-                CreatedOnUtc = DateTime.UtcNow,
-                OrderId = order.Id,
+                OrderId = order.Id
             });
 
             if (request.NotifyCustomer)
@@ -71,7 +67,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Shipping
                 await _messageProviderService.SendShipmentSentCustomerMessage(request.Shipment, order);
             }
             //check order status
-            await _mediator.Send(new CheckOrderStatusCommand() { Order = order });
+            await _mediator.Send(new CheckOrderStatusCommand { Order = order }, cancellationToken);
 
             //event
             await _mediator.PublishShipmentSent(request.Shipment);

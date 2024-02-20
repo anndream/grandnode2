@@ -1,12 +1,12 @@
 ﻿using Grand.Business.Core.Commands.Catalog;
 using Grand.Business.Core.Interfaces.Catalog.Products;
+using Grand.Domain.Catalog;
+using Grand.Data;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
-using Grand.Domain.Catalog;
-using Grand.Domain.Data;
 using MediatR;
 
-namespace Grand.Business.Catalog.Commands.Handlers
+namespace Grand.Business.Catalog.Commands
 {
     public class UpdateProductReviewTotalsCommandHandler : IRequestHandler<UpdateProductReviewTotalsCommand, bool>
     {
@@ -18,7 +18,8 @@ namespace Grand.Business.Catalog.Commands.Handlers
 
         #endregion
 
-        public UpdateProductReviewTotalsCommandHandler(IRepository<Product> productRepository, IProductReviewService productReviewService, ICacheBase cacheBase)
+        public UpdateProductReviewTotalsCommandHandler(IRepository<Product> productRepository,
+            IProductReviewService productReviewService, ICacheBase cacheBase)
         {
             _productRepository = productRepository;
             _cacheBase = cacheBase;
@@ -30,13 +31,13 @@ namespace Grand.Business.Catalog.Commands.Handlers
             if (request.Product == null)
                 throw new ArgumentNullException(nameof(request.Product));
 
-            int approvedRatingSum = 0;
-            int notApprovedRatingSum = 0;
-            int approvedTotalReviews = 0;
-            int notApprovedTotalReviews = 0;
+            var approvedRatingSum = 0;
+            var notApprovedRatingSum = 0;
+            var approvedTotalReviews = 0;
+            var notApprovedTotalReviews = 0;
 
             var reviews = await _productReviewService.GetAllProductReviews(null, null, null, null, null,
-                null, request.Product.Id, 0, int.MaxValue);
+                null, request.Product.Id);
 
             foreach (var pr in reviews)
             {
@@ -56,14 +57,16 @@ namespace Grand.Business.Catalog.Commands.Handlers
             request.Product.NotApprovedRatingSum = notApprovedRatingSum;
             request.Product.ApprovedTotalReviews = approvedTotalReviews;
             request.Product.NotApprovedTotalReviews = notApprovedTotalReviews;
-
+            request.Product.AvgRating = approvedTotalReviews > 0 ? Math.Round((double)approvedRatingSum / approvedTotalReviews, 2) : 0;
+            
             var update = UpdateBuilder<Product>.Create()
-            .Set(x => x.ApprovedRatingSum, request.Product.ApprovedRatingSum)
-            .Set(x => x.NotApprovedRatingSum, request.Product.NotApprovedRatingSum)
-            .Set(x => x.ApprovedTotalReviews, request.Product.ApprovedTotalReviews)
-            .Set(x => x.NotApprovedTotalReviews, request.Product.NotApprovedTotalReviews);
+                .Set(x => x.ApprovedRatingSum, request.Product.ApprovedRatingSum)
+                .Set(x => x.NotApprovedRatingSum, request.Product.NotApprovedRatingSum)
+                .Set(x => x.ApprovedTotalReviews, request.Product.ApprovedTotalReviews)
+                .Set(x => x.AvgRating, request.Product.AvgRating)
+                .Set(x => x.NotApprovedTotalReviews, request.Product.NotApprovedTotalReviews);
 
-            await _productRepository.UpdateOneAsync(x=>x.Id == request.Product.Id, update);
+            await _productRepository.UpdateOneAsync(x => x.Id == request.Product.Id, update);
 
             //cache
             await _cacheBase.RemoveByPrefix(string.Format(CacheKey.PRODUCTS_BY_ID_KEY, request.Product.Id));

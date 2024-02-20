@@ -4,11 +4,8 @@ using Grand.Infrastructure;
 using Grand.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
-using System.Globalization;
 
 namespace Grand.Web.Common.Startup
 {
@@ -24,8 +21,8 @@ namespace Grand.Web.Common.Startup
         /// <param name="configuration">Configuration root of the application</param>
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
-            var securityconfig = new SecurityConfig();
-            configuration.GetSection("Security").Bind(securityconfig);
+            var securityConfig = new SecurityConfig();
+            configuration.GetSection("Security").Bind(securityConfig);
 
             //add settings
             services.AddSettings();
@@ -36,11 +33,11 @@ namespace Grand.Web.Common.Startup
             //add options feature
             services.AddOptions();
 
-            //add HTTP sesion state feature
-            services.AddHttpSession(securityconfig);
+            //add HTTP session state feature
+            services.AddHttpSession(securityConfig);
 
             //add anti-forgery
-            services.AddAntiForgery(securityconfig);
+            services.AddAntiForgery(securityConfig);
 
             //add localization
             services.AddLocalization();
@@ -51,7 +48,7 @@ namespace Grand.Web.Common.Startup
             //add WebEncoderOptions
             services.AddWebEncoder();
 
-            //adddetection device
+            //add detection device
             services.AddDetectionDevice();
 
             //add routing
@@ -102,32 +99,7 @@ namespace Grand.Web.Common.Startup
                 //gzip by default
                 application.UseResponseCompression();
             }
-
-            //Add webMarkupMin
-            if (performanceConfig.UseHtmlMinification)
-            {
-                application.UseHtmlMinification();
-            }
-
-            //use request localization
-            if (appConfig.UseRequestLocalization)
-            {
-                var supportedCultures = new List<CultureInfo>();
-                foreach (var culture in appConfig.SupportedCultures)
-                {
-                    supportedCultures.Add(new CultureInfo(culture));
-                }
-                application.UseRequestLocalization(new RequestLocalizationOptions
-                {
-                    DefaultRequestCulture = new RequestCulture(appConfig.DefaultRequestCulture),
-                    SupportedCultures = supportedCultures,
-                    SupportedUICultures = supportedCultures
-                });
-            }
-            else
-                //use default request localization
-                application.UseRequestLocalization();
-
+            
             //use static files feature
             application.UseGrandStaticFiles(appConfig);
 
@@ -141,12 +113,6 @@ namespace Grand.Web.Common.Startup
             //use powered by
             if (!performanceConfig.IgnoreUsePoweredByMiddleware)
                 application.UsePoweredBy();
-
-            // Write streamlined request completion events, instead of the more verbose ones from the framework.
-            // To use the default framework request logging instead, remove this line and set the "Microsoft"
-            // level in appsettings.json to "Information".
-            if (appConfig.UseSerilogRequestLogging)
-                application.UseSerilogRequestLogging();
 
             //add responsive middleware (for detection)
             application.UseGrandDetection();

@@ -1,6 +1,6 @@
 using Grand.Business.Core.Interfaces.Catalog.Collections;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
@@ -11,7 +11,7 @@ namespace Grand.Business.Catalog.Services.Collections
     /// <summary>
     /// Collection layout service
     /// </summary>
-    public partial class CollectionLayoutService : ICollectionLayoutService
+    public class CollectionLayoutService : ICollectionLayoutService
     {
         #region Fields
 
@@ -64,7 +64,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <returns>Collection layout</returns>
         public virtual Task<CollectionLayout> GetCollectionLayoutById(string collectionLayoutId)
         {
-            string key = string.Format(CacheKey.COLLECTION_LAYOUT_BY_ID_KEY, collectionLayoutId);
+            var key = string.Format(CacheKey.COLLECTION_LAYOUT_BY_ID_KEY, collectionLayoutId);
             return _cacheBase.GetAsync(key, () => _collectionLayoutRepository.GetByIdAsync(collectionLayoutId));
         }
 
@@ -74,8 +74,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <param name="collectionLayout">Collection layout</param>
         public virtual async Task InsertCollectionLayout(CollectionLayout collectionLayout)
         {
-            if (collectionLayout == null)
-                throw new ArgumentNullException(nameof(collectionLayout));
+            ArgumentNullException.ThrowIfNull(collectionLayout);
 
             await _collectionLayoutRepository.InsertAsync(collectionLayout);
 
@@ -92,8 +91,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <param name="collectionLayout">Collection layout</param>
         public virtual async Task UpdateCollectionLayout(CollectionLayout collectionLayout)
         {
-            if (collectionLayout == null)
-                throw new ArgumentNullException(nameof(collectionLayout));
+            ArgumentNullException.ThrowIfNull(collectionLayout);
 
             await _collectionLayoutRepository.UpdateAsync(collectionLayout);
 
@@ -110,8 +108,7 @@ namespace Grand.Business.Catalog.Services.Collections
         /// <param name="collectionLayout">Collection layout</param>
         public virtual async Task DeleteCollectionLayout(CollectionLayout collectionLayout)
         {
-            if (collectionLayout == null)
-                throw new ArgumentNullException(nameof(collectionLayout));
+            ArgumentNullException.ThrowIfNull(collectionLayout);
 
             await _collectionLayoutRepository.DeleteAsync(collectionLayout);
 

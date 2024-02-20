@@ -1,19 +1,15 @@
 ﻿using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
+using Grand.Web.Common.Binders;
+using Grand.Web.Common.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Models.Common
 {
-    public partial class AddressModel : BaseEntityModel
+    public class AddressModel : BaseEntityModel
     {
-        public AddressModel()
-        {
-            AvailableCountries = new List<SelectListItem>();
-            AvailableStates = new List<SelectListItem>();
-            CustomAddressAttributes = new List<AddressAttributeModel>();
-        }
-
         public bool NameEnabled { get; set; }
 
         [GrandResourceDisplayName("Address.Fields.AddressName")]
@@ -86,13 +82,16 @@ namespace Grand.Web.Models.Common
         [GrandResourceDisplayName("Address.Fields.Note")]
         public string Note { get; set; }
 
-        public IList<SelectListItem> AvailableCountries { get; set; }
-        public IList<SelectListItem> AvailableStates { get; set; }
+        public IList<SelectListItem> AvailableCountries { get; set; } = new List<SelectListItem>();
+        public IList<SelectListItem> AvailableStates { get; set; } = new List<SelectListItem>();
 
 
         public string FormattedCustomAddressAttributes { get; set; }
-        public IList<AddressAttributeModel> CustomAddressAttributes { get; set; }
+        public IList<AddressAttributeModel> CustomAddressAttributes { get; set; } = new List<AddressAttributeModel>();
 
+        [ModelBinder(BinderType = typeof(CustomAttributesBinder))]
+        public IList<CustomAttributeModel> SelectedAttributes { get; set; }
+        
         public bool AddressTypeEnabled { get; set; }
 
         [GrandResourceDisplayName("Address.Fields.AddressType")]

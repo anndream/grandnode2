@@ -8,13 +8,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Messages
 {
-    public partial class ContactAttributeModel : BaseEntityModel, ILocalizedModel<ContactAttributeLocalizedModel>, IGroupLinkModel, IStoreLinkModel
+    public class ContactAttributeModel : BaseEntityModel, ILocalizedModel<ContactAttributeLocalizedModel>, IGroupLinkModel, IStoreLinkModel
     {
-        public ContactAttributeModel()
-        {
-            Locales = new List<ContactAttributeLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ContactAttributes.Fields.Name")]
 
         public string Name { get; set; }
@@ -54,7 +49,7 @@ namespace Grand.Web.Admin.Models.Messages
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ContactAttributes.Fields.DefaultValue")]
         public string DefaultValue { get; set; }
 
-        public IList<ContactAttributeLocalizedModel> Locales { get; set; }
+        public IList<ContactAttributeLocalizedModel> Locales { get; set; } = new List<ContactAttributeLocalizedModel>();
 
         //condition
         public bool ConditionAllowed { get; set; }
@@ -71,7 +66,7 @@ namespace Grand.Web.Admin.Models.Messages
         public string[] CustomerGroups { get; set; }
     }
 
-    public partial class ConditionModel : BaseEntityModel
+    public class ConditionModel : BaseEntityModel
     {
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ContactAttributes.Condition.EnableCondition")]
         public bool EnableCondition { get; set; }
@@ -81,7 +76,7 @@ namespace Grand.Web.Admin.Models.Messages
 
         public IList<AttributeConditionModel> ConditionAttributes { get; set; }
     }
-    public partial class AttributeConditionModel : BaseEntityModel
+    public class AttributeConditionModel : BaseEntityModel
     {
         public string Name { get; set; }
 
@@ -91,7 +86,7 @@ namespace Grand.Web.Admin.Models.Messages
 
         public string SelectedValueId { get; set; }
     }
-    public partial class ContactAttributeLocalizedModel : ILocalizedModelLocal
+    public class ContactAttributeLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

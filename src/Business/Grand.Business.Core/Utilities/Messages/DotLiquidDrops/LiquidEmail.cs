@@ -2,7 +2,7 @@
 
 namespace Grand.Business.Core.Utilities.Messages.DotLiquidDrops
 {
-    public partial class LiquidEmail : Drop
+    public class LiquidEmail : Drop
     {
         private readonly string _emailId;
 
@@ -11,9 +11,6 @@ namespace Grand.Business.Core.Utilities.Messages.DotLiquidDrops
             _emailId = emailId;
         }
 
-        public string Id
-        {
-            get { return _emailId; }
-        }
+        public string Id => _emailId;
     }
 }

@@ -4,13 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Customers
 {
-    public partial class CustomerAttributeModel : BaseEntityModel, ILocalizedModel<CustomerAttributeLocalizedModel>
+    public class CustomerAttributeModel : BaseEntityModel, ILocalizedModel<CustomerAttributeLocalizedModel>
     {
-        public CustomerAttributeModel()
-        {
-            Locales = new List<CustomerAttributeLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Customers.CustomerAttributes.Fields.Name")]
         public string Name { get; set; }
 
@@ -30,11 +25,10 @@ namespace Grand.Web.Admin.Models.Customers
         public int DisplayOrder { get; set; }
 
 
-        public IList<CustomerAttributeLocalizedModel> Locales { get; set; }
-
+        public IList<CustomerAttributeLocalizedModel> Locales { get; set; } = new List<CustomerAttributeLocalizedModel>();
     }
 
-    public partial class CustomerAttributeLocalizedModel : ILocalizedModelLocal
+    public class CustomerAttributeLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

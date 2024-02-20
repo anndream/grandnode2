@@ -5,7 +5,6 @@ using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using Grand.Domain.Localization;
 using Grand.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 using Grand.Business.Core.Utilities.Authentication;
 
 namespace Grand.Business.Authentication.Services
@@ -14,17 +13,17 @@ namespace Grand.Business.Authentication.Services
     {
         private readonly IWorkContext _workContext;
         private readonly IUserFieldService _userFieldService;
-        private readonly IServiceProvider _serviceProvider;
-        private TwoFactorAuthenticator _twoFactorAuthentication;
+        private readonly IEnumerable<ISMSVerificationService> _smsVerificationService;
+        private readonly TwoFactorAuthenticator _twoFactorAuthentication;
 
         public TwoFactorAuthenticationService(
             IWorkContext workContext,
             IUserFieldService userFieldService,
-            IServiceProvider serviceProvider)
+            IEnumerable<ISMSVerificationService> smsVerificationService)
         {
             _workContext = workContext;
             _userFieldService = userFieldService;
-            _serviceProvider = serviceProvider;
+            _smsVerificationService = smsVerificationService;
             _twoFactorAuthentication = new TwoFactorAuthenticator();
         }
 
@@ -36,17 +35,17 @@ namespace Grand.Business.Authentication.Services
                     return _twoFactorAuthentication.ValidateTwoFactorPIN(secretKey, token.Trim());
 
                 case TwoFactorAuthenticationType.EmailVerification:
-                    var customertoken = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.TwoFactorValidCode);
-                    if (customertoken != token.Trim())
+                    var customerToken = customer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.TwoFactorValidCode);
+                    if (customerToken != token?.Trim())
                         return false;
-                    var validuntil = customer.GetUserFieldFromEntity<DateTime>(SystemCustomerFieldNames.TwoFactorCodeValidUntil);
-                    if (validuntil < DateTime.UtcNow)
-                        return false;
+                    var validUntil = customer.GetUserFieldFromEntity<DateTime>(SystemCustomerFieldNames.TwoFactorCodeValidUntil);
+                    return validUntil >= DateTime.UtcNow;
 
-                    return true;
                 case TwoFactorAuthenticationType.SMSVerification:
-                    var smsVerificationService = _serviceProvider.GetRequiredService<ISMSVerificationService>();
-                    return await smsVerificationService.Authenticate(secretKey, token.Trim(), customer);
+                    if (!_smsVerificationService.Any())
+                        throw new Exception("ISMSVerificationService not registered in DI container");
+                    var smsVerificationService = _smsVerificationService.FirstOrDefault();
+                    return await smsVerificationService!.Authenticate(secretKey, token.Trim(), customer);
                 default:
                     return false;
             }
@@ -59,7 +58,7 @@ namespace Grand.Business.Authentication.Services
             switch (twoFactorAuthenticationType)
             {
                 case TwoFactorAuthenticationType.AppVerification:
-                    var setupInfo = _twoFactorAuthentication.GenerateSetupCode(_workContext.CurrentStore.CompanyName, customer.Email, secretKey, false, 3);
+                    var setupInfo = _twoFactorAuthentication.GenerateSetupCode(_workContext.CurrentStore.CompanyName, customer.Email, secretKey, false);
                     model.CustomValues.Add("QrCodeImageUrl", setupInfo.QrCodeSetupImageUrl);
                     model.CustomValues.Add("ManualEntryQrCode", setupInfo.ManualEntryKey);
                     break;
@@ -72,14 +71,12 @@ namespace Grand.Business.Authentication.Services
                     break;
 
                 case TwoFactorAuthenticationType.SMSVerification:
-                    var smsVerificationService = _serviceProvider.GetRequiredService<ISMSVerificationService>();
-                    model = await smsVerificationService.GenerateCode(secretKey, customer, language);
-                    break;
-
-                default:
+                    if (!_smsVerificationService.Any())
+                        throw new Exception("ISMSVerificationService not registered in DI container");
+                    var smsVerificationService = _smsVerificationService.FirstOrDefault();
+                    model = await smsVerificationService!.GenerateCode(secretKey, customer, language);
                     break;
             }
-
             return model;
         }
 

@@ -34,7 +34,7 @@ namespace Grand.Web.Common.TagHelpers
         }
         public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
         {
-            bool isAjaxCall = _httpContextAccessor.HttpContext.Request.Headers["x-requested-with"] == "XMLHttpRequest";
+            var isAjaxCall = _httpContextAccessor.HttpContext != null && _httpContextAccessor.HttpContext.Request.Headers["x-requested-with"] == "XMLHttpRequest";
             if (!isAjaxCall)
             {
                 output.SuppressOutput();
@@ -65,9 +65,6 @@ namespace Grand.Web.Common.TagHelpers
 
                     case ScriptLocation.Footer:
                         _resourceManager.RegisterFootScript(builder, DisplayOrder);
-                        break;
-
-                    default:
                         break;
                 }
             }

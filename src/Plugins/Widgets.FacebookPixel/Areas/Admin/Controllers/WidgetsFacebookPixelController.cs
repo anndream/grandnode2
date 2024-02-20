@@ -2,21 +2,19 @@
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Web.Common.Controllers;
-using Grand.Web.Common.Filters;
-using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using Grand.Infrastructure;
+using Grand.Web.Common.Controllers;
+using Grand.Web.Common.Filters;
+using Grand.Web.Common.Security.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Widgets.FacebookPixel.Models;
 
-namespace Widgets.FacebookPixel.Controllers
+namespace Widgets.FacebookPixel.Areas.Admin.Controllers
 {
-    [Area("Admin")]
-    [AuthorizeAdmin]
     [PermissionAuthorize(PermissionSystemName.Widgets)]
-    public class WidgetsFacebookPixelController : BasePluginController
+    public class WidgetsFacebookPixelController : BaseAdminPluginController
     {
         private readonly IWorkContext _workContext;
         private readonly IStoreService _storeService;
@@ -37,7 +35,7 @@ namespace Widgets.FacebookPixel.Controllers
         {
             var stores = await storeService.GetAllStores();
             if (stores.Count < 2)
-                return stores.FirstOrDefault().Id;
+                return stores.FirstOrDefault()!.Id;
 
             var storeId = workContext.CurrentCustomer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.AdminAreaStoreScopeConfiguration);
             var store = await storeService.GetStoreById(storeId);
@@ -50,15 +48,16 @@ namespace Widgets.FacebookPixel.Controllers
             //load settings for a chosen store scope
             var storeScope = await GetActiveStore(_storeService, _workContext);
             var facebookPixelSettings = _settingService.LoadSetting<FacebookPixelSettings>(storeScope);
-            var model = new ConfigurationModel();
-            model.PixelId = facebookPixelSettings.PixelId;
-            model.PixelScript = facebookPixelSettings.PixelScript;
-            model.AddToCartScript = facebookPixelSettings.AddToCartScript;
-            model.DetailsOrderScript = facebookPixelSettings.DetailsOrderScript;
-            model.AllowToDisableConsentCookie = facebookPixelSettings.AllowToDisableConsentCookie;
-            model.ConsentName = facebookPixelSettings.ConsentName;
-            model.ConsentDescription = facebookPixelSettings.ConsentDescription;
-            model.ConsentDefaultState = facebookPixelSettings.ConsentDefaultState;
+            var model = new ConfigurationModel {
+                PixelId = facebookPixelSettings.PixelId,
+                PixelScript = facebookPixelSettings.PixelScript,
+                AddToCartScript = facebookPixelSettings.AddToCartScript,
+                DetailsOrderScript = facebookPixelSettings.DetailsOrderScript,
+                AllowToDisableConsentCookie = facebookPixelSettings.AllowToDisableConsentCookie,
+                ConsentName = facebookPixelSettings.ConsentName,
+                ConsentDescription = facebookPixelSettings.ConsentDescription,
+                ConsentDefaultState = facebookPixelSettings.ConsentDefaultState
+            };
 
             return View(model);
         }

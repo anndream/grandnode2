@@ -5,6 +5,7 @@ using Grand.Domain.Cms;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Plugins;
 using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Models.Cms;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Security.Authorization;
@@ -13,7 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.Widgets)]
-    public partial class WidgetController : BaseAdminController
+    public class WidgetController : BaseAdminController
     {
         #region Fields
 
@@ -44,9 +45,15 @@ namespace Grand.Web.Admin.Controllers
 
         #region Methods
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
@@ -71,7 +78,7 @@ namespace Grand.Web.Admin.Controllers
             var gridModel = new DataSourceResult
             {
                 Data = widgetsModel,
-                Total = widgetsModel.Count()
+                Total = widgetsModel.Count
             };
 
             return Json(gridModel);

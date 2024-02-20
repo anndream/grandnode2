@@ -3,7 +3,7 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Models.Catalog
 {
-    public partial class ProductEmailAFriendModel : BaseModel
+    public class ProductEmailAFriendModel : BaseModel
     {
         public string ProductId { get; set; }
 
@@ -22,7 +22,7 @@ namespace Grand.Web.Models.Catalog
 
         public bool SuccessfullySent { get; set; }
         public string Result { get; set; }
-
         public bool DisplayCaptcha { get; set; }
+        public ICaptchaValidModel Captcha { get; set; } = new CaptchaModel();
     }
 }

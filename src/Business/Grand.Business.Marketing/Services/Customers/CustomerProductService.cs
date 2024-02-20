@@ -4,7 +4,7 @@ using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Marketing.Services.Customers
@@ -37,7 +37,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <summary>
         /// Gets a customer product price
         /// </summary>
-        /// <param name="Id">Identifier</param>
+        /// <param name="id">Identifier</param>
         /// <returns>Customer product price</returns>
         public virtual Task<CustomerProductPrice> GetCustomerProductPriceById(string id)
         {
@@ -53,19 +53,15 @@ namespace Grand.Business.Marketing.Services.Customers
         public virtual async Task<double?> GetPriceByCustomerProduct(string customerId, string productId)
         {
             var key = string.Format(CacheKey.CUSTOMER_PRODUCT_PRICE_KEY_ID, customerId, productId);
-            var productprice = await _cacheBase.GetAsync(key, async () =>
+            var productPrice = await _cacheBase.GetAsync(key, async () =>
             {
-                var pp = await Task.FromResult(_customerProductPriceRepository.Table.Where(x => x.CustomerId == customerId && x.ProductId == productId).FirstOrDefault());
-                if (pp == null)
-                    return (null, false);
-                else
-                    return (pp, true);
+                var pp = await Task.FromResult(_customerProductPriceRepository.Table.FirstOrDefault(x => x.CustomerId == customerId && x.ProductId == productId));
+                return pp == null ? (null, false) : (pp, true);
             });
 
-            if (!productprice.Item2)
+            if (!productPrice.Item2)
                 return null;
-            else
-                return productprice.pp.Price;
+            return productPrice.pp.Price;
         }
 
         /// <summary>
@@ -74,8 +70,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerProductPrice">Customer product price</param>
         public virtual async Task InsertCustomerProductPrice(CustomerProductPrice customerProductPrice)
         {
-            if (customerProductPrice == null)
-                throw new ArgumentNullException(nameof(customerProductPrice));
+            ArgumentNullException.ThrowIfNull(customerProductPrice);
 
             await _customerProductPriceRepository.InsertAsync(customerProductPrice);
 
@@ -92,8 +87,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerProductPrice">Customer product price</param>
         public virtual async Task UpdateCustomerProductPrice(CustomerProductPrice customerProductPrice)
         {
-            if (customerProductPrice == null)
-                throw new ArgumentNullException(nameof(customerProductPrice));
+            ArgumentNullException.ThrowIfNull(customerProductPrice);
 
             await _customerProductPriceRepository.UpdateAsync(customerProductPrice);
 
@@ -110,8 +104,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerProductPrice">Customer product price</param>
         public virtual async Task DeleteCustomerProductPrice(CustomerProductPrice customerProductPrice)
         {
-            if (customerProductPrice == null)
-                throw new ArgumentNullException(nameof(customerProductPrice));
+            ArgumentNullException.ThrowIfNull(customerProductPrice);
 
             await _customerProductPriceRepository.DeleteAsync(customerProductPrice);
 
@@ -165,8 +158,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerProduct">Customer product</param>
         public virtual async Task InsertCustomerProduct(CustomerProduct customerProduct)
         {
-            if (customerProduct == null)
-                throw new ArgumentNullException(nameof(customerProduct));
+            ArgumentNullException.ThrowIfNull(customerProduct);
 
             await _customerProductRepository.InsertAsync(customerProduct);
 
@@ -183,8 +175,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerProduct">Customer product </param>
         public virtual async Task UpdateCustomerProduct(CustomerProduct customerProduct)
         {
-            if (customerProduct == null)
-                throw new ArgumentNullException(nameof(customerProduct));
+            ArgumentNullException.ThrowIfNull(customerProduct);
 
             await _customerProductRepository.UpdateAsync(customerProduct);
 
@@ -201,8 +192,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerProduct">Customer product</param>
         public virtual async Task DeleteCustomerProduct(CustomerProduct customerProduct)
         {
-            if (customerProduct == null)
-                throw new ArgumentNullException(nameof(customerProduct));
+            ArgumentNullException.ThrowIfNull(customerProduct);
 
             await _customerProductRepository.DeleteAsync(customerProduct);
 

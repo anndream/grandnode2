@@ -3,7 +3,7 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Models.Vendors
 {
-    public partial class VendorReviewOverviewModel : BaseModel
+    public class VendorReviewOverviewModel : BaseModel
     {
         public string VendorId { get; set; }
 
@@ -14,25 +14,21 @@ namespace Grand.Web.Models.Vendors
         public bool AllowCustomerReviews { get; set; }
     }
 
-    public partial class VendorReviewsModel : BaseModel
+    public class VendorReviewsModel : BaseModel
     {
-        public VendorReviewsModel()
-        {
-            Items = new List<VendorReviewModel>();
-            AddVendorReview = new AddVendorReviewModel();
-        }
         public string VendorId { get; set; }
 
         public string VendorName { get; set; }
 
         public string VendorSeName { get; set; }
 
-        public IList<VendorReviewModel> Items { get; set; }
-        public AddVendorReviewModel AddVendorReview { get; set; }
+        public IList<VendorReviewModel> Items { get; set; } = new List<VendorReviewModel>();
+        public AddVendorReviewModel AddVendorReview { get; set; } = new();
         public VendorReviewOverviewModel VendorReviewOverview { get; set; }
+        public ICaptchaValidModel Captcha { get; set; } = new CaptchaModel();
     }
 
-    public partial class VendorReviewModel : BaseEntityModel
+    public class VendorReviewModel : BaseEntityModel
     {
         public string CustomerId { get; set; }
 
@@ -49,7 +45,7 @@ namespace Grand.Web.Models.Vendors
         public string WrittenOnStr { get; set; }
     }
 
-    public partial class VendorReviewHelpfulnessModel : BaseModel
+    public class VendorReviewHelpfulnessModel : BaseModel
     {
         public string VendorReviewId { get; set; }
         public string VendorId { get; set; }
@@ -59,7 +55,7 @@ namespace Grand.Web.Models.Vendors
         public int HelpfulNoTotal { get; set; }
     }
 
-    public partial class AddVendorReviewModel : BaseModel
+    public class AddVendorReviewModel : BaseModel
     {
         [GrandResourceDisplayName("Reviews.Fields.Title")]
         public string Title { get; set; }

@@ -5,7 +5,7 @@ using Grand.Business.Core.Events.Customers;
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Utilities.Customers;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Stores;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Extensions;
@@ -20,7 +20,7 @@ namespace Grand.Business.Authentication.Services
     /// <summary>
     /// Determines the external authentication service implementation
     /// </summary>
-    public partial class ExternalAuthenticationService : IExternalAuthenticationService
+    public class ExternalAuthenticationService : IExternalAuthenticationService
     {
         #region Fields
 
@@ -123,8 +123,7 @@ namespace Grand.Business.Authentication.Services
         /// <returns>Result of an authentication</returns>
         protected virtual async Task<IActionResult> RegisterNewUser(ExternalAuthParam parameters, string returnUrl)
         {
-            var approved = _customerSettings.UserRegistrationType == UserRegistrationType.Standard ||
-                _customerSettings.UserRegistrationType == UserRegistrationType.EmailValidation;
+            var approved = _customerSettings.UserRegistrationType is UserRegistrationType.Standard or UserRegistrationType.EmailValidation;
 
             //create registration request
             var registrationRequest = new RegistrationRequest(_workContext.CurrentCustomer,
@@ -135,32 +134,26 @@ namespace Grand.Business.Authentication.Services
                 approved);
 
             //whether registration request has been completed successfully
-            var registrationResult = await _customerManagerService.RegisterCustomer(registrationRequest);
-            if (!registrationResult.Success)
-                return Error(registrationResult.Errors);
-
+            await _customerManagerService.RegisterCustomer(registrationRequest);
+            
             //allow to save other customer values by consuming this event
-            await _mediator.Publish(new RegisteredByExternalMethod(_workContext.CurrentCustomer, parameters, registrationResult));
+            await _mediator.Publish(new RegisteredByExternalMethod(_workContext.CurrentCustomer, parameters));
 
-            //raise vustomer registered event
+            //raise customer registered event
             await _mediator.Publish(new CustomerRegisteredEvent(_workContext.CurrentCustomer));
 
             //associate external account with registered user
             await AssociateCustomer(_workContext.CurrentCustomer, parameters);
 
             //authenticate
-            if (approved)
-            {
-                await _authenticationService.SignIn(_workContext.CurrentCustomer, false);
+            if (!approved)
+                return _customerSettings.UserRegistrationType == UserRegistrationType.AdminApproval
+                    ? new RedirectToRouteResult("RegisterResult",
+                        new { resultId = (int)UserRegistrationType.AdminApproval })
+                    : Error(new[] { "Error on registration" });
+            await _authenticationService.SignIn(_workContext.CurrentCustomer, false);
 
-                return new RedirectToRouteResult("RegisterResult", new { resultId = (int)UserRegistrationType.Standard });
-            }
-
-            //registration is succeeded but isn't approved by admin
-            if (_customerSettings.UserRegistrationType == UserRegistrationType.AdminApproval)
-                return new RedirectToRouteResult("RegisterResult", new { resultId = (int)UserRegistrationType.AdminApproval });
-
-            return Error(new[] { "Error on registration" });
+            return new RedirectToRouteResult("RegisterResult", new { resultId = (int)UserRegistrationType.Standard });
         }
 
         /// <summary>
@@ -259,8 +252,7 @@ namespace Grand.Business.Authentication.Services
         /// <returns>Result of an authentication</returns>
         public virtual async Task<IActionResult> Authenticate(ExternalAuthParam parameters, string returnUrl = null)
         {
-            if (parameters == null)
-                throw new ArgumentNullException(nameof(parameters));
+            ArgumentNullException.ThrowIfNull(parameters);
 
             if (!AuthenticationProviderIsAvailable(parameters.ProviderSystemName))
                 return Error(new[] { "External authentication method cannot be loaded" });
@@ -280,14 +272,13 @@ namespace Grand.Business.Authentication.Services
         #endregion
 
         /// <summary>
-        /// Accociate external account with customer
+        /// Associate external account with customer
         /// </summary>
         /// <param name="customer">Customer</param>
         /// <param name="parameters">External authentication parameters</param>
         public virtual async Task AssociateCustomer(Customer customer, ExternalAuthParam parameters)
         {
-            if (customer == null)
-                throw new ArgumentNullException(nameof(customer));
+            ArgumentNullException.ThrowIfNull(customer);
 
             var externalAuthenticationRecord = new ExternalAuthentication {
                 CustomerId = customer.Id,
@@ -295,7 +286,7 @@ namespace Grand.Business.Authentication.Services
                 ExternalIdentifier = parameters.Identifier,
                 ExternalDisplayIdentifier = parameters.Name,
                 OAuthAccessToken = parameters.AccessToken,
-                ProviderSystemName = parameters.ProviderSystemName,
+                ProviderSystemName = parameters.ProviderSystemName
             };
 
             await _externalAuthenticationRecordRepository.InsertAsync(externalAuthenticationRecord);
@@ -308,8 +299,7 @@ namespace Grand.Business.Authentication.Services
         /// <returns>Customer</returns>
         public virtual async Task<Customer> GetCustomer(ExternalAuthParam parameters)
         {
-            if (parameters == null)
-                throw new ArgumentNullException(nameof(parameters));
+            ArgumentNullException.ThrowIfNull(parameters);
 
             var associationRecord = (from q in _externalAuthenticationRecordRepository.Table
                                      where q.ExternalIdentifier.ToLowerInvariant() == parameters.Identifier
@@ -324,8 +314,8 @@ namespace Grand.Business.Authentication.Services
 
         public virtual async Task<IList<ExternalAuthentication>> GetExternalIdentifiers(Customer customer)
         {
-            if (customer == null)
-                throw new ArgumentNullException(nameof(customer));
+            ArgumentNullException.ThrowIfNull(customer);
+            
             var query = from p in _externalAuthenticationRecordRepository.Table
                         where p.CustomerId == customer.Id
                         select p;
@@ -335,11 +325,10 @@ namespace Grand.Business.Authentication.Services
         /// <summary>
         /// Delete the external authentication 
         /// </summary>
-        /// <param name="externalAuthenticationRecord">External authentication</param>
+        /// <param name="externalAuthentication">External authentication</param>
         public virtual async Task DeleteExternalAuthentication(ExternalAuthentication externalAuthentication)
         {
-            if (externalAuthentication == null)
-                throw new ArgumentNullException(nameof(externalAuthentication));
+            ArgumentNullException.ThrowIfNull(externalAuthentication);
 
             await _externalAuthenticationRecordRepository.DeleteAsync(externalAuthentication);
         }

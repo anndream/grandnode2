@@ -2,10 +2,10 @@
 using Grand.Infrastructure.Events;
 using Grand.Domain.Catalog;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Seo;
 using MediatR;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Grand.Business.Catalog.Events.Handlers
 {
@@ -51,7 +51,7 @@ namespace Grand.Business.Catalog.Events.Handlers
             //delete cross sales product
             await _productRepository.Pull(string.Empty, x => x.CrossSellProduct, notification.Entity.Id);
 
-            //delete recomended product
+            //delete recommended product
             await _productRepository.Pull(string.Empty, x => x.RecommendedProduct, notification.Entity.Id);
 
             //delete review
@@ -64,7 +64,7 @@ namespace Grand.Business.Catalog.Events.Handlers
             await _customerGroupProductRepository.DeleteManyAsync(x => x.ProductId == notification.Entity.Id);
 
             //delete url
-            await _entityUrlRepository.DeleteManyAsync(x => x.EntityId == notification.Entity.Id && x.EntityName == "Product");
+            await _entityUrlRepository.DeleteManyAsync(x => x.EntityId == notification.Entity.Id && x.EntityName == EntityTypes.Product);
 
             //delete product tags
             var existingProductTags = _productTagRepository.Table.Where(x => notification.Entity.ProductTags.ToList().Contains(x.Name)).ToList();
@@ -74,10 +74,12 @@ namespace Grand.Business.Catalog.Events.Handlers
             }
 
             //insert to deleted products
-            var productDeleted = JsonConvert.DeserializeObject<ProductDeleted>(JsonConvert.SerializeObject(notification.Entity));
-            productDeleted.DeletedOnUtc = DateTime.UtcNow;
-            await _productDeletedRepository.InsertAsync(productDeleted);
-
+            var productDeleted = JsonSerializer.Deserialize<ProductDeleted>(JsonSerializer.Serialize(notification.Entity));
+            if (productDeleted != null)
+            {
+                productDeleted.DeletedOnUtc = DateTime.UtcNow;
+                await _productDeletedRepository.InsertAsync(productDeleted);
+            }
         }
     }
 }

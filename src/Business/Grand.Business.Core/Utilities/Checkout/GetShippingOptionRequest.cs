@@ -8,14 +8,9 @@ namespace Grand.Business.Core.Utilities.Checkout
     /// <summary>
     /// Represents a request for getting shipping rate options
     /// </summary>
-    public partial class GetShippingOptionRequest
+    public class GetShippingOptionRequest
     {
         #region Ctor
-
-        public GetShippingOptionRequest()
-        {
-            Items = new List<PackageItem>();
-        }
 
         #endregion
 
@@ -29,7 +24,7 @@ namespace Grand.Business.Core.Utilities.Checkout
         /// <summary>
         /// Gets or sets a shopping cart items
         /// </summary>
-        public IList<PackageItem> Items { get; set; }
+        public IList<PackageItem> Items { get; set; } = new List<PackageItem>();
 
         /// <summary>
         /// Gets or sets a shipping address (where we ship to)
@@ -90,10 +85,7 @@ namespace Grand.Business.Core.Utilities.Checkout
 
             public int GetQuantity()
             {
-                if (OverriddenQuantity.HasValue)
-                    return OverriddenQuantity.Value;
-
-                return ShoppingCartItem.Quantity;
+                return OverriddenQuantity ?? ShoppingCartItem.Quantity;
             }
         }
 

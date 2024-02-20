@@ -1,17 +1,15 @@
-﻿using Grand.Business.Core.Interfaces.Catalog.Discounts;
+﻿using DiscountRules.Standard.Models;
+using Grand.Business.Core.Interfaces.Catalog.Discounts;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Web.Common.Controllers;
-using Grand.Web.Common.Filters;
 using Grand.Domain.Discounts;
-using Grand.Plugin.DiscountRules.ShoppingCart.Models;
+using Grand.Web.Common.Controllers;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 
-namespace DiscountRules.Standard.Controllers
+namespace DiscountRules.Standard.Areas.Admin.Controllers
 {
-    [AuthorizeAdmin]
-    [Area("Admin")]
-    public class ShoppingCartAmountController : BasePluginController
+    public class ShoppingCartAmountController : BaseAdminPluginController
     {
         private readonly IDiscountService _discountService;
         private readonly IPermissionService _permissionService;
@@ -42,14 +40,15 @@ namespace DiscountRules.Standard.Controllers
                 spentAmountRequirement = Convert.ToDouble(discountRequirement.Metadata);
             }
 
-            var model = new RequirementModel {
+            var model = new RequirementShoppingCartModel {
                 RequirementId = !string.IsNullOrEmpty(discountRequirementId) ? discountRequirementId : "",
                 DiscountId = discountId,
                 SpentAmount = spentAmountRequirement
             };
 
             //add a prefix
-            ViewData.TemplateInfo.HtmlFieldPrefix = string.Format("DiscountRulesShoppingCart{0}", !String.IsNullOrEmpty(discountRequirementId) ? discountRequirementId : "");
+            ViewData.TemplateInfo.HtmlFieldPrefix =
+                $"DiscountRulesShoppingCart{(!string.IsNullOrEmpty(discountRequirementId) ? discountRequirementId : "")}";
 
             return View(model);
         }
@@ -72,7 +71,7 @@ namespace DiscountRules.Standard.Controllers
             if (discountRequirement != null)
             {
                 //update existing rule
-                discountRequirement.Metadata = spentAmount.ToString();
+                discountRequirement.Metadata = spentAmount.ToString(CultureInfo.InvariantCulture);
                 await _discountService.UpdateDiscount(discount);
             }
             else
@@ -81,7 +80,7 @@ namespace DiscountRules.Standard.Controllers
                 discountRequirement = new DiscountRule
                 {
                     DiscountRequirementRuleSystemName = "DiscountRequirement.ShoppingCart",
-                    Metadata = spentAmount.ToString()
+                    Metadata = spentAmount.ToString(CultureInfo.InvariantCulture)
                 };
                 discount.DiscountRules.Add(discountRequirement);
                 await _discountService.UpdateDiscount(discount);

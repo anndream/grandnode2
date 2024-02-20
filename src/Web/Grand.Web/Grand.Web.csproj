@@ -1,6 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 	<Import Project="..\..\Build\Grand.Common.props" />
 	<PropertyGroup>
+		<!--The common language runtime (CLR) supports two types of garbage collection:
+		workstation garbage collection, which is available on all systems, and server garbage collection,
+		which is available on multiprocessor systems.      
+		For single-processor computers, the default workstation garbage collection should be the fastest option.
+		Either workstation or server can be used for two-processor computers.
+		Server garbage collection should be the fastest option for more than two processors.      
+		More details about GC you can see here: https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals-->
 		<ServerGarbageCollection>false</ServerGarbageCollection>
 		<PreserveCompilationReferences>true</PreserveCompilationReferences>
 		<DockerComposeProjectPath>..\..\..\docker-compose.dcproj</DockerComposeProjectPath>
@@ -14,39 +21,20 @@
 		<ProjectReference Include="..\..\Core\Grand.SharedKernel\Grand.SharedKernel.csproj" />
 		<ProjectReference Include="..\Grand.Web.Common\Grand.Web.Common.csproj" />
 		<ProjectReference Include="..\Grand.Web.Admin\Grand.Web.Admin.csproj" />
-
+		<ProjectReference Include="..\Grand.Web.Vendor\Grand.Web.Vendor.csproj" />
 		<ProjectReference Include="..\..\API\Grand.Api\Grand.Api.csproj" />
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\..\Business\Grand.Business.Authentication\Grand.Business.Authentication.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Catalog\Grand.Business.Catalog.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Checkout\Grand.Business.Checkout.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Cms\Grand.Business.Cms.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Common\Grand.Business.Common.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Customers\Grand.Business.Customers.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Marketing\Grand.Business.Marketing.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Messages\Grand.Business.Messages.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.Storage\Grand.Business.Storage.csproj" />
-		<ProjectReference Include="..\..\Business\Grand.Business.System\Grand.Business.System.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="6.0.9" />
-	</ItemGroup>
-	<ItemGroup>
 		<Content Include="App_Data\**" CopyToPublishDirectory="PreserveNewest" Exclude="App_Data\appsettings.json;App_Data\DataProtectionKeys\*.xml;" />
-		<Content Include="Themes\**" CopyToPublishDirectory="PreserveNewest" Exclude="Themes\**\*.cfg;Themes\**\*.cshtml" />
 		<Content Include="Roslyn\**" CopyToPublishDirectory="PreserveNewest" Exclude="Roslyn\**\*.dll" />
 		<Content Include="logs\**" CopyToPublishDirectory="PreserveNewest" />
 		<Content Remove="wwwroot\assets\images\thumbs\*.jpeg;wwwroot\assets\images\thumbs\*.jpg;wwwroot\assets\images\thumbs\*.png" />
 	</ItemGroup>
 	<Target Name="PublishViews" BeforeTargets="PrepareForPublish">
 		<ItemGroup>
-			<ThemeViews Include="Themes/**/*" />
 			<PluginFiles Include="Plugins/**/*" />
 		</ItemGroup>
-		<Copy SourceFiles="@(ThemeViews)" DestinationFolder="$(PublishDir)/Themes/%(RecursiveDir)" SkipUnchangedFiles="true" />
 		<Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(PublishDir)/Plugins/%(RecursiveDir)" SkipUnchangedFiles="true" />
 	</Target>
 	<!--<PropertyGroup>
@@ -60,5 +48,5 @@
 		<Content Update="Plugins\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
-	</ItemGroup>	
+	</ItemGroup>
 </Project>

@@ -4,13 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Catalog
 {
-    public partial class SpecificationAttributeOptionModel : BaseEntityModel, ILocalizedModel<SpecificationAttributeOptionLocalizedModel>
+    public class SpecificationAttributeOptionModel : BaseEntityModel, ILocalizedModel<SpecificationAttributeOptionLocalizedModel>
     {
-        public SpecificationAttributeOptionModel()
-        {
-            Locales = new List<SpecificationAttributeOptionLocalizedModel>();
-        }
-
         public string SpecificationAttributeId { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Attributes.SpecificationAttributes.Options.Fields.Name")]
@@ -30,11 +25,10 @@ namespace Grand.Web.Admin.Models.Catalog
         [GrandResourceDisplayName("Admin.Catalog.Attributes.SpecificationAttributes.Options.Fields.NumberOfAssociatedProducts")]
         public int NumberOfAssociatedProducts { get; set; }
 
-        public IList<SpecificationAttributeOptionLocalizedModel> Locales { get; set; }
-
+        public IList<SpecificationAttributeOptionLocalizedModel> Locales { get; set; } = new List<SpecificationAttributeOptionLocalizedModel>();
     }
 
-    public partial class SpecificationAttributeOptionLocalizedModel : ILocalizedModelLocal
+    public class SpecificationAttributeOptionLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

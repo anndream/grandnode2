@@ -1,9 +1,7 @@
 using Grand.Business.Core.Interfaces.Catalog.Directory;
 using Grand.Business.Core.Interfaces.Catalog.Tax;
 using Grand.Business.Core.Utilities.Catalog;
-using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Domain.Catalog;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
@@ -12,13 +10,14 @@ using Grand.Domain.Orders;
 using Grand.Domain.Tax;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Business.Catalog.Services.Tax
 {
     /// <summary>
     /// Tax service
     /// </summary>
-    public partial class TaxService : ITaxService
+    public class TaxService : ITaxService
     {
         #region Fields
 
@@ -27,7 +26,7 @@ namespace Grand.Business.Catalog.Services.Tax
         private readonly IGeoLookupService _geoLookupService;
         private readonly ICountryService _countryService;
         private readonly IEnumerable<ITaxProvider> _taxProviders;
-        private readonly ILogger _logger;
+        private readonly ILogger<TaxService> _logger;
         private readonly TaxSettings _taxSettings;
         private readonly TaxProviderSettings _taxProviderSettings;
         private readonly CustomerSettings _customerSettings;
@@ -43,7 +42,7 @@ namespace Grand.Business.Catalog.Services.Tax
             IGeoLookupService geoLookupService,
             ICountryService countryService,
             IEnumerable<ITaxProvider> taxProviders,
-            ILogger logger,
+            ILogger<TaxService> logger,
             TaxSettings taxSettings,
             TaxProviderSettings taxProviderSettings,
             CustomerSettings customerSettings,
@@ -72,16 +71,14 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <returns>Result</returns>
         protected virtual async Task<bool> IsEuConsumer(Customer customer)
         {
-            if (customer == null)
-                throw new ArgumentNullException(nameof(customer));
+            ArgumentNullException.ThrowIfNull(customer);
 
             Country country = null;
 
             //get country from billing address
             if (_addressSettings.CountryEnabled && customer.BillingAddress != null)
             {
-                var _country = await _countryService.GetCountryById(customer.BillingAddress.CountryId);
-                country = _country;
+                country =  await _countryService.GetCountryById(customer.BillingAddress.CountryId);
             }
             //get country specified during registration?
             if (country == null && _customerSettings.CountryEnabled)
@@ -99,20 +96,12 @@ namespace Grand.Business.Catalog.Services.Tax
             }
 
             //we cannot detect country
-            if (country == null)
+            if (country is not { SubjectToVat: true })
                 return false;
-
-            //outside EU
-            if (!country.SubjectToVat)
-                return false;
-
+            
             //company (business) or consumer?
             var customerVatStatus = (VatNumberStatus)customer.GetUserFieldFromEntity<int>(SystemCustomerFieldNames.VatNumberStatusId);
-            if (customerVatStatus == VatNumberStatus.Valid)
-                return false;
-
-            //consumer
-            return true;
+            return customerVatStatus != VatNumberStatus.Valid;
         }
 
         /// <summary>
@@ -121,17 +110,18 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="product">Product</param>
         /// <param name="taxCategoryId">Tax category identifier</param>
         /// <param name="customer">Customer</param>
+        /// <param name="price">Price</param>
         /// <returns>Package for tax calculation</returns>
         protected virtual async Task<TaxRequest> CreateCalculateTaxRequest(Product product,
             string taxCategoryId, Customer customer, double price)
         {
-            if (customer == null)
-                throw new ArgumentNullException(nameof(customer));
+            ArgumentNullException.ThrowIfNull(customer);
 
-            var calculateTaxRequest = new TaxRequest();
-            calculateTaxRequest.Customer = customer;
-            calculateTaxRequest.Product = product;
-            calculateTaxRequest.Price = price;
+            var calculateTaxRequest = new TaxRequest {
+                Customer = customer,
+                Product = product,
+                Price = price
+            };
 
             if (!string.IsNullOrEmpty(taxCategoryId))
             {
@@ -146,7 +136,7 @@ namespace Grand.Business.Catalog.Services.Tax
             if (_taxSettings.EuVatEnabled)
             {
                 //telecommunications, broadcasting and electronic services?
-                if (product != null && product.IsTele)
+                if (product is { IsTele: true })
                 {
                     //Europe Union consumer?
                     if (await IsEuConsumer(customer))
@@ -214,18 +204,16 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="taxCategoryId">Tax category identifier</param>
         /// <param name="customer">Customer</param>
         /// <param name="price">Price (taxable value)</param>
-        /// <param name="taxRate">Calculated tax rate</param>
-        /// <param name="isTaxable">A value indicating whether a request is taxable</param>
         protected virtual async Task<(double taxRate, bool isTaxable)> GetTaxRate(Product product, string taxCategoryId,
             Customer customer, double price)
         {
             double taxRate = 0;
-            bool isTaxable = true;
+            var isTaxable = true;
 
             //active tax provider
             var activeTaxProvider = LoadActiveTaxProvider();
             if (activeTaxProvider == null)
-                return (taxRate, isTaxable);
+                return (taxRate, true);
 
             //tax request
             var calculateTaxRequest = await CreateCalculateTaxRequest(product, taxCategoryId, customer, price);
@@ -258,7 +246,7 @@ namespace Grand.Business.Catalog.Services.Tax
             {
                 foreach (var error in calculateTaxResult.Errors)
                 {
-                    _ = _logger.Error(string.Format("{0} - {1}", activeTaxProvider.FriendlyName, error), null, customer);
+                    _logger.LogError("{FriendlyName} - {Error}", activeTaxProvider.FriendlyName, error);
                 }
             }
             return (taxRate, isTaxable);
@@ -275,9 +263,8 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <returns>Active tax provider</returns>
         public virtual ITaxProvider LoadActiveTaxProvider()
         {
-            var taxProvider = LoadTaxProviderBySystemName(_taxProviderSettings.ActiveTaxProviderSystemName);
-            if (taxProvider == null)
-                taxProvider = LoadAllTaxProviders(_workContext.CurrentCustomer, _workContext.CurrentStore.Id).FirstOrDefault();
+            var taxProvider = LoadTaxProviderBySystemName(_taxProviderSettings.ActiveTaxProviderSystemName) ??
+                              LoadAllTaxProviders(_workContext.CurrentCustomer, _workContext.CurrentStore.Id).FirstOrDefault();
             return taxProvider;
         }
 
@@ -313,7 +300,6 @@ namespace Grand.Business.Catalog.Services.Tax
         /// </summary>
         /// <param name="product">Product</param>
         /// <param name="price">Price</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double productprice, double taxRate)> GetProductPrice(Product product, double price)
         {
@@ -327,12 +313,11 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="product">Product</param>
         /// <param name="price">Price</param>
         /// <param name="customer">Customer</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double productprice, double taxRate)> GetProductPrice(Product product, double price,
             Customer customer)
         {
-            bool includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
+            var includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
             return await GetProductPrice(product, price, includingTax, customer);
         }
 
@@ -343,14 +328,12 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="price">Price</param>
         /// <param name="includingTax">A value indicating whether calculated price should include tax</param>
         /// <param name="customer">Customer</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double productprice, double taxRate)> GetProductPrice(Product product, double price,
             bool includingTax, Customer customer)
         {
-            bool priceIncludesTax = _taxSettings.PricesIncludeTax;
-            string taxCategoryId = "";
-            return await GetProductPrice(product, taxCategoryId, price, includingTax,
+            var priceIncludesTax = _taxSettings.PricesIncludeTax;
+            return await GetProductPrice(product, string.Empty, price, includingTax,
                 customer, priceIncludesTax);
         }
 
@@ -363,7 +346,6 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="includingTax">A value indicating whether calculated price should include tax</param>
         /// <param name="customer">Customer</param>
         /// <param name="priceIncludesTax">A value indicating whether price already includes tax</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double productprice, double taxRate)> GetProductPrice(Product product, string taxCategoryId,
             double price, bool includingTax, Customer customer,
@@ -428,7 +410,7 @@ namespace Grand.Business.Catalog.Services.Tax
             Product product,
             Customer customer,
             double unitPrice,
-            double unitPricewithoutDisc,
+            double unitPriceWithoutDisc,
             int quantity,
             double subTotal,
             double discountAmount,
@@ -439,7 +421,7 @@ namespace Grand.Business.Catalog.Services.Tax
 
             var productPrice = new TaxProductPrice
             {
-                taxRate = taxrates.taxRate,
+                TaxRate = taxrates.taxRate,
                 Quantity = quantity
             };
 
@@ -447,8 +429,8 @@ namespace Grand.Business.Catalog.Services.Tax
             {
                 if (taxrates.isTaxable)
                 {
-                    productPrice.UnitPriceWihoutDiscInclTax = unitPricewithoutDisc;
-                    productPrice.UnitPriceWihoutDiscExclTax = CalculatePrice(unitPricewithoutDisc, taxrates.taxRate, false);
+                    productPrice.UnitPriceWithoutDiscInclTax = unitPriceWithoutDisc;
+                    productPrice.UnitPriceWithoutDiscExclTax = CalculatePrice(unitPriceWithoutDisc, taxrates.taxRate, false);
 
                     productPrice.UnitPriceInclTax = unitPrice;
                     productPrice.UnitPriceExclTax = CalculatePrice(unitPrice, taxrates.taxRate, false);
@@ -456,13 +438,13 @@ namespace Grand.Business.Catalog.Services.Tax
                     productPrice.SubTotalInclTax = subTotal;
                     productPrice.SubTotalExclTax = CalculatePrice(subTotal, taxrates.taxRate, false);
 
-                    productPrice.discountAmountInclTax = discountAmount;
-                    productPrice.discountAmountExclTax = CalculatePrice(discountAmount, taxrates.taxRate, false);
+                    productPrice.DiscountAmountInclTax = discountAmount;
+                    productPrice.DiscountAmountExclTax = CalculatePrice(discountAmount, taxrates.taxRate, false);
                 }
                 else
                 {
-                    productPrice.UnitPriceWihoutDiscInclTax = CalculatePrice(unitPricewithoutDisc, taxrates.taxRate, false);
-                    productPrice.UnitPriceWihoutDiscExclTax = CalculatePrice(unitPricewithoutDisc, taxrates.taxRate, false);
+                    productPrice.UnitPriceWithoutDiscInclTax = CalculatePrice(unitPriceWithoutDisc, taxrates.taxRate, false);
+                    productPrice.UnitPriceWithoutDiscExclTax = CalculatePrice(unitPriceWithoutDisc, taxrates.taxRate, false);
 
                     productPrice.UnitPriceInclTax = CalculatePrice(unitPrice, taxrates.taxRate, false);
                     productPrice.UnitPriceExclTax = CalculatePrice(unitPrice, taxrates.taxRate, false);
@@ -470,16 +452,16 @@ namespace Grand.Business.Catalog.Services.Tax
                     productPrice.SubTotalInclTax = CalculatePrice(subTotal, taxrates.taxRate, false);
                     productPrice.SubTotalExclTax = CalculatePrice(subTotal, taxrates.taxRate, false);
 
-                    productPrice.discountAmountInclTax = CalculatePrice(discountAmount, taxrates.taxRate, false);
-                    productPrice.discountAmountExclTax = CalculatePrice(discountAmount, taxrates.taxRate, false);
+                    productPrice.DiscountAmountInclTax = CalculatePrice(discountAmount, taxrates.taxRate, false);
+                    productPrice.DiscountAmountExclTax = CalculatePrice(discountAmount, taxrates.taxRate, false);
                 }
             }
             else
             {
                 if (taxrates.isTaxable)
                 {
-                    productPrice.UnitPriceWihoutDiscInclTax = CalculatePrice(unitPricewithoutDisc, taxrates.taxRate, true);
-                    productPrice.UnitPriceWihoutDiscExclTax = unitPricewithoutDisc;
+                    productPrice.UnitPriceWithoutDiscInclTax = CalculatePrice(unitPriceWithoutDisc, taxrates.taxRate, true);
+                    productPrice.UnitPriceWithoutDiscExclTax = unitPriceWithoutDisc;
 
                     productPrice.UnitPriceInclTax = CalculatePrice(unitPrice, taxrates.taxRate, true);
                     productPrice.UnitPriceExclTax = unitPrice;
@@ -487,13 +469,13 @@ namespace Grand.Business.Catalog.Services.Tax
                     productPrice.SubTotalInclTax = CalculatePrice(subTotal, taxrates.taxRate, true);
                     productPrice.SubTotalExclTax = subTotal;
 
-                    productPrice.discountAmountInclTax = CalculatePrice(discountAmount, taxrates.taxRate, true);
-                    productPrice.discountAmountExclTax = discountAmount;
+                    productPrice.DiscountAmountInclTax = CalculatePrice(discountAmount, taxrates.taxRate, true);
+                    productPrice.DiscountAmountExclTax = discountAmount;
                 }
                 else
                 {
-                    productPrice.UnitPriceWihoutDiscInclTax = unitPricewithoutDisc;
-                    productPrice.UnitPriceWihoutDiscExclTax = unitPricewithoutDisc;
+                    productPrice.UnitPriceWithoutDiscInclTax = unitPriceWithoutDisc;
+                    productPrice.UnitPriceWithoutDiscExclTax = unitPriceWithoutDisc;
 
                     productPrice.UnitPriceInclTax = unitPrice;
                     productPrice.UnitPriceExclTax = unitPrice;
@@ -501,8 +483,8 @@ namespace Grand.Business.Catalog.Services.Tax
                     productPrice.SubTotalInclTax = subTotal;
                     productPrice.SubTotalExclTax = subTotal;
 
-                    productPrice.discountAmountInclTax = discountAmount;
-                    productPrice.discountAmountExclTax = discountAmount;
+                    productPrice.DiscountAmountInclTax = discountAmount;
+                    productPrice.DiscountAmountExclTax = discountAmount;
                 }
             }
 
@@ -522,7 +504,7 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <returns>Price</returns>
         public virtual async Task<(double shippingPrice, double taxRate)> GetShippingPrice(double price, Customer customer)
         {
-            bool includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
+            var includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
             return await GetShippingPrice(price, includingTax, customer);
         }
 
@@ -532,7 +514,6 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="price">Price</param>
         /// <param name="includingTax">A value indicating whether calculated price should include tax</param>
         /// <param name="customer">Customer</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double shippingPrice, double taxRate)> GetShippingPrice(double price, bool includingTax, Customer customer)
         {
@@ -541,8 +522,8 @@ namespace Grand.Business.Catalog.Services.Tax
                 return (price, 0);
             }
 
-            string taxCategoryId = _taxSettings.ShippingTaxCategoryId;
-            bool priceIncludesTax = _taxSettings.ShippingPriceIncludesTax;
+            var taxCategoryId = _taxSettings.ShippingTaxCategoryId;
+            var priceIncludesTax = _taxSettings.ShippingPriceIncludesTax;
             var prices = await GetProductPrice(null, taxCategoryId, price, includingTax, customer,
                 priceIncludesTax);
             return (prices.productprice, prices.taxRate);
@@ -556,7 +537,7 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <returns>Price</returns>
         public virtual async Task<(double paymentPrice, double taxRate)> GetPaymentMethodAdditionalFee(double price, Customer customer)
         {
-            bool includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
+            var includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
             return await GetPaymentMethodAdditionalFee(price, includingTax, customer);
         }
 
@@ -566,7 +547,6 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="price">Price</param>
         /// <param name="includingTax">A value indicating whether calculated price should include tax</param>
         /// <param name="customer">Customer</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double paymentPrice, double taxRate)> GetPaymentMethodAdditionalFee(double price, bool includingTax, Customer customer)
         {
@@ -574,8 +554,8 @@ namespace Grand.Business.Catalog.Services.Tax
             {
                 return (price, 0);
             }
-            string taxClassId = _taxSettings.PaymentMethodAdditionalFeeTaxCategoryId;
-            bool priceIncludesTax = _taxSettings.PaymentMethodAdditionalFeeIncludesTax;
+            var taxClassId = _taxSettings.PaymentMethodAdditionalFeeTaxCategoryId;
+            var priceIncludesTax = _taxSettings.PaymentMethodAdditionalFeeIncludesTax;
             var prices = await GetProductPrice(null, taxClassId, price, includingTax, customer,
                 priceIncludesTax);
             return (prices.productprice, prices.taxRate);
@@ -602,7 +582,7 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <returns>Price</returns>
         public virtual async Task<(double checkoutPrice, double taxRate)> GetCheckoutAttributePrice(CheckoutAttribute ca, CheckoutAttributeValue cav, Customer customer)
         {
-            bool includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
+            var includingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
             return await GetCheckoutAttributePrice(ca, cav, includingTax, customer);
         }
 
@@ -613,24 +593,20 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <param name="cav">Checkout attribute value</param>
         /// <param name="includingTax">A value indicating whether calculated price should include tax</param>
         /// <param name="customer">Customer</param>
-        /// <param name="taxRate">Tax rate</param>
         /// <returns>Price</returns>
         public virtual async Task<(double checkoutPrice, double taxRate)> GetCheckoutAttributePrice(CheckoutAttribute ca, CheckoutAttributeValue cav, bool includingTax, Customer customer)
         {
-            if (ca == null)
-                throw new ArgumentNullException(nameof(ca));
+            ArgumentNullException.ThrowIfNull(ca);
+            ArgumentNullException.ThrowIfNull(cav);
 
-            if (cav == null)
-                throw new ArgumentNullException(nameof(cav));
-
-            double price = cav.PriceAdjustment;
+            var price = cav.PriceAdjustment;
             if (ca.IsTaxExempt)
             {
                 return (price, 0);
             }
 
-            bool priceIncludesTax = _taxSettings.PricesIncludeTax;
-            string taxClassId = ca.TaxCategoryId;
+            var priceIncludesTax = _taxSettings.PricesIncludeTax;
+            var taxClassId = ca.TaxCategoryId;
             var prices = await GetProductPrice(null, taxClassId, price, includingTax, customer,
                 priceIncludesTax);
 
@@ -647,27 +623,15 @@ namespace Grand.Business.Catalog.Services.Tax
         /// <returns>A value indicating whether a product is tax exempt</returns>
         public virtual async Task<bool> IsTaxExempt(Product product, Customer customer)
         {
-            if (customer != null)
-            {
-                if (customer.IsTaxExempt)
-                    return true;
-
-                var customerGroups = await _groupService.GetAllByIds(customer.Groups.ToArray());
-                if (customerGroups.Any(cr => cr.TaxExempt))
-                    return true;
-            }
-
-            if (product == null)
-            {
-                return false;
-            }
-
-            if (product.IsTaxExempt)
-            {
+            if (customer == null) return product is { IsTaxExempt: true };
+            if (customer.IsTaxExempt)
                 return true;
-            }
 
-            return false;
+            var customerGroups = await _groupService.GetAllByIds(customer.Groups.ToArray());
+            if (customerGroups.Any(cr => cr.TaxExempt))
+                return true;
+
+            return product is { IsTaxExempt: true };
         }
 
         /// <summary>
@@ -681,7 +645,7 @@ namespace Grand.Business.Catalog.Services.Tax
             if (!_taxSettings.EuVatEnabled)
                 return false;
 
-            if (address == null || String.IsNullOrEmpty(address.CountryId) || customer == null)
+            if (address == null || string.IsNullOrEmpty(address.CountryId) || customer == null)
                 return false;
 
             var country = await _countryService.GetCountryById(address.CountryId);

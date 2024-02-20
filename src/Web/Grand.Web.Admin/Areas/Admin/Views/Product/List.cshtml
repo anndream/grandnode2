@@ -1,5 +1,4 @@
-﻿@using Grand.Domain.Catalog
-@model ProductListModel
+﻿@model ProductListModel
 @inject AdminAreaSettings adminAreaSettings
 @{
     //page title
@@ -32,15 +31,11 @@
                                 </li>
                             </ul>
                         </div>
-                        @if (!Model.IsLoggedInAsVendor)
-                        {
-                            //a vendor cannot import products
                             <button type="button" id="importexcel" name="importexcel" class="btn default">
                                 <i class="fa fa-upload"></i>
                                 @Loc["Admin.Common.ImportFromExcel"]
                             </button>
 
-                        }
                         <button type="button" name="delete-selected" id="delete-selected" class="btn red">
                             <i class="fa fa-trash-o"></i>
                             @Loc["Admin.Common.Delete.Selected"]
@@ -138,7 +133,7 @@
                                         <admin-select asp-for="SearchStoreId" asp-items="Model.AvailableStores" />
                                     </div>
                                 </div>
-                                <div class="form-group" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+                                <div class="form-group">
                                     <admin-label asp-for="SearchVendorId" class="col-sm-3 control-label" />
                                     <div class="col-md-9 col-sm-9">
                                         <admin-input asp-for="SearchVendorId" />
@@ -427,13 +422,7 @@
             });
         });
 </script>
-<form asp-area="@Constants.AreaAdmin" asp-controller="Product" asp-action="ExportXmlSelected" method="post" id="export-xml-selected-form">
-    
-    <input type="hidden" id="selectedIds" name="selectedIds" value="" />
-</form>
-
 <script>
-
     $(document).ready(function () {
         $('#exportxml-selected').click(function (e) {
             e.preventDefault();

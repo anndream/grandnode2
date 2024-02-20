@@ -1,6 +1,6 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Stores;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -22,7 +22,7 @@ namespace Grand.Web.Common.Filters
         public PublicStoreAttribute(bool ignore = false) : base(typeof(AccessPublicStoreFilter))
         {
             _ignoreFilter = ignore;
-            Arguments = new object[] { ignore };
+            Arguments = [ignore];
         }
 
         public bool IgnoreFilter => _ignoreFilter;
@@ -61,8 +61,7 @@ namespace Grand.Web.Common.Filters
             public async Task OnAuthorizationAsync(AuthorizationFilterContext filterContext)
             {
                 //ignore filter (the action available even when navigation is not allowed)
-                if (filterContext == null)
-                    throw new ArgumentNullException(nameof(filterContext));
+                ArgumentNullException.ThrowIfNull(filterContext);
 
                 //check whether this filter has been overridden for the Action
                 var actionFilter = filterContext.ActionDescriptor.FilterDescriptors
@@ -81,13 +80,9 @@ namespace Grand.Web.Common.Filters
                 if (await _permissionService.Authorize(StandardPermission.PublicStoreAllowNavigation))
                     return;
 
-                if (_storeInformationSettings.StoreClosed)
-                {
-                    filterContext.Result = new RedirectToRouteResult("StoreClosed", new RouteValueDictionary());
-                }
-                else
+                filterContext.Result = _storeInformationSettings.StoreClosed ? new RedirectToRouteResult("StoreClosed", new RouteValueDictionary()) :
                     //customer has not access to a public store
-                    filterContext.Result = new RedirectToRouteResult("Login", new RouteValueDictionary());
+                    new RedirectToRouteResult("Login", new RouteValueDictionary());
 
             }
 

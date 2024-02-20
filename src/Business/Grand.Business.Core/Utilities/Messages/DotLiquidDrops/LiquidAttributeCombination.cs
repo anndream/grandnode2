@@ -3,7 +3,7 @@ using Grand.Domain.Catalog;
 
 namespace Grand.Business.Core.Utilities.Messages.DotLiquidDrops
 {
-    public partial class LiquidAttributeCombination : Drop
+    public class LiquidAttributeCombination : Drop
     {
         private readonly ProductAttributeCombination _combination;
 
@@ -17,10 +17,7 @@ namespace Grand.Business.Core.Utilities.Messages.DotLiquidDrops
 
         public string SKU { get; set; }
 
-        public string StockQuantity
-        {
-            get { return _combination.StockQuantity.ToString(); }
-        }
+        public string StockQuantity => _combination.StockQuantity.ToString();
 
         public IDictionary<string, string> AdditionalTokens { get; set; }
     }

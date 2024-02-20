@@ -11,20 +11,20 @@ using Grand.Web.Common.Models;
 using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Directory;
 using Grand.Domain.Shipping;
-using Grand.Infrastructure;
-using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Models.Directory;
 using Grand.Web.Admin.Models.Shipping;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Grand.Web.Admin.Models.Common;
-using Grand.Business.Core.Interfaces.Common.Logging;
+using Grand.Domain;
+using Grand.Domain.Customers;
+using Grand.Web.Admin.Extensions.Mapping;
+using Grand.Web.Admin.Extensions.Mapping.Settings;
 
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.ShippingSettings)]
-    public partial class ShippingController : BaseAdminController
+    public class ShippingController : BaseAdminController
     {
         #region Fields
 
@@ -39,8 +39,7 @@ namespace Grand.Web.Admin.Controllers
         private readonly ILanguageService _languageService;
         private readonly IStoreService _storeService;
         private readonly IGroupService _groupService;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly IWorkContext _workContext;
+
         #endregion
 
         #region Constructors
@@ -56,9 +55,7 @@ namespace Grand.Web.Admin.Controllers
             ITranslationService translationService,
             ILanguageService languageService,
             IStoreService storeService,
-            IGroupService groupService,
-            IServiceProvider serviceProvider,
-            IWorkContext workContext)
+            IGroupService groupService)
         {
             _shippingService = shippingService;
             _shippingMethodService = shippingMethodService;
@@ -71,8 +68,6 @@ namespace Grand.Web.Admin.Controllers
             _languageService = languageService;
             _storeService = storeService;
             _groupService = groupService;
-            _serviceProvider = serviceProvider;
-            _workContext = workContext;
         }
 
         #endregion
@@ -83,13 +78,13 @@ namespace Grand.Web.Admin.Controllers
         {
             model.Address.AvailableCountries.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Address.SelectCountry"), Value = "" });
             foreach (var c in await _countryService.GetAllCountries(showHidden: true))
-                model.Address.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString(), Selected = (c.Id == model.Address.CountryId) });
+                model.Address.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id, Selected = c.Id == model.Address.CountryId });
             //states
-            var states = !String.IsNullOrEmpty(model.Address.CountryId) ? (await _countryService.GetCountryById(model.Address.CountryId))?.StateProvinces : new List<StateProvince>();
-            if (states.Count > 0)
+            var states = !string.IsNullOrEmpty(model.Address.CountryId) ? (await _countryService.GetCountryById(model.Address.CountryId))?.StateProvinces : new List<StateProvince>();
+            if (states?.Count > 0)
             {
                 foreach (var s in states)
-                    model.Address.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString(), Selected = (s.Id == model.Address.StateProvinceId) });
+                    model.Address.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id, Selected = s.Id == model.Address.StateProvinceId });
             }
 
             model.Address.CountryEnabled = true;
@@ -107,13 +102,13 @@ namespace Grand.Web.Admin.Controllers
         {
             model.Address.AvailableCountries.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Address.SelectCountry"), Value = "" });
             foreach (var c in await _countryService.GetAllCountries(showHidden: true))
-                model.Address.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString(), Selected = (c.Id == model.Address.CountryId) });
+                model.Address.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id, Selected = c.Id == model.Address.CountryId });
             //states
-            var states = !String.IsNullOrEmpty(model.Address.CountryId) ? (await _countryService.GetCountryById(model.Address.CountryId))?.StateProvinces : new List<StateProvince>();
-            if (states.Count > 0)
+            var states = !string.IsNullOrEmpty(model.Address.CountryId) ? (await _countryService.GetCountryById(model.Address.CountryId))?.StateProvinces : new List<StateProvince>();
+            if (states?.Count > 0)
             {
                 foreach (var s in states)
-                    model.Address.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString(), Selected = (s.Id == model.Address.StateProvinceId) });
+                    model.Address.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id, Selected = s.Id == model.Address.StateProvinceId });
             }
 
             model.Address.CountryEnabled = true;
@@ -128,11 +123,11 @@ namespace Grand.Web.Admin.Controllers
 
             model.AvailableStores.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Configuration.Shipping.PickupPoint.SelectStore"), Value = "" });
             foreach (var c in await _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = c.Shortcut, Value = c.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = c.Shortcut, Value = c.Id });
 
             model.AvailableWarehouses.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Configuration.Shipping.PickupPoint.SelectWarehouse"), Value = "" });
             foreach (var c in await _warehouseService.GetAllWarehouses())
-                model.AvailableWarehouses.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString() });
+                model.AvailableWarehouses.Add(new SelectListItem { Text = c.Name, Value = c.Id });
 
         }
 
@@ -140,7 +135,10 @@ namespace Grand.Web.Admin.Controllers
 
         #region Shipping rate  methods
 
-        public IActionResult Providers() => View();
+        public IActionResult Providers()
+        {
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> Providers(DataSourceRequest command)
@@ -160,7 +158,7 @@ namespace Grand.Web.Admin.Controllers
             var gridModel = new DataSourceResult
             {
                 Data = shippingProvidersModel,
-                Total = shippingProvidersModel.Count()
+                Total = shippingProvidersModel.Count
             };
 
             return Json(gridModel);
@@ -199,7 +197,10 @@ namespace Grand.Web.Admin.Controllers
 
         #region Shipping methods
 
-        public IActionResult Methods() => View();
+        public IActionResult Methods()
+        {
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> Methods(DataSourceRequest command)
@@ -316,13 +317,13 @@ namespace Grand.Web.Admin.Controllers
 
             model.ShippingOriginAddress.AvailableCountries.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Address.SelectCountry"), Value = "" });
             foreach (var c in await _countryService.GetAllCountries(showHidden: true))
-                model.ShippingOriginAddress.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString(), Selected = (originAddress != null && c.Id == originAddress.CountryId) });
+                model.ShippingOriginAddress.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id, Selected = originAddress != null && c.Id == originAddress.CountryId });
 
-            var states = originAddress != null && !String.IsNullOrEmpty(originAddress.CountryId) ? (await _countryService.GetCountryById(originAddress.CountryId))?.StateProvinces : new List<StateProvince>();
-            if (states.Count > 0)
+            var states = originAddress != null && !string.IsNullOrEmpty(originAddress.CountryId) ? (await _countryService.GetCountryById(originAddress.CountryId))?.StateProvinces : new List<StateProvince>();
+            if (states?.Count > 0)
             {
                 foreach (var s in states)
-                    model.ShippingOriginAddress.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString(), Selected = (s.Id == originAddress.StateProvinceId) });
+                    model.ShippingOriginAddress.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id, Selected = s.Id == originAddress?.StateProvinceId });
             }
 
             model.ShippingOriginAddress.CountryEnabled = true;
@@ -336,8 +337,7 @@ namespace Grand.Web.Admin.Controllers
             return View(model);
         }
         [HttpPost]
-        public async Task<IActionResult> Settings(ShippingSettingsModel model, 
-            [FromServices] ICustomerActivityService customerActivityService)
+        public async Task<IActionResult> Settings(ShippingSettingsModel model)
         {
             //load settings for a chosen store scope
             var storeScope = await GetActiveStore();
@@ -345,11 +345,6 @@ namespace Grand.Web.Admin.Controllers
             shippingSettings = model.ToEntity(shippingSettings);
 
             await _settingService.SaveSetting(shippingSettings, storeScope);
-
-            //activity log
-            _ = customerActivityService.InsertActivity("EditSettings", "",
-                _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.EditSettings"));
 
             Success(_translationService.GetResource("Admin.Configuration.Updated"));
             return RedirectToAction("Settings");
@@ -359,7 +354,10 @@ namespace Grand.Web.Admin.Controllers
 
         #region Delivery dates
 
-        public IActionResult DeliveryDates() => View();
+        public IActionResult DeliveryDates()
+        {
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> DeliveryDates(DataSourceRequest command)
@@ -411,7 +409,7 @@ namespace Grand.Web.Admin.Controllers
 
             var model = deliveryDate.ToModel();
 
-            if (String.IsNullOrEmpty(model.ColorSquaresRgb))
+            if (string.IsNullOrEmpty(model.ColorSquaresRgb))
             {
                 model.ColorSquaresRgb = "#000000";
             }
@@ -462,14 +460,17 @@ namespace Grand.Web.Admin.Controllers
                 return RedirectToAction("DeliveryDates");
             }
             Error(ModelState);
-            return RedirectToAction("EditDeliveryDate", new { id = id });
+            return RedirectToAction("EditDeliveryDate", new { id });
         }
 
         #endregion
 
         #region Warehouses
 
-        public IActionResult Warehouses() => View();
+        public IActionResult Warehouses()
+        {
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> Warehouses(DataSourceRequest command)
@@ -499,7 +500,6 @@ namespace Grand.Web.Admin.Controllers
             {
                 var warehouse = model.ToEntity();
                 var address = model.Address.ToEntity();
-                address.CreatedOnUtc = DateTime.UtcNow;
                 warehouse.Address = address;
                 await _warehouseService.InsertWarehouse(warehouse);
 
@@ -563,7 +563,10 @@ namespace Grand.Web.Admin.Controllers
 
         #region PickupPoints
 
-        public IActionResult PickupPoints() => View();
+        public IActionResult PickupPoints()
+        {
+            return View();
+        }
 
         [HttpPost]
         public async Task<IActionResult> PickupPoints(DataSourceRequest command)
@@ -684,14 +687,14 @@ namespace Grand.Web.Admin.Controllers
             }
             foreach (var r in customerGroups)
             {
-                model.AvailableCustomerGroups.Add(new CustomerGroupModel() { Id = r.Id, Name = r.Name });
+                model.AvailableCustomerGroups.Add(new CustomerGroupModel { Id = r.Id, Name = r.Name });
             }
 
             foreach (var country in countries)
             {
                 foreach (var shippingMethod in shippingMethods)
                 {
-                    bool restricted = shippingMethod.CountryRestrictionExists(country.Id);
+                    var restricted = shippingMethod.CountryRestrictionExists(country.Id);
                     if (!model.Restricted.ContainsKey(country.Id))
                         model.Restricted[country.Id] = new Dictionary<string, bool>();
                     model.Restricted[country.Id][shippingMethod.Id] = restricted;
@@ -702,7 +705,7 @@ namespace Grand.Web.Admin.Controllers
             {
                 foreach (var shippingMethod in shippingMethods)
                 {
-                    bool restricted = shippingMethod.CustomerGroupRestrictionExists(role.Id);
+                    var restricted = shippingMethod.CustomerGroupRestrictionExists(role.Id);
                     if (!model.RestictedGroup.ContainsKey(role.Id))
                         model.RestictedGroup[role.Id] = new Dictionary<string, bool>();
                     model.RestictedGroup[role.Id][shippingMethod.Id] = restricted;
@@ -715,55 +718,31 @@ namespace Grand.Web.Admin.Controllers
 
         [HttpPost, ActionName("Restrictions")]
         [RequestFormLimits(ValueCountLimit = 2048)]
-        public async Task<IActionResult> RestrictionSave(IFormCollection form)
+        public async Task<IActionResult> RestrictionSave(IDictionary<string, string[]> model)
         {
             var countries = await _countryService.GetAllCountries(showHidden: true);
             var shippingMethods = await _shippingMethodService.GetAllShippingMethods();
             var customerGroups = await _groupService.GetAllCustomerGroups();
-
             foreach (var shippingMethod in shippingMethods)
             {
-                string formKey = "restrict_" + shippingMethod.Id;
-                var countryIdsToRestrict = form[formKey].ToString() != null
-                    ? form[formKey].ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x)
-                    .ToList()
-                    : new List<string>();
+                await SaveRestrictedCountries(model, shippingMethod, countries);
+                await SaveRestrictedGroup(model, shippingMethod, customerGroups);
+            }
+            Success(_translationService.GetResource("Admin.Configuration.Shipping.Restrictions.Updated"));
+            //selected tab
+            await SaveSelectedTabIndex();
 
-                foreach (var country in countries)
-                {
+            return RedirectToAction("Restrictions");
+        }
 
-                    bool restrict = countryIdsToRestrict.Contains(country.Id);
-                    if (restrict)
-                    {
-                        if (shippingMethod.RestrictedCountries.FirstOrDefault(c => c.Id == country.Id) == null)
-                        {
-                            shippingMethod.RestrictedCountries.Add(country);
-                            await _shippingMethodService.UpdateShippingMethod(shippingMethod);
-                        }
-                    }
-                    else
-                    {
-                        if (shippingMethod.RestrictedCountries.FirstOrDefault(c => c.Id == country.Id) != null)
-                        {
-                            shippingMethod.RestrictedCountries.Remove(shippingMethod.RestrictedCountries.FirstOrDefault(x => x.Id == country.Id));
-                            await _shippingMethodService.UpdateShippingMethod(shippingMethod);
-                        }
-                    }
-                }
-
-                formKey = "restrictgroup_" + shippingMethod.Id;
-                var roleIdsToRestrict = form[formKey].ToString() != null
-                    ? form[formKey].ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x)
-                    .ToList()
-                    : new List<string>();
-
-
+        private async Task SaveRestrictedGroup(IDictionary<string, string[]> model, ShippingMethod shippingMethod, IPagedList<CustomerGroup> customerGroups)
+        {
+            if (model.TryGetValue($"restrictgroup_{shippingMethod.Id}", out var roleIds))
+            {
+                var roleIdsToRestrict = roleIds.ToList();
                 foreach (var role in customerGroups)
                 {
-
-                    bool restrict = roleIdsToRestrict.Contains(role.Id);
+                    var restrict = roleIdsToRestrict.Contains(role.Id);
                     if (restrict)
                     {
                         if (shippingMethod.RestrictedGroups.FirstOrDefault(c => c == role.Id) == null)
@@ -782,12 +761,45 @@ namespace Grand.Web.Admin.Controllers
                     }
                 }
             }
+            else
+            {
+                shippingMethod.RestrictedGroups.Clear();
+                await _shippingMethodService.UpdateShippingMethod(shippingMethod);
+            }
+        }
 
-            Success(_translationService.GetResource("Admin.Configuration.Shipping.Restrictions.Updated"));
-            //selected tab
-            await SaveSelectedTabIndex();
-
-            return RedirectToAction("Restrictions");
+        private async Task SaveRestrictedCountries(IDictionary<string, string[]> model, ShippingMethod shippingMethod, IList<Country> countries)
+        {
+            if (model.TryGetValue($"restrict_{shippingMethod.Id}", out var countryIds))
+            {
+                var countryIdsToRestrict = countryIds.ToList();
+                foreach (var country in countries)
+                {
+                    var restrict = countryIdsToRestrict.Contains(country.Id);
+                    if (restrict)
+                    {
+                        if (shippingMethod.RestrictedCountries.FirstOrDefault(c => c.Id == country.Id) == null)
+                        {
+                            shippingMethod.RestrictedCountries.Add(country);
+                            await _shippingMethodService.UpdateShippingMethod(shippingMethod);
+                        }
+                    }
+                    else
+                    {
+                        if (shippingMethod.RestrictedCountries.FirstOrDefault(c => c.Id == country.Id) != null)
+                        {
+                            shippingMethod.RestrictedCountries.Remove(
+                                shippingMethod.RestrictedCountries.FirstOrDefault(x => x.Id == country.Id));
+                            await _shippingMethodService.UpdateShippingMethod(shippingMethod);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                shippingMethod.RestrictedCountries.Clear();
+                await _shippingMethodService.UpdateShippingMethod(shippingMethod);
+            }
         }
 
         #endregion

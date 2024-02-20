@@ -3,18 +3,12 @@ using Grand.Web.Models.Media;
 
 namespace Grand.Web.Models.Blogs
 {
-    public partial class BlogPostListModel : BaseModel
+    public class BlogPostListModel : BaseModel
     {
-        public BlogPostListModel()
-        {
-            PagingFilteringContext = new BlogPagingFilteringModel();
-            BlogPosts = new List<BlogPostModel>();
-            PictureModel = new PictureModel();
-        }
-        public PictureModel PictureModel { get; set; }
+        public PictureModel PictureModel { get; set; } = new();
         public string WorkingLanguageId { get; set; }
-        public BlogPagingFilteringModel PagingFilteringContext { get; set; }
-        public IList<BlogPostModel> BlogPosts { get; set; }
+        public BlogPagingFilteringModel PagingFilteringContext { get; set; } = new();
+        public IList<BlogPostModel> BlogPosts { get; set; } = new List<BlogPostModel>();
         public string SearchKeyword { get; set; }
     }
 }

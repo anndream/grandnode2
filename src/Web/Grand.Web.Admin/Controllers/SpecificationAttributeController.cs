@@ -2,22 +2,20 @@
 using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Filters;
 using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Seo;
 using Grand.Infrastructure;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Models.Catalog;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.SpecificationAttributes)]
-    public partial class SpecificationAttributeController : BaseAdminController
+    public class SpecificationAttributeController : BaseAdminController
     {
         #region Fields
 
@@ -25,21 +23,18 @@ namespace Grand.Web.Admin.Controllers
         private readonly IProductService _productService;
         private readonly ILanguageService _languageService;
         private readonly ITranslationService _translationService;
-        private readonly ICustomerActivityService _customerActivityService;
-        private readonly IStoreService _storeService;
         private readonly IWorkContext _workContext;
         private readonly IGroupService _groupService;
         private readonly SeoSettings _seoSettings;
 
-        #endregion Fields
+        #endregion Fields
 
         #region Constructors
 
-        public SpecificationAttributeController(ISpecificationAttributeService specificationAttributeService,
+        public SpecificationAttributeController(
+            ISpecificationAttributeService specificationAttributeService,
             ILanguageService languageService,
             ITranslationService translationService,
-            ICustomerActivityService customerActivityService,
-            IStoreService storeService,
             IWorkContext workContext,
             IGroupService groupService,
             IProductService productService,
@@ -48,8 +43,6 @@ namespace Grand.Web.Admin.Controllers
             _specificationAttributeService = specificationAttributeService;
             _languageService = languageService;
             _translationService = translationService;
-            _customerActivityService = customerActivityService;
-            _storeService = storeService;
             _workContext = workContext;
             _groupService = groupService;
             _productService = productService;
@@ -61,9 +54,15 @@ namespace Grand.Web.Admin.Controllers
         #region Specification attributes
 
         //list
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.List)]
@@ -100,13 +99,10 @@ namespace Grand.Web.Admin.Controllers
                 specificationAttribute.SeName = SeoExtensions.GetSeName(string.IsNullOrEmpty(specificationAttribute.SeName) ? specificationAttribute.Name : specificationAttribute.SeName, _seoSettings.ConvertNonWesternChars, _seoSettings.AllowUnicodeCharsInUrls, _seoSettings.SeoCharConversion);
                 if (await _groupService.IsStaff(_workContext.CurrentCustomer))
                 {
-                    model.Stores = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                    model.Stores = [_workContext.CurrentCustomer.StaffStoreId];
                 }
                 await _specificationAttributeService.InsertSpecificationAttribute(specificationAttribute);
-                //activity log
-                _ = _customerActivityService.InsertActivity("AddNewSpecAttribute", specificationAttribute.Id,
-                    _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.AddNewSpecAttribute"), specificationAttribute.Name);
+
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.SpecificationAttributes.Added"));
                 return continueEditing ? RedirectToAction("Edit", new { id = specificationAttribute.Id }) : RedirectToAction("List");
             }
@@ -149,13 +145,9 @@ namespace Grand.Web.Admin.Controllers
                 specificationAttribute.SeName = SeoExtensions.GetSeName(string.IsNullOrEmpty(specificationAttribute.SeName) ? specificationAttribute.Name : specificationAttribute.SeName, _seoSettings.ConvertNonWesternChars, _seoSettings.AllowUnicodeCharsInUrls, _seoSettings.SeoCharConversion);
                 if (await _groupService.IsStaff(_workContext.CurrentCustomer))
                 {
-                    model.Stores = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                    model.Stores = [_workContext.CurrentCustomer.StaffStoreId];
                 }
                 await _specificationAttributeService.UpdateSpecificationAttribute(specificationAttribute);
-                //activity log
-                _ = _customerActivityService.InsertActivity("EditSpecAttribute", specificationAttribute.Id,
-                    _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.EditSpecAttribute"), specificationAttribute.Name);
 
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.SpecificationAttributes.Updated"));
 
@@ -190,11 +182,6 @@ namespace Grand.Web.Admin.Controllers
             if (ModelState.IsValid)
             {
                 await _specificationAttributeService.DeleteSpecificationAttribute(specificationAttribute);
-
-                //activity log
-                _ = _customerActivityService.InsertActivity("DeleteSpecAttribute", specificationAttribute.Id,
-                    _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.DeleteSpecAttribute"), specificationAttribute.Name);
 
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.SpecificationAttributes.Deleted"));
                 return RedirectToAction("List");
@@ -270,13 +257,13 @@ namespace Grand.Web.Admin.Controllers
         [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> OptionEditPopup(string id)
         {
-            var sao = (await _specificationAttributeService.GetSpecificationAttributeByOptionId(id)).SpecificationAttributeOptions.Where(x => x.Id == id).FirstOrDefault();
+            var sao = (await _specificationAttributeService.GetSpecificationAttributeByOptionId(id)).SpecificationAttributeOptions.FirstOrDefault(x => x.Id == id);
             if (sao == null)
                 //No specification attribute option found with the specified id
                 return RedirectToAction("List");
 
             var model = sao.ToModel();
-            model.EnableColorSquaresRgb = !String.IsNullOrEmpty(sao.ColorSquaresRgb);
+            model.EnableColorSquaresRgb = !string.IsNullOrEmpty(sao.ColorSquaresRgb);
             //locales
             await AddLocales(_languageService, model.Locales, (locale, languageId) =>
             {
@@ -291,7 +278,7 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> OptionEditPopup(SpecificationAttributeOptionModel model)
         {
             var specificationAttribute = await _specificationAttributeService.GetSpecificationAttributeByOptionId(model.Id);
-            var sao = specificationAttribute.SpecificationAttributeOptions.Where(x => x.Id == model.Id).FirstOrDefault();
+            var sao = specificationAttribute.SpecificationAttributeOptions.FirstOrDefault(x => x.Id == model.Id);
             if (sao == null)
                 //No specification attribute option found with the specified id
                 return RedirectToAction("List");
@@ -321,7 +308,7 @@ namespace Grand.Web.Admin.Controllers
             if (ModelState.IsValid)
             {
                 var specificationAttribute = await _specificationAttributeService.GetSpecificationAttributeByOptionId(id);
-                var sao = specificationAttribute.SpecificationAttributeOptions.Where(x => x.Id == id).FirstOrDefault();
+                var sao = specificationAttribute.SpecificationAttributeOptions.FirstOrDefault(x => x.Id == id);
                 if (sao == null)
                     throw new ArgumentException("No specification attribute option found with the specified id");
 
@@ -350,13 +337,6 @@ namespace Grand.Web.Admin.Controllers
             if (!string.IsNullOrEmpty(_workContext.CurrentCustomer.StaffStoreId))
                 searchStoreId = _workContext.CurrentCustomer.StaffStoreId;
 
-            var searchVendorId = string.Empty;
-            //a vendor should have access only to his products
-            if (_workContext.CurrentVendor != null)
-            {
-                searchVendorId = _workContext.CurrentVendor.Id;
-            }
-
             var specificationProducts = new List<SpecificationAttributeModel.UsedByProductModel>();
             var total = 0;
 
@@ -365,7 +345,6 @@ namespace Grand.Web.Admin.Controllers
             {
                 var products = (await _productService.SearchProducts(
                     storeId: searchStoreId,
-                    vendorId: searchVendorId,
                     specificationOptions: searchspecificationOptions,
                     pageIndex: command.Page - 1,
                     pageSize: command.PageSize,

@@ -3,7 +3,7 @@ using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Catalog.Services.Products
@@ -11,7 +11,7 @@ namespace Grand.Business.Catalog.Services.Products
     /// <summary>
     /// Product tag service
     /// </summary>
-    public partial class ProductTagService : IProductTagService
+    public class ProductTagService : IProductTagService
     {
         #region Fields
 
@@ -28,6 +28,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// Ctor
         /// </summary>
         /// <param name="productTagRepository">Product tag repository</param>
+        /// <param name="productRepository">Product repository</param>
         /// <param name="cacheBase">Cache manager</param>
         /// <param name="mediator">Mediator</param>
         public ProductTagService(IRepository<ProductTag> productTagRepository,
@@ -43,35 +44,21 @@ namespace Grand.Business.Catalog.Services.Products
         }
 
         #endregion
-
-        #region Nested classes
-
-        private class ProductTagWithCount
-        {
-            public int ProductTagId { get; set; }
-            public int ProductCount { get; set; }
-        }
-
-        #endregion
-
+        
         #region Utilities
 
         /// <summary>
         /// Get product count for each of existing product tag
         /// </summary>
-        /// <param name="storeId">Store identifier</param>
         /// <returns>Dictionary of "product tag ID : product count"</returns>
-        private async Task<Dictionary<string, int>> GetProductCount(string storeId)
+        private async Task<Dictionary<string, int>> GetProductCount()
         {
-            string key = string.Format(CacheKey.PRODUCTTAG_COUNT_KEY, storeId);
-            return await _cacheBase.GetAsync(key, async () =>
+            return await _cacheBase.GetAsync(CacheKey.PRODUCTTAG_COUNT_KEY, async () =>
              {
                  var query = from pt in _productTagRepository.Table
                              select pt;
 
-                 var dictionary = new Dictionary<string, int>();
-                 foreach (var item in query.ToList())
-                     dictionary.Add(item.Id, item.Count);
+                 var dictionary = query.ToList().ToDictionary(item => item.Id, item => item.Count);
                  return await Task.FromResult(dictionary);
              });
         }
@@ -87,10 +74,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Product tags</returns>
         public virtual async Task<IList<ProductTag>> GetAllProductTags()
         {
-            return await _cacheBase.GetAsync(CacheKey.PRODUCTTAG_ALL_KEY, async () =>
-            {
-                return await Task.FromResult(_productTagRepository.Table.ToList());
-            });
+            return await _cacheBase.GetAsync(CacheKey.PRODUCTTAG_ALL_KEY, async () => await Task.FromResult(_productTagRepository.Table.ToList()));
         }
 
         /// <summary>
@@ -110,24 +94,17 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Product tag</returns>
         public virtual Task<ProductTag> GetProductTagByName(string name)
         {
-            var query = from pt in _productTagRepository.Table
-                        where pt.Name == name
-                        select pt;
-
-            return Task.FromResult(query.FirstOrDefault());
+            return _productTagRepository.GetOneAsync(x=>x.Name == name);
         }
 
         /// <summary>
-        /// Gets product tag by sename
+        /// Gets product tag by se-name
         /// </summary>
-        /// <param name="sename">Product tag sename</param>
+        /// <param name="sename">Product tag se-name</param>
         /// <returns>Product tag</returns>
         public virtual Task<ProductTag> GetProductTagBySeName(string sename)
         {
-            var query = from pt in _productTagRepository.Table
-                        where pt.SeName == sename
-                        select pt;
-            return Task.FromResult(query.FirstOrDefault());
+            return _productTagRepository.GetOneAsync(x=>x.SeName == sename);
         }
 
         /// <summary>
@@ -136,8 +113,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productTag">Product tag</param>
         public virtual async Task InsertProductTag(ProductTag productTag)
         {
-            if (productTag == null)
-                throw new ArgumentNullException(nameof(productTag));
+            ArgumentNullException.ThrowIfNull(productTag);
 
             await _productTagRepository.InsertAsync(productTag);
 
@@ -154,15 +130,14 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productTag">Product tag</param>
         public virtual async Task UpdateProductTag(ProductTag productTag)
         {
-            if (productTag == null)
-                throw new ArgumentNullException(nameof(productTag));
+            ArgumentNullException.ThrowIfNull(productTag);
 
-            var previouse = await GetProductTagById(productTag.Id);
+            var previous = await GetProductTagById(productTag.Id);
 
             await _productTagRepository.UpdateAsync(productTag);
 
             //update on products
-            await _productRepository.UpdateToSet(x => x.ProductTags, previouse.Name, productTag.Name);
+            await _productRepository.UpdateToSet(x => x.ProductTags, previous.Name, productTag.Name);
 
             //cache
             await _cacheBase.RemoveByPrefix(CacheKey.PRODUCTTAG_PATTERN_KEY);
@@ -176,8 +151,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productTag">Product tag</param>
         public virtual async Task DeleteProductTag(ProductTag productTag)
         {
-            if (productTag == null)
-                throw new ArgumentNullException(nameof(productTag));
+            ArgumentNullException.ThrowIfNull(productTag);
 
             //update product
             await _productRepository.Pull(string.Empty, x => x.ProductTags, productTag.Name);
@@ -200,8 +174,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task AttachProductTag(ProductTag productTag, string productId)
         {
-            if (productTag == null)
-                throw new ArgumentNullException(nameof(productTag));
+            ArgumentNullException.ThrowIfNull(productTag);
 
             //assign to product
             await _productRepository.AddToSet(productId, x => x.ProductTags, productTag.Name);
@@ -224,9 +197,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task DetachProductTag(ProductTag productTag, string productId)
         {
-            if (productTag == null)
-                throw new ArgumentNullException(nameof(productTag));
-
+            ArgumentNullException.ThrowIfNull(productTag);
 
             await _productRepository.Pull(productId, x => x.ProductTags, productTag.Name);
 
@@ -246,15 +217,11 @@ namespace Grand.Business.Catalog.Services.Products
         /// Get number of products
         /// </summary>
         /// <param name="productTagId">Product tag identifier</param>
-        /// <param name="storeId">Store identifier</param>
         /// <returns>Number of products</returns>
-        public virtual async Task<int> GetProductCount(string productTagId, string storeId)
+        public virtual async Task<int> GetProductCount(string productTagId)
         {
-            var dictionary = await GetProductCount(storeId);
-            if (dictionary.ContainsKey(productTagId))
-                return dictionary[productTagId];
-
-            return 0;
+            var dictionary = await GetProductCount();
+            return dictionary.TryGetValue(productTagId, out var value) ? value : 0;
         }
 
         #endregion

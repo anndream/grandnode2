@@ -2,7 +2,7 @@
 
 namespace Grand.Web.Models.Customer
 {
-    public partial class CustomerProductReviewModel : BaseEntityModel
+    public class CustomerProductReviewModel : BaseEntityModel
     {
         public string ProductId { get; set; }
         public string ProductName { get; set; }
@@ -22,11 +22,6 @@ namespace Grand.Web.Models.Customer
         public string CustomerId { get; set; }
 
         public string CustomerInfo { get; set; }
-        public IList<CustomerProductReviewModel> Reviews { get; set; }
-
-        public CustomerProductReviewsModel()
-        {
-            Reviews = new List<CustomerProductReviewModel>();
-        }
+        public IList<CustomerProductReviewModel> Reviews { get; set; } = new List<CustomerProductReviewModel>();
     }
 }

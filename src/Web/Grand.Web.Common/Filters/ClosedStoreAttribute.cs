@@ -1,7 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Cms;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Stores;
 using Grand.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +24,7 @@ namespace Grand.Web.Common.Filters
         public ClosedStoreAttribute(bool ignore = false) : base(typeof(CheckAccessClosedStoreFilter))
         {
             _ignoreFilter = ignore;
-            Arguments = new object[] { ignore };
+            Arguments = [ignore];
         }
 
         public bool IgnoreFilter => _ignoreFilter;
@@ -69,14 +69,9 @@ namespace Grand.Web.Common.Filters
             /// Called before the action executes, after model binding is complete
             /// </summary>
             /// <param name="context">A context for action filters</param>
+            /// <param name="next">Action execution delegate</param>
             public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
             {
-
-                if (context == null || context.HttpContext == null || context.HttpContext.Request == null)
-                {
-                    await next();
-                    return;
-                }
                 //check whether this filter has been overridden for the Action
                 var actionFilter = context.ActionDescriptor.FilterDescriptors
                     .Where(f => f.Scope == FilterScope.Action)
@@ -106,7 +101,7 @@ namespace Grand.Web.Common.Filters
                 var actionName = actionDescriptor?.ActionName;
                 var controllerName = actionDescriptor?.ControllerName;
 
-                if ((string.IsNullOrEmpty(actionName) || string.IsNullOrEmpty(controllerName)) ||
+                if (string.IsNullOrEmpty(actionName) || string.IsNullOrEmpty(controllerName) ||
                     (controllerName.Equals("Common", StringComparison.OrdinalIgnoreCase) &&
                     actionName.Equals("StoreClosed", StringComparison.OrdinalIgnoreCase)))
                 {

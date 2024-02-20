@@ -2,17 +2,12 @@
 
 namespace Grand.Web.Models.Orders
 {
-    public partial class CustomerMerchandiseReturnsModel : BaseModel
+    public class CustomerMerchandiseReturnsModel : BaseModel
     {
-        public CustomerMerchandiseReturnsModel()
-        {
-            Items = new List<MerchandiseReturnModel>();
-        }
-
-        public IList<MerchandiseReturnModel> Items { get; set; }
+        public IList<MerchandiseReturnModel> Items { get; set; } = new List<MerchandiseReturnModel>();
 
         #region Nested classes
-        public partial class MerchandiseReturnModel : BaseEntityModel
+        public class MerchandiseReturnModel : BaseEntityModel
         {
             public int ReturnNumber { get; set; }
             public string MerchandiseReturnStatus { get; set; }

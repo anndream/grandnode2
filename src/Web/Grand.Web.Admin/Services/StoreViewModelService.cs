@@ -4,14 +4,14 @@ using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Domain.Stores;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Stores;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Services
 {
-    public partial class StoreViewModelService : IStoreViewModelService
+    public class StoreViewModelService : IStoreViewModelService
     {
         private readonly ILanguageService _languageService;
         private readonly IWarehouseService _warehouseService;
@@ -33,8 +33,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task PrepareLanguagesModel(StoreModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             model.AvailableLanguages.Add(new SelectListItem {
                 Text = "---",
@@ -52,8 +51,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task PrepareWarehouseModel(StoreModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             //warehouse
             model.AvailableWarehouses.Add(new SelectListItem {
@@ -71,8 +69,7 @@ namespace Grand.Web.Admin.Services
         }
         public virtual async Task PrepareCountryModel(StoreModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             //countries
             model.AvailableCountries.Add(new SelectListItem {
@@ -91,8 +88,7 @@ namespace Grand.Web.Admin.Services
         }
         public virtual async Task PrepareCurrencyModel(StoreModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             //countries
             model.AvailableCurrencies.Add(new SelectListItem {
@@ -126,7 +122,7 @@ namespace Grand.Web.Admin.Services
 
             var storeUri = new Uri(store.Url);
 
-            store.Domains.Add(new DomainHost() {
+            store.Domains.Add(new DomainHost {
                 HostName = storeUri.Host,
                 Url = store.SslEnabled ? store.SecureUrl : store.Url,
                 Primary = true
@@ -149,7 +145,7 @@ namespace Grand.Web.Admin.Services
             if (domain == null)
             {
                 var storeUri = new Uri(store.Url);
-                store.Domains.Add(new DomainHost() {
+                store.Domains.Add(new DomainHost {
                     HostName = storeUri.Host,
                     Url = store.SslEnabled ? store.SecureUrl : store.Url,
                     Primary = true
@@ -193,17 +189,15 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task InsertDomainHostModel(Store store, DomainHostModel model)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store));
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(store);
+            ArgumentNullException.ThrowIfNull(model);
 
             if (!model.Url.EndsWith("/"))
                 model.Url += "/";
 
             var storeUri = new Uri(model.Url);
 
-            store.Domains.Add(new DomainHost() {
+            store.Domains.Add(new DomainHost {
                 HostName = storeUri.Host,
                 Url = model.Url
             });
@@ -213,11 +207,9 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task UpdateDomainHostModel(Store store, DomainHostModel model)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store));
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-            
+            ArgumentNullException.ThrowIfNull(store);
+            ArgumentNullException.ThrowIfNull(model);
+
             if (!model.Url.EndsWith("/"))
                 model.Url += "/";
 

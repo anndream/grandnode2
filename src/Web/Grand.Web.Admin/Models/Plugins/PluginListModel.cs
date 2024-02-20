@@ -4,16 +4,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Models.Plugins
 {
-    public partial class PluginListModel : BaseModel
+    public class PluginListModel : BaseModel
     {
-        public PluginListModel()
-        {
-            AvailableLoadModes = new List<SelectListItem>();
-        }
-
         [GrandResourceDisplayName("Admin.Plugins.LoadMode")]
         public int SearchLoadModeId { get; set; }
         [GrandResourceDisplayName("Admin.Plugins.LoadMode")]
-        public IList<SelectListItem> AvailableLoadModes { get; set; }
+        public IList<SelectListItem> AvailableLoadModes { get; set; } = new List<SelectListItem>();
     }
 }

@@ -1,9 +1,9 @@
-﻿using Grand.Business.Core.Commands.Messages;
-using Grand.Domain.Data;
+﻿using Grand.Business.Core.Commands.Messages.Common;
+using Grand.Data;
 using Grand.Domain.Messages;
 using MediatR;
 
-namespace Grand.Business.Messages.Commands.Handlers
+namespace Grand.Business.Messages.Commands.Handlers.Common
 {
     public class InsertContactUsCommandHandler : IRequestHandler<InsertContactUsCommand, bool>
     {
@@ -17,8 +17,7 @@ namespace Grand.Business.Messages.Commands.Handlers
 
         public async Task<bool> Handle(InsertContactUsCommand request, CancellationToken cancellationToken)
         {
-            var contactus = new ContactUs() {
-                CreatedOnUtc = DateTime.UtcNow,
+            var contactus = new ContactUs {
                 CustomerId = request.CustomerId,
                 StoreId = request.StoreId,
                 VendorId = request.VendorId,

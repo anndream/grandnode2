@@ -4,13 +4,8 @@ using Grand.Infrastructure.ModelBinding;
 
 namespace Grand.Web.Admin.Models.Affiliates
 {
-    public partial class AffiliateModel : BaseEntityModel
+    public class AffiliateModel : BaseEntityModel
     {
-        public AffiliateModel()
-        {
-            Address = new AddressModel();
-        }
-
         [GrandResourceDisplayName("Admin.Affiliates.Fields.ID")]
         public override string Id { get; set; }
 
@@ -32,11 +27,11 @@ namespace Grand.Web.Admin.Models.Affiliates
         [GrandResourceDisplayName("Admin.Affiliates.Fields.Active")]
         public bool Active { get; set; }
 
-        public AddressModel Address { get; set; }
+        public AddressModel Address { get; set; } = new();
 
         #region Nested classes
         
-        public partial class AffiliatedOrderModel : BaseEntityModel
+        public class AffiliatedOrderModel : BaseEntityModel
         {
             [GrandResourceDisplayName("Admin.Affiliates.Orders.Order")]
             public override string Id { get; set; }
@@ -60,7 +55,7 @@ namespace Grand.Web.Admin.Models.Affiliates
             public DateTime CreatedOn { get; set; }
         }
 
-        public partial class AffiliatedCustomerModel : BaseEntityModel
+        public class AffiliatedCustomerModel : BaseEntityModel
         {
             [GrandResourceDisplayName("Admin.Affiliates.Customers.Name")]
             public string Name { get; set; }

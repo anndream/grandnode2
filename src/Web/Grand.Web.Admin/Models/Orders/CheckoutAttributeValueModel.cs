@@ -4,13 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Orders
 {
-    public partial class CheckoutAttributeValueModel : BaseEntityModel, ILocalizedModel<CheckoutAttributeValueLocalizedModel>
+    public class CheckoutAttributeValueModel : BaseEntityModel, ILocalizedModel<CheckoutAttributeValueLocalizedModel>
     {
-        public CheckoutAttributeValueModel()
-        {
-            Locales = new List<CheckoutAttributeValueLocalizedModel>();
-        }
-
         public string CheckoutAttributeId { get; set; }
 
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Values.Fields.Name")]
@@ -36,11 +31,10 @@ namespace Grand.Web.Admin.Models.Orders
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Values.Fields.DisplayOrder")]
         public int DisplayOrder { get; set; }
 
-        public IList<CheckoutAttributeValueLocalizedModel> Locales { get; set; }
-
+        public IList<CheckoutAttributeValueLocalizedModel> Locales { get; set; } = new List<CheckoutAttributeValueLocalizedModel>();
     }
 
-    public partial class CheckoutAttributeValueLocalizedModel : ILocalizedModelLocal
+    public class CheckoutAttributeValueLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

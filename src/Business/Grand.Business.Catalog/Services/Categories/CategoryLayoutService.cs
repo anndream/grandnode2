@@ -1,7 +1,7 @@
 using Grand.Business.Core.Interfaces.Catalog.Categories;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
@@ -11,7 +11,7 @@ namespace Grand.Business.Catalog.Services.Categories
     /// <summary>
     /// Category layout service
     /// </summary>
-    public partial class CategoryLayoutService : ICategoryLayoutService
+    public class CategoryLayoutService : ICategoryLayoutService
     {
         #region Fields
 
@@ -64,7 +64,7 @@ namespace Grand.Business.Catalog.Services.Categories
         /// <returns>Category layout</returns>
         public virtual Task<CategoryLayout> GetCategoryLayoutById(string categoryLayoutId)
         {
-            string key = string.Format(CacheKey.CATEGORY_LAYOUT_BY_ID_KEY, categoryLayoutId);
+            var key = string.Format(CacheKey.CATEGORY_LAYOUT_BY_ID_KEY, categoryLayoutId);
             return _cacheBase.GetAsync(key, () => _categoryLayoutRepository.GetByIdAsync(categoryLayoutId));
         }
 
@@ -74,8 +74,7 @@ namespace Grand.Business.Catalog.Services.Categories
         /// <param name="categoryLayout">Category layout</param>
         public virtual async Task InsertCategoryLayout(CategoryLayout categoryLayout)
         {
-            if (categoryLayout == null)
-                throw new ArgumentNullException(nameof(categoryLayout));
+            ArgumentNullException.ThrowIfNull(categoryLayout);
 
             await _categoryLayoutRepository.InsertAsync(categoryLayout);
 
@@ -92,8 +91,7 @@ namespace Grand.Business.Catalog.Services.Categories
         /// <param name="categoryLayout">Category layout</param>
         public virtual async Task UpdateCategoryLayout(CategoryLayout categoryLayout)
         {
-            if (categoryLayout == null)
-                throw new ArgumentNullException(nameof(categoryLayout));
+            ArgumentNullException.ThrowIfNull(categoryLayout);
 
             await _categoryLayoutRepository.UpdateAsync(categoryLayout);
 
@@ -110,8 +108,7 @@ namespace Grand.Business.Catalog.Services.Categories
         /// <param name="categoryLayout">Category layout</param>
         public virtual async Task DeleteCategoryLayout(CategoryLayout categoryLayout)
         {
-            if (categoryLayout == null)
-                throw new ArgumentNullException(nameof(categoryLayout));
+            ArgumentNullException.ThrowIfNull(categoryLayout);
 
             await _categoryLayoutRepository.DeleteAsync(categoryLayout);
 

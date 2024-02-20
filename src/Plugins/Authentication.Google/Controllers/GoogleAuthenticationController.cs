@@ -43,7 +43,7 @@ namespace Authentication.Google.Controllers
 
             //configure login callback action
             var authenticationProperties = new AuthenticationProperties {
-                RedirectUri = Url.Action("GoogleLoginCallback", "GoogleAuthentication", new { returnUrl = returnUrl })
+                RedirectUri = Url.Action("GoogleLoginCallback", "GoogleAuthentication", new { returnUrl })
             };
 
             return Challenge(authenticationProperties, GoogleDefaults.AuthenticationScheme);
@@ -73,7 +73,7 @@ namespace Authentication.Google.Controllers
         public IActionResult GoogleSignInFailed(string error_message)
         {
             //handle exception and display message to user
-            var model = new FailedModel() {
+            var model = new FailedModel {
                 ErrorMessage = error_message
             };
             return View(model);

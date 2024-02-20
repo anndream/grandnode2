@@ -1,17 +1,16 @@
-﻿using Grand.Business.Core.Interfaces.System.Installation;
-using Grand.Domain.Common;
+﻿using Grand.Domain.Common;
 using Grand.Domain.Stores;
 
 namespace Grand.Business.System.Services.Installation
 {
-    public partial class InstallationService : IInstallationService
+    public partial class InstallationService
     {
         protected virtual async Task InstallDataRobotsTxt(
             Store store)
         {
             var url = store.SslEnabled ? store.SecureUrl : store.Url;
 
-            var robotsTxt = new RobotsTxt() {
+            var robotsTxt = new RobotsTxt {
                 Name = "RobotsTXT",
                 StoreId = store.Id,
                 Text = @$"User-agent: *
@@ -50,7 +49,8 @@ Disallow: /subscribenewsletter/*
 Disallow: /page/authenticate
 Disallow: /uploadfileproductattribute
 Disallow: /uploadfilecheckoutattribute
-Disallow: /wishlist"
+Disallow: /wishlist
+Disallow: /quickview/*"
             };
 
             await _robotsTxtRepository.InsertAsync(robotsTxt);

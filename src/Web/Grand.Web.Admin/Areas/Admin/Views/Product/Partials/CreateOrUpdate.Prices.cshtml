@@ -181,7 +181,7 @@
     </div>
 </div>
 
-@if (!String.IsNullOrEmpty(Model.Id))
+@if (!string.IsNullOrEmpty(Model.Id))
 {
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -240,6 +240,17 @@
                             type: "POST",
                             dataType: "json",
                             data: addAntiForgeryToken
+                        },
+                        parameterMap: function (data, operation) {                            
+                            if (operation === "destroy") 
+                            {
+                                return { 
+                                    id: data.Id, 
+                                    productId: data.ProductId,
+                                    __RequestVerificationToken: data.__RequestVerificationToken
+                                };
+                            }
+                            return data;
                         }
                     },
                     schema: {
@@ -256,8 +267,8 @@
                                 CustomerGroupId: { editable: true, type: "string" },
                                 Quantity: { editable: true, type: "number" },
                                 Price: { editable: true, type: "number" },
-                                //StartDateTime: { editable: false, type: "date" },
-                                //EndDateTime: { editable: false, type: "date" },
+                                StartDateTime: { editable: false, type: "date" },
+                                EndDateTime: { editable: false, type: "date" },
                                 Id: { editable: false, type: "string" }
                             }
                         }
@@ -311,9 +322,11 @@
                 }, {
                     field: "StartDateTime",
                     title: "@Loc["Admin.Catalog.Products.TierPrices.Fields.StartDateTime"]",
+                    format: "{0:G}"
                 }, {
                     field: "EndDateTime",
                     title: "@Loc["Admin.Catalog.Products.TierPrices.Fields.EndDateTime"]",
+                    format: "{0:G}"
                 }, {
                     field: "Id",
                     title: "@Loc["Admin.Common.Edit"]",
@@ -341,7 +354,7 @@ else
 }
 
 
-@if (Model.AvailableDiscounts != null && Model.AvailableDiscounts.Count > 0)
+@if (Model.AvailableDiscounts is {Count: > 0 })
 {
 
     <div class="panel panel-default">
@@ -365,7 +378,7 @@ else
 else
 {
     <div class="note note-info">
-        @Html.Raw(@Loc["Admin.Catalog.Collections.Discounts.NoDiscounts"])
+        @Html.Raw(Loc["Admin.Catalog.Collections.Discounts.NoDiscounts"])
     </div>
 }
 <vc:admin-widget widget-zone="product_details_prices_bottom" additional-data="Model" />

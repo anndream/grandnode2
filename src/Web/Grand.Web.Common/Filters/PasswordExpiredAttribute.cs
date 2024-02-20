@@ -1,5 +1,5 @@
 ﻿using Grand.Business.Core.Queries.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -53,9 +53,7 @@ namespace Grand.Web.Common.Filters
             /// <param name="context">A context for action filters</param>
             public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
             {
-                if (context == null || context.HttpContext == null || context.HttpContext.Request == null)
-                    return;
-
+                
                 if (!DataSettingsManager.DatabaseIsInstalled())
                     return;
 
@@ -68,15 +66,15 @@ namespace Grand.Web.Common.Filters
                     return;
 
                 //don't validate on ChangePassword page and store closed
-                if ((!(controllerName.Equals("Customer", StringComparison.OrdinalIgnoreCase) &&
-                    actionName.Equals("ChangePassword", StringComparison.OrdinalIgnoreCase)))
+                if (!(controllerName.Equals("Account", StringComparison.OrdinalIgnoreCase) &&
+                      actionName.Equals("ChangePassword", StringComparison.OrdinalIgnoreCase))
                     &&
                     !(controllerName.Equals("Common", StringComparison.OrdinalIgnoreCase) &&
                     actionName.Equals("StoreClosed", StringComparison.OrdinalIgnoreCase))
                     )
                 {
                     //check password expiration
-                    var passwordIsExpired = await _mediator.Send(new GetPasswordIsExpiredQuery() { Customer = _workContext.CurrentCustomer });
+                    var passwordIsExpired = await _mediator.Send(new GetPasswordIsExpiredQuery { Customer = _workContext.CurrentCustomer });
                     if (passwordIsExpired)
                     {
                         //redirect to ChangePassword page if expires

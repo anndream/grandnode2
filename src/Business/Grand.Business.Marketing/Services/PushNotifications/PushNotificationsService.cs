@@ -1,43 +1,39 @@
-﻿using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Business.Core.Interfaces.Marketing.PushNotifications;
+﻿using Grand.Business.Core.Interfaces.Marketing.PushNotifications;
 using Grand.Business.Marketing.Utilities;
 using Grand.Domain;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.PushNotifications;
 using Grand.Infrastructure.Extensions;
 using MediatR;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 using System.Net.Http;
+using System.Text.Json;
 
 namespace Grand.Business.Marketing.Services.PushNotifications
 {
     public class PushNotificationsService : IPushNotificationsService
     {
-        private readonly IRepository<PushRegistration> _pushRegistratiosnRepository;
+        private readonly IRepository<PushRegistration> _pushRegistrationRepository;
         private readonly IRepository<PushMessage> _pushMessagesRepository;
         private readonly IMediator _mediator;
         private readonly PushNotificationsSettings _pushNotificationsSettings;
-        private readonly ITranslationService _translationService;
-        private readonly ILogger _logger;
+        private readonly ILogger<PushNotificationsService> _logger;
         private readonly HttpClient _httpClient;
 
-        private readonly string fcmUrl = "https://fcm.googleapis.com/fcm/send";
+        private const string FcmUrl = "https://fcm.googleapis.com/fcm/send";
 
         public PushNotificationsService(
-            IRepository<PushRegistration> pushRegistratiosnRepository,
+            IRepository<PushRegistration> pushRegistrationRepository,
             IRepository<PushMessage> pushMessagesRepository,
             IMediator mediator,
             PushNotificationsSettings pushNotificationsSettings,
-            ITranslationService translationService,
-            ILogger logger,
+            ILogger<PushNotificationsService> logger,
             HttpClient httpClient)
         {
-            _pushRegistratiosnRepository = pushRegistratiosnRepository;
+            _pushRegistrationRepository = pushRegistrationRepository;
             _pushMessagesRepository = pushMessagesRepository;
             _mediator = mediator;
             _pushNotificationsSettings = pushNotificationsSettings;
-            _translationService = translationService;
             _logger = logger;
             _httpClient = httpClient;
         }
@@ -45,10 +41,10 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// <summary>
         /// Inserts push receiver
         /// </summary>
-        /// <param name="model"></param>
+        /// <param name="registration"></param>
         public virtual async Task InsertPushReceiver(PushRegistration registration)
         {
-            await _pushRegistratiosnRepository.InsertAsync(registration);
+            await _pushRegistrationRepository.InsertAsync(registration);
 
             await _mediator.EntityInserted(registration);
         }
@@ -56,20 +52,20 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// <summary>
         /// Deletes push receiver
         /// </summary>
-        /// <param name="model"></param>
+        /// <param name="registration"></param>
         public virtual async Task DeletePushReceiver(PushRegistration registration)
         {
-            await _pushRegistratiosnRepository.DeleteAsync(registration);
+            await _pushRegistrationRepository.DeleteAsync(registration);
             await _mediator.EntityDeleted(registration);
         }
 
         /// <summary>
         /// Gets push receiver
         /// </summary>
-        /// <param name="CustomerId"></param>
-        public virtual async Task<PushRegistration> GetPushReceiverByCustomerId(string CustomerId)
+        /// <param name="customerId"></param>
+        public virtual async Task<PushRegistration> GetPushReceiverByCustomerId(string customerId)
         {
-            return await Task.FromResult(_pushRegistratiosnRepository.Table.Where(x => x.CustomerId == CustomerId).FirstOrDefault());
+            return await Task.FromResult(_pushRegistrationRepository.Table.FirstOrDefault(x => x.CustomerId == customerId));
         }
 
         /// <summary>
@@ -78,7 +74,7 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// <param name="registration"></param>
         public virtual async Task UpdatePushReceiver(PushRegistration registration)
         {
-            await _pushRegistratiosnRepository.UpdateAsync(registration);
+            await _pushRegistrationRepository.UpdateAsync(registration);
             await _mediator.EntityUpdated(registration);
         }
 
@@ -87,7 +83,7 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// </summary>
         public virtual async Task<List<PushRegistration>> GetPushReceivers()
         {
-            return await Task.FromResult(_pushRegistratiosnRepository.Table.Where(x => x.Allowed).ToList());
+            return await Task.FromResult(_pushRegistrationRepository.Table.Where(x => x.Allowed).ToList());
         }
 
         /// <summary>
@@ -95,7 +91,7 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// </summary>
         public virtual async Task<int> GetAllowedReceivers()
         {
-            return await Task.FromResult(_pushRegistratiosnRepository.Table.Where(x => x.Allowed).Count());
+            return await Task.FromResult(_pushRegistrationRepository.Table.Count(x => x.Allowed));
         }
 
         /// <summary>
@@ -103,13 +99,13 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// </summary>
         public virtual async Task<int> GetDeniedReceivers()
         {
-            return await Task.FromResult(_pushRegistratiosnRepository.Table.Where(x => !x.Allowed).Count());
+            return await Task.FromResult(_pushRegistrationRepository.Table.Count(x => !x.Allowed));
         }
 
         /// <summary>
         /// Inserts push message
         /// </summary>
-        /// <param name="registration"></param>
+        /// <param name="message"></param>
         public virtual async Task InsertPushMessage(PushMessage message)
         {
             await _pushMessagesRepository.InsertAsync(message);
@@ -121,8 +117,8 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// </summary>
         public virtual async Task<IPagedList<PushMessage>> GetPushMessages(int pageIndex = 0, int pageSize = int.MaxValue)
         {
-            var allMessages = await Task.FromResult(_pushMessagesRepository.Table.OrderByDescending(x => x.SentOn).ToList());
-            return new PagedList<PushMessage>(allMessages.Skip(pageIndex * pageSize).Take(pageSize).ToList(), pageIndex, pageSize, allMessages.Count);
+            var query = _pushMessagesRepository.Table.OrderByDescending(x => x.SentOn);
+            return await Task.FromResult(new PagedList<PushMessage>(query, pageIndex, pageSize));
         }
 
         /// <summary>
@@ -130,8 +126,8 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// </summary>
         public virtual async Task<IPagedList<PushRegistration>> GetPushReceivers(int pageIndex = 0, int pageSize = int.MaxValue)
         {
-            var allReceivers = await Task.FromResult(_pushRegistratiosnRepository.Table.OrderByDescending(x => x.RegisteredOn).ToList());
-            return new PagedList<PushRegistration>(allReceivers.Skip(pageIndex * pageSize).Take(pageSize).ToList(), pageIndex, pageSize, allReceivers.Count);
+            var query = _pushRegistrationRepository.Table.OrderByDescending(x => x.RegisteredOn);
+            return await Task.FromResult(new PagedList<PushRegistration>(query, pageIndex, pageSize));
         }
 
         /// <summary>
@@ -156,17 +152,16 @@ namespace Grand.Business.Marketing.Services.PushNotifications
                 var receivers = await GetPushReceivers();
                 if (!receivers.Any())
                 {
-                    return (false, _translationService.GetResource("Admin.PushNotifications.Error.NoReceivers"));
+                    return (false, "Admin.PushNotifications.Error.NoReceivers");
                 }
 
-                int batchsize = 1000;
-                for (int batch = 0; batch <= Math.Round((double)(receivers.Count / batchsize), 0, MidpointRounding.ToEven); batch++)
+                const int batchSize = 1000;
+                for (var batch = 0; batch <= Math.Round((double)(receivers.Count / batchSize), 0, MidpointRounding.ToEven); batch++)
                 {
-                    var t = receivers.Skip(batch * batchsize).Take(batchsize);
-                    foreach (var receiver in receivers)
+                    var t = receivers.Skip(batch * batchSize).Take(batchSize);
+                    foreach (var receiver in receivers.Where(receiver => !ids.Contains(receiver.Token)))
                     {
-                        if (!ids.Contains(receiver.Token))
-                            ids.Add(receiver.Token);
+                        ids.Add(receiver.Token);
                     }
                 }
             }
@@ -177,47 +172,40 @@ namespace Grand.Business.Marketing.Services.PushNotifications
                 notification = new
                 {
                     body = text,
-                    title = title,
+                    title,
                     icon = pictureUrl,
                     click_action = clickUrl
                 }
             };
 
-            var json = JsonConvert.SerializeObject(data);
-
+            var json = JsonSerializer.Serialize(data);
             try
             {
-                using (var httpRequest = new HttpRequestMessage(HttpMethod.Post, fcmUrl))
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, FcmUrl);
+                httpRequest.Headers.Add("Authorization", $"key = {_pushNotificationsSettings.PrivateApiKey}");
+                httpRequest.Headers.Add("Sender", $"id = {_pushNotificationsSettings.SenderId}");
+
+                httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var response = await _httpClient.SendAsync(httpRequest);
+                var responseString = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
                 {
-                    httpRequest.Headers.Add("Authorization", $"key = {_pushNotificationsSettings.PrivateApiKey}");
-                    httpRequest.Headers.Add("Sender", $"id = {_pushNotificationsSettings.SenderId}");
-
-                    httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                    using (var response = await _httpClient.SendAsync(httpRequest))
-                    {
-                        var responseString = await response.Content.ReadAsStringAsync();
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            await _logger.InsertLog(Domain.Logging.LogLevel.Error, "Error occured while sending push notification.", responseString);
-                            return (false, responseString);
-                        }
-                        else
-                        {
-                            var responseMessage = JsonConvert.DeserializeObject<JsonResponse>(responseString);
-
-                            await InsertPushMessage(new PushMessage {
-                                NumberOfReceivers = responseMessage.success,
-                                SentOn = DateTime.UtcNow,
-                                Text = text,
-                                Title = title
-                            });
-
-                            return (true, string.Format(_translationService.GetResource("Admin.PushNotifications.MessageSent"), responseMessage.success, responseMessage.failure));
-                        }
-
-                    }
+                    _logger.LogError("Error occured while sending push notification {ResponseString}", responseString);
+                    return (false, responseString);
                 }
+
+                var responseMessage = JsonSerializer.Deserialize<JsonResponse>(responseString);
+                if (responseMessage == null) return (false, "PushNotifications.ResponseMessage.Empty");
+                    
+                await InsertPushMessage(new PushMessage {
+                    NumberOfReceivers = responseMessage.success,
+                    SentOn = DateTime.UtcNow,
+                    Text = text,
+                    Title = title
+                });
+
+                return (true, "Admin.PushNotifications.MessageSent");
             }
             catch (Exception ex)
             {
@@ -236,7 +224,8 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// <returns>Bool indicating whether message was sent successfully and string result to display</returns>
         public virtual async Task<(bool, string)> SendPushNotification(string title, string text, string pictureUrl, string customerId, string clickUrl)
         {
-            return await SendPushNotification(title, text, pictureUrl, clickUrl, new List<string> { GetPushReceiverByCustomerId(customerId).Id.ToString() });
+            return await SendPushNotification(title, text, pictureUrl, clickUrl,
+                [GetPushReceiverByCustomerId(customerId).Id.ToString()]);
         }
 
         /// <summary>
@@ -245,7 +234,7 @@ namespace Grand.Business.Marketing.Services.PushNotifications
         /// <param name="id">Ident</param>
         public virtual Task<PushRegistration> GetPushReceiver(string id)
         {
-            return _pushRegistratiosnRepository.GetByIdAsync(id);
+            return _pushRegistrationRepository.GetByIdAsync(id);
         }
     }
 }

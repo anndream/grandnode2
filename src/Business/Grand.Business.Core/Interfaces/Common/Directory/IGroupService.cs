@@ -6,6 +6,19 @@ namespace Grand.Business.Core.Interfaces.Common.Directory
     public interface IGroupService
     {
         /// <summary>
+        /// Gets a value indicating whether customer is in a certain customer group
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <param name="customerGroupSystemName">Customer group system name</param>
+        /// <param name="onlyActiveCustomerGroups">A value indicating whether we should look only in active customer groups</param>
+        /// <param name="isSystem">A value indicating whether we should look only in system groups</param>
+        /// <returns>Result</returns>
+        Task<bool> IsInCustomerGroup(Customer customer,
+            string customerGroupSystemName,
+            bool onlyActiveCustomerGroups = true,
+            bool? isSystem = null);
+
+        /// <summary>
         /// Gets a value indicating whether customer is staff
         /// </summary>
         /// <param name="customer">Customer</param>
@@ -34,7 +47,7 @@ namespace Grand.Business.Core.Interfaces.Common.Directory
         Task<bool> IsVendor(Customer customer);
 
         /// <summary>
-        /// Gets a value indicating whether customer is owner subaccount
+        /// Gets a value indicating whether customer is owner sub-account
         /// </summary>
         /// <param name="customer">Customer</param>
         /// <returns>Result</returns>

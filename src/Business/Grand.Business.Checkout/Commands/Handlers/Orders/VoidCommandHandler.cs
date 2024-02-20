@@ -3,11 +3,10 @@ using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Payments;
 using Grand.Business.Core.Queries.Checkout.Orders;
 using Grand.Business.Core.Utilities.Checkout;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Domain.Logging;
 using Grand.SharedKernel;
 using MediatR;
 using Grand.Business.Core.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Business.Checkout.Commands.Handlers.Orders
 {
@@ -17,14 +16,14 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
         private readonly IMediator _mediator;
         private readonly IPaymentService _paymentService;
         private readonly IPaymentTransactionService _paymentTransactionService;
-        private readonly ILogger _logger;
+        private readonly ILogger<VoidCommandHandler> _logger;
 
         public VoidCommandHandler(
             IOrderService orderService,
             IMediator mediator,
             IPaymentService paymentService,
             IPaymentTransactionService paymentTransactionService,
-            ILogger logger)
+            ILogger<VoidCommandHandler> logger)
         {
             _orderService = orderService;
             _mediator = mediator;
@@ -38,7 +37,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
             if (paymentTransaction == null)
                 throw new ArgumentNullException(nameof(command.PaymentTransaction));
 
-            var canVoid = await _mediator.Send(new CanVoidQuery() { PaymentTransaction = paymentTransaction });
+            var canVoid = await _mediator.Send(new CanVoidQuery { PaymentTransaction = paymentTransaction }, cancellationToken);
             if (!canVoid)
                 throw new GrandException("Cannot do void for order.");
 
@@ -66,30 +65,28 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
                         await _orderService.UpdateOrder(order);
 
                         //check order status
-                        await _mediator.Send(new CheckOrderStatusCommand() { Order = order });
+                        await _mediator.Send(new CheckOrderStatusCommand { Order = order }, cancellationToken);
                     }
                 }
             }
             catch (Exception exc)
             {
-                if (result == null)
-                    result = new VoidPaymentResult();
-                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+                result ??= new VoidPaymentResult();
+                result.AddError($"Error: {exc.Message}. Full exception: {exc}");
             }
 
             //process errors
-            string error = "";
-            for (int i = 0; i < result.Errors.Count; i++)
+            var error = "";
+            for (var i = 0; i < result.Errors.Count; i++)
             {
-                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                error += $"Error {i}: {result.Errors[i]}";
                 if (i != result.Errors.Count - 1)
                     error += ". ";
             }
-            if (!String.IsNullOrEmpty(error))
-            {
-                string logError = string.Format("Error voiding order #{0}. Error: {1}", paymentTransaction.OrderCode, error);
-                await _logger.InsertLog(LogLevel.Error, logError, logError);
-            }
+
+            if (string.IsNullOrEmpty(error)) return result.Errors;
+            
+            _logger.LogError("Error voiding order #{PaymentTransactionOrderCode}. Error: {Error}", paymentTransaction.OrderCode, error);
             return result.Errors;
         }
     }

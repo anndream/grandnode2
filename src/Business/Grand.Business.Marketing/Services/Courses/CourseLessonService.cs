@@ -1,7 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Marketing.Courses;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Courses;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Marketing.Services.Courses
@@ -19,8 +19,7 @@ namespace Grand.Business.Marketing.Services.Courses
 
         public virtual async Task Delete(CourseLesson courseLesson)
         {
-            if (courseLesson == null)
-                throw new ArgumentNullException(nameof(courseLesson));
+            ArgumentNullException.ThrowIfNull(courseLesson);
 
             await _courseLessonRepository.DeleteAsync(courseLesson);
 
@@ -31,7 +30,7 @@ namespace Grand.Business.Marketing.Services.Courses
         public virtual async Task<IList<CourseLesson>> GetByCourseId(string courseId)
         {
             if (string.IsNullOrEmpty(courseId))
-                throw new ArgumentNullException("courseId");
+                throw new ArgumentNullException(nameof(courseId));
 
             var query = from c in _courseLessonRepository.Table
                         where c.CourseId == courseId
@@ -47,8 +46,7 @@ namespace Grand.Business.Marketing.Services.Courses
 
         public virtual async Task<CourseLesson> Insert(CourseLesson courseLesson)
         {
-            if (courseLesson == null)
-                throw new ArgumentNullException(nameof(courseLesson));
+            ArgumentNullException.ThrowIfNull(courseLesson);
 
             await _courseLessonRepository.InsertAsync(courseLesson);
 
@@ -60,8 +58,7 @@ namespace Grand.Business.Marketing.Services.Courses
 
         public virtual async Task<CourseLesson> Update(CourseLesson courseLesson)
         {
-            if (courseLesson == null)
-                throw new ArgumentNullException(nameof(courseLesson));
+            ArgumentNullException.ThrowIfNull(courseLesson);
 
             await _courseLessonRepository.UpdateAsync(courseLesson);
 

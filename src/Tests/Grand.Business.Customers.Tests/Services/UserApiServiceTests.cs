@@ -1,6 +1,6 @@
 ﻿using Grand.Business.Customers.Services;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Events;
 using MediatR;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,6 +23,13 @@ namespace Grand.Business.Customers.Tests.Services
             _userApiService = new UserApiService(_repositoryMock.Object, _mediatorMock.Object);
         }
 
+        [TestMethod()]
+        public async Task GetUserByIdTest()
+        {
+            await _userApiService.GetUserById("");
+            _repositoryMock.Verify(c => c.GetByIdAsync(It.IsAny<string>()), Times.Once);
+
+        }
         [TestMethod()]
         public async Task InsertUserApi_ValidArguments_InvokeRepositoryAndPublishEvent()
         {

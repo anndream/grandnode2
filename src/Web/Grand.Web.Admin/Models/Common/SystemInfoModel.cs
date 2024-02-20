@@ -3,24 +3,22 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class SystemInfoModel : BaseModel
+    public class SystemInfoModel : BaseModel
     {
-        public SystemInfoModel()
-        {
-            ServerVariables = new List<ServerVariableModel>();
-            LoadedAssemblies = new List<LoadedAssembly>();
-            SystemWarnings = new List<SystemWarningModel>();
-        }
-
         [GrandResourceDisplayName("Admin.System.SystemInfo.ASPNETInfo")]
         public string AspNetInfo { get; set; }
 
         [GrandResourceDisplayName("Admin.System.SystemInfo.MachineName")]
         public string MachineName { get; set; }
 
-
         [GrandResourceDisplayName("Admin.System.SystemInfo.GrandVersion")]
         public string GrandVersion { get; set; }
+        
+        [GrandResourceDisplayName("Admin.System.SystemInfo.GitBranch")]
+        public string GitBranch { get; set; }
+
+        [GrandResourceDisplayName("Admin.System.SystemInfo.GitCommit")]
+        public string GitCommit { get; set; }
 
         [GrandResourceDisplayName("Admin.System.SystemInfo.OperatingSystem")]
         public string OperatingSystem { get; set; }
@@ -53,26 +51,26 @@ namespace Grand.Web.Admin.Models.Common
         public bool IsHttps { get; set; }
 
         [GrandResourceDisplayName("Admin.System.SystemInfo.ServerVariables")]
-        public IList<ServerVariableModel> ServerVariables { get; set; }
+        public IList<ServerVariableModel> ServerVariables { get; set; } = new List<ServerVariableModel>();
 
         [GrandResourceDisplayName("Admin.System.SystemInfo.LoadedAssemblies")]
-        public IList<LoadedAssembly> LoadedAssemblies { get; set; }
+        public IList<LoadedAssembly> LoadedAssemblies { get; set; } = new List<LoadedAssembly>();
 
-        public IList<SystemWarningModel> SystemWarnings { get; set; }
+        public IList<SystemWarningModel> SystemWarnings { get; set; } = new List<SystemWarningModel>();
 
-        public partial class ServerVariableModel : BaseModel
+        public class ServerVariableModel : BaseModel
         {
             public string Name { get; set; }
             public string Value { get; set; }
         }
 
-        public partial class LoadedAssembly : BaseModel
+        public class LoadedAssembly : BaseModel
         {
             public string FullName { get; set; }
             public string Location { get; set; }
         }
 
-        public partial class SystemWarningModel : BaseModel
+        public class SystemWarningModel : BaseModel
         {
             public SystemWarningLevel Level { get; set; }
 

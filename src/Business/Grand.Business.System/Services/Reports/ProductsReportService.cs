@@ -1,7 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.System.Reports;
 using Grand.Business.Core.Utilities.System;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 
 namespace Grand.Business.System.Services.Reports
 {
@@ -31,23 +31,23 @@ namespace Grand.Business.System.Services.Reports
         /// <param name="vendorId">Vendor identifier</param>
         /// <param name="storeId">Store identifier</param>
         /// <returns>Result</returns>
-        public virtual async Task<(IList<Product> products, IList<ProductsAttributeCombination> combinations)> LowStockProducts(string vendorId, string storeId)
+        public virtual async Task<(IList<Product> products, IList<ProductsAttributeCombination> combinations)> LowStockProducts(string vendorId = "", string storeId = "")
         {
             //Track inventory for product
             //simple products
-            var query_simple_products = from p in _productRepository.Table
+            var querySimpleProducts = from p in _productRepository.Table
                                         where p.LowStock &&
-                                        ((p.ProductTypeId == ProductType.SimpleProduct || p.ProductTypeId == ProductType.BundledProduct)
-                                        && p.ManageInventoryMethodId == ManageInventoryMethod.ManageStock)
+                                              (p.ProductTypeId == ProductType.SimpleProduct || p.ProductTypeId == ProductType.BundledProduct) 
+                                              && p.ManageInventoryMethodId == ManageInventoryMethod.ManageStock
                                         select p;
 
             if (!string.IsNullOrEmpty(vendorId))
-                query_simple_products = query_simple_products.Where(x => x.VendorId == vendorId);
+                querySimpleProducts = querySimpleProducts.Where(x => x.VendorId == vendorId);
 
             if (!string.IsNullOrEmpty(storeId))
-                query_simple_products = query_simple_products.Where(x => x.Stores.Contains(storeId));
+                querySimpleProducts = querySimpleProducts.Where(x => x.Stores.Contains(storeId));
 
-            var products = query_simple_products.ToList();
+            var products = querySimpleProducts.ToList();
 
             //Track inventory for product by product attributes
             var query2_1 = from p in _productRepository.Table
@@ -56,8 +56,7 @@ namespace Grand.Business.System.Services.Reports
                            (vendorId == "" || p.VendorId == vendorId) &&
                            (storeId == "" || p.Stores.Contains(storeId))
                            from c in p.ProductAttributeCombinations
-                           select new ProductsAttributeCombination()
-                           {
+                           select new ProductsAttributeCombination {
                                ProductId = p.Id,
                                StockQuantity = c.StockQuantity,
                                Attributes = c.Attributes,

@@ -4,7 +4,6 @@ using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Web.Common.Controllers;
 using Grand.Web.Common.DataSource;
-using Grand.Web.Common.Filters;
 using Grand.Web.Common.Security.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,12 +11,10 @@ using Tax.CountryStateZip.Domain;
 using Tax.CountryStateZip.Models;
 using Tax.CountryStateZip.Services;
 
-namespace Tax.CountryStateZip.Controllers
+namespace Tax.CountryStateZip.Areas.Admin.Controllers
 {
-    [AuthorizeAdmin]
-    [Area("Admin")]
     [PermissionAuthorize(PermissionSystemName.TaxSettings)]
-    public class TaxCountryStateZipController : BasePluginController
+    public class TaxCountryStateZipController : BaseAdminPluginController
     {
         private readonly ITaxCategoryService _taxCategoryService;
         private readonly ICountryService _countryService;
@@ -46,14 +43,14 @@ namespace Tax.CountryStateZip.Controllers
             model.AvailableStores.Add(new SelectListItem { Text = "*", Value = "" });
             var stores = await _storeService.GetAllStores();
             foreach (var s in stores)
-                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id });
             //tax categories
             foreach (var tc in taxCategories)
-                model.AvailableTaxCategories.Add(new SelectListItem { Text = tc.Name, Value = tc.Id.ToString() });
+                model.AvailableTaxCategories.Add(new SelectListItem { Text = tc.Name, Value = tc.Id });
             //countries
             var countries = await _countryService.GetAllCountries(showHidden: true);
             foreach (var c in countries)
-                model.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id.ToString() });
+                model.AvailableCountries.Add(new SelectListItem { Text = c.Name, Value = c.Id });
             //states
             model.AvailableStates.Add(new SelectListItem { Text = "*", Value = "" });
             var defaultCountry = countries.FirstOrDefault();
@@ -61,7 +58,7 @@ namespace Tax.CountryStateZip.Controllers
             {
                 var states = await _countryService.GetStateProvincesByCountryId(defaultCountry.Id);
                 foreach (var s in states)
-                    model.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
+                    model.AvailableStates.Add(new SelectListItem { Text = s.Name, Value = s.Id });
             }
 
             return View(model);
@@ -83,22 +80,22 @@ namespace Tax.CountryStateZip.Controllers
                     CountryId = x.CountryId,
                     StateProvinceId = x.StateProvinceId,
                     Zip = x.Zip,
-                    Percentage = x.Percentage,
+                    Percentage = x.Percentage
                 };
                 //store
                 var store = await _storeService.GetStoreById(x.StoreId);
-                m.StoreName = (store != null) ? store.Shortcut : "*";
+                m.StoreName = store != null ? store.Shortcut : "*";
                 //tax category
                 var tc = await _taxCategoryService.GetTaxCategoryById(x.TaxCategoryId);
-                m.TaxCategoryName = (tc != null) ? tc.Name : "";
+                m.TaxCategoryName = tc != null ? tc.Name : "";
                 //country
                 var c = await _countryService.GetCountryById(x.CountryId);
-                m.CountryName = (c != null) ? c.Name : "Unavailable";
+                m.CountryName = c != null ? c.Name : "Unavailable";
                 //state
                 var s = c?.StateProvinces.FirstOrDefault(z=>z.Id == x.StateProvinceId);
-                m.StateProvinceName = (s != null) ? s.Name : "*";
+                m.StateProvinceName = s != null ? s.Name : "*";
                 //zip
-                m.Zip = (!String.IsNullOrEmpty(x.Zip)) ? x.Zip : "*";
+                m.Zip = !string.IsNullOrEmpty(x.Zip) ? x.Zip : "*";
                 taxRatesModel.Add(m);
             }
 

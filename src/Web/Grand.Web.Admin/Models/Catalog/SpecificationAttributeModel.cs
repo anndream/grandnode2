@@ -6,13 +6,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Catalog
 {
-    public partial class SpecificationAttributeModel : BaseEntityModel, ILocalizedModel<SpecificationAttributeLocalizedModel>, IStoreLinkModel
+    public class SpecificationAttributeModel : BaseEntityModel, ILocalizedModel<SpecificationAttributeLocalizedModel>, IStoreLinkModel
     {
-        public SpecificationAttributeModel()
-        {
-            Locales = new List<SpecificationAttributeLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Catalog.Attributes.SpecificationAttributes.Fields.Name")]
         public string Name { get; set; }
 
@@ -27,9 +22,9 @@ namespace Grand.Web.Admin.Models.Catalog
         [UIHint("Stores")]
         public string[] Stores { get; set; }
 
-        public IList<SpecificationAttributeLocalizedModel> Locales { get; set; }
+        public IList<SpecificationAttributeLocalizedModel> Locales { get; set; } = new List<SpecificationAttributeLocalizedModel>();
 
-        public partial class UsedByProductModel : BaseEntityModel
+        public class UsedByProductModel : BaseEntityModel
         {
             [GrandResourceDisplayName("Admin.Catalog.Attributes.SpecificationAttributes.UsedByProducts.Product")]
             public string ProductName { get; set; }
@@ -40,7 +35,7 @@ namespace Grand.Web.Admin.Models.Catalog
         }
     }
 
-    public partial class SpecificationAttributeLocalizedModel : ILocalizedModelLocal
+    public class SpecificationAttributeLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

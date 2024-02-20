@@ -3,36 +3,34 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Models.Catalog
 {
-    public partial class ProductReviewOverviewModel : BaseModel
+    public class ProductReviewOverviewModel : BaseModel
     {
         public string ProductId { get; set; }
 
         public int RatingSum { get; set; }
 
         public int TotalReviews { get; set; }
+        public double AvgRating { get; set; }
 
         public bool AllowCustomerReviews { get; set; }
     }
 
-    public partial class ProductReviewsModel : BaseModel
+    public class ProductReviewsModel : BaseModel
     {
-        public ProductReviewsModel()
-        {
-            Items = new List<ProductReviewModel>();
-            AddProductReview = new AddProductReviewModel();
-        }
         public string ProductId { get; set; }
 
+        public bool CaptchaValid { get; set; }
+        public ICaptchaValidModel Captcha { get; set; } = new CaptchaModel();
         public string ProductName { get; set; }
 
         public string ProductSeName { get; set; }
 
-        public IList<ProductReviewModel> Items { get; set; }
-        public AddProductReviewModel AddProductReview { get; set; }
+        public IList<ProductReviewModel> Items { get; set; } = new List<ProductReviewModel>();
+        public AddProductReviewModel AddProductReview { get; set; } = new();
         public ProductReviewOverviewModel ProductReviewOverviewModel { get; set; }
     }
 
-    public partial class ProductReviewModel : BaseEntityModel
+    public class ProductReviewModel : BaseEntityModel
     {
         public string CustomerId { get; set; }
         public string CustomerName { get; set; }
@@ -47,7 +45,7 @@ namespace Grand.Web.Models.Catalog
     }
 
 
-    public partial class ProductReviewHelpfulnessModel : BaseModel
+    public class ProductReviewHelpfulnessModel : BaseModel
     {
         public string ProductReviewId { get; set; }
         public string ProductId { get; set; }
@@ -57,7 +55,7 @@ namespace Grand.Web.Models.Catalog
         public int HelpfulNoTotal { get; set; }
     }
 
-    public partial class AddProductReviewModel : BaseModel
+    public class AddProductReviewModel : BaseModel
     {
         [GrandResourceDisplayName("Reviews.Fields.Title")]
         public string Title { get; set; }

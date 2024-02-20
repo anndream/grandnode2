@@ -1,50 +1,42 @@
 ﻿using Grand.Business.Core.Extensions;
-using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Interfaces.Marketing.Contacts;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Filters;
 using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Catalog;
-using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Messages;
 using Microsoft.AspNetCore.Mvc;
 using Grand.Infrastructure;
+using Grand.Web.Admin.Extensions.Mapping;
 
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.ContactAttributes)]
-    public partial class ContactAttributeController : BaseAdminController
+    public class ContactAttributeController : BaseAdminController
     {
         #region Fields
         private readonly IContactAttributeViewModelService _contactAttributeViewModelService;
         private readonly IContactAttributeService _contactAttributeService;
         private readonly ILanguageService _languageService;
         private readonly ITranslationService _translationService;
-        private readonly IStoreService _storeService;
-        private readonly IGroupService _groupService;
 
         #endregion
 
         #region Constructors
 
-        public ContactAttributeController(IContactAttributeViewModelService contactAttributeViewModelService,
+        public ContactAttributeController(
+            IContactAttributeViewModelService contactAttributeViewModelService,
             IContactAttributeService contactAttributeService,
             ILanguageService languageService,
-            ITranslationService translationService,
-            IStoreService storeService,
-            IGroupService groupService)
+            ITranslationService translationService)
         {
             _contactAttributeViewModelService = contactAttributeViewModelService;
             _contactAttributeService = contactAttributeService;
             _languageService = languageService;
             _translationService = translationService;
-            _storeService = storeService;
-            _groupService = groupService;
         }
 
         #endregion
@@ -57,7 +49,10 @@ namespace Grand.Web.Admin.Controllers
             return RedirectToAction("List");
         }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.List)]
@@ -152,24 +147,18 @@ namespace Grand.Web.Admin.Controllers
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> Delete(string id,
-            [FromServices] IWorkContext workContext,
-            [FromServices] ICustomerActivityService customerActivityService)
+            [FromServices] IWorkContext workContext)
         {
             if (ModelState.IsValid)
             {
                 var contactAttribute = await _contactAttributeService.GetContactAttributeById(id);
                 await _contactAttributeService.DeleteContactAttribute(contactAttribute);
 
-                //activity log
-                _ = customerActivityService.InsertActivity("DeleteContactAttribute", contactAttribute.Id,
-                    workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.DeleteContactAttribute"), contactAttribute.Name);
-
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.ContactAttributes.Deleted"));
                 return RedirectToAction("List");
             }
             Error(ModelState);
-            return RedirectToAction("Edit", new { id = id });
+            return RedirectToAction("Edit", new { id });
         }
 
         #endregion
@@ -189,12 +178,12 @@ namespace Grand.Web.Admin.Controllers
                 {
                     Id = x.Id,
                     ContactAttributeId = x.ContactAttributeId,
-                    Name = contactAttribute.AttributeControlType != AttributeControlType.ColorSquares ? x.Name : string.Format("{0} - {1}", x.Name, x.ColorSquaresRgb),
+                    Name = contactAttribute.AttributeControlType != AttributeControlType.ColorSquares ? x.Name : $"{x.Name} - {x.ColorSquaresRgb}",
                     ColorSquaresRgb = x.ColorSquaresRgb,
                     IsPreSelected = x.IsPreSelected,
-                    DisplayOrder = x.DisplayOrder,
+                    DisplayOrder = x.DisplayOrder
                 }),
-                Total = values.Count()
+                Total = values.Count
             };
             return Json(gridModel);
         }
@@ -219,18 +208,9 @@ namespace Grand.Web.Admin.Controllers
             if (contactAttribute == null)
                 //No contact attribute found with the specified id
                 return RedirectToAction("List");
-
-            if (contactAttribute.AttributeControlType == AttributeControlType.ColorSquares)
-            {
-                //ensure valid color is chosen/entered
-                if (String.IsNullOrEmpty(model.ColorSquaresRgb))
-                    ModelState.AddModelError("", "Color is required");
-            }
-
             if (ModelState.IsValid)
             {
                 await _contactAttributeViewModelService.InsertContactAttributeValueModel(contactAttribute, model);
-
                 return Content("");
             }
 
@@ -243,7 +223,7 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> ValueEditPopup(string id, string contactAttributeId)
         {
             var contactAttribute = await _contactAttributeService.GetContactAttributeById(contactAttributeId);
-            var cav = contactAttribute.ContactAttributeValues.Where(x => x.Id == id).FirstOrDefault();
+            var cav = contactAttribute.ContactAttributeValues.FirstOrDefault(x => x.Id == id);
             if (cav == null)
                 //No contact attribute value found with the specified id
                 return RedirectToAction("List");
@@ -264,17 +244,10 @@ namespace Grand.Web.Admin.Controllers
         {
             var contactAttribute = await _contactAttributeService.GetContactAttributeById(model.ContactAttributeId);
 
-            var cav = contactAttribute.ContactAttributeValues.Where(x => x.Id == model.Id).FirstOrDefault();
+            var cav = contactAttribute.ContactAttributeValues.FirstOrDefault(x => x.Id == model.Id);
             if (cav == null)
                 //No contact attribute value found with the specified id
                 return RedirectToAction("List");
-
-            if (contactAttribute.AttributeControlType == AttributeControlType.ColorSquares)
-            {
-                //ensure valid color is chosen/entered
-                if (String.IsNullOrEmpty(model.ColorSquaresRgb))
-                    ModelState.AddModelError("", "Color is required");
-            }
 
             if (ModelState.IsValid)
             {
@@ -293,7 +266,7 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> ValueDelete(string id, string contactAttributeId)
         {
             var contactAttribute = await _contactAttributeService.GetContactAttributeById(contactAttributeId);
-            var cav = contactAttribute.ContactAttributeValues.Where(x => x.Id == id).FirstOrDefault();
+            var cav = contactAttribute.ContactAttributeValues.FirstOrDefault(x => x.Id == id);
             if (cav == null)
                 throw new ArgumentException("No contact attribute value found with the specified id");
             if (ModelState.IsValid)

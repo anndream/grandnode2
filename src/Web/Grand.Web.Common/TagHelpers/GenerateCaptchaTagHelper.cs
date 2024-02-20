@@ -26,15 +26,8 @@ namespace Grand.Web.Common.TagHelpers
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            if (output == null)
-            {
-                throw new ArgumentNullException(nameof(output));
-            }
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(output);
 
             //contextualize IHtmlHelper
             var viewContextAware = _htmlHelper as IViewContextAware;
@@ -44,7 +37,7 @@ namespace Grand.Web.Common.TagHelpers
             var captchaControl = new GoogleRecaptchaControl(_captchaSettings.ReCaptchaVersion)
             {
                 Theme = _captchaSettings.ReCaptchaTheme,
-                Id = "g-recaptcha-response-value-" + Guid.NewGuid().ToString("N"),
+                Id = "g-recaptcha-response-value",
                 PublicKey = _captchaSettings.ReCaptchaPublicKey,
                 Language = _captchaSettings.ReCaptchaLanguage
             };

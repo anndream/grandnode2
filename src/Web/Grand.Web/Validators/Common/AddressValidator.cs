@@ -1,9 +1,12 @@
 ﻿using FluentValidation;
-using Grand.Domain.Common;
-using Grand.Infrastructure.Validators;
+using Grand.Business.Core.Interfaces.Common.Addresses;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
+using Grand.Domain.Common;
+using Grand.Infrastructure.Validators;
+using Grand.Web.Features.Models.Common;
 using Grand.Web.Models.Common;
+using MediatR;
 
 namespace Grand.Web.Validators.Common
 {
@@ -11,6 +14,7 @@ namespace Grand.Web.Validators.Common
     {
         public AddressValidator(
             IEnumerable<IValidatorConsumer<AddressModel>> validators,
+            IMediator mediator, IAddressAttributeParser addressAttributeParser,
             ITranslationService translationService,
             ICountryService countryService,
             AddressSettings addressSettings)
@@ -39,55 +43,61 @@ namespace Grand.Web.Validators.Common
             }
             if (addressSettings.CountryEnabled && addressSettings.StateProvinceEnabled)
             {
-                RuleFor(x => x.StateProvinceId).MustAsync(async (x, y, context) =>
+                RuleFor(x => x.StateProvinceId).MustAsync(async (x, y, _) =>
                 {
                     var countryId = !string.IsNullOrEmpty(x.CountryId) ? x.CountryId : "";
                     var country = await countryService.GetCountryById(countryId);
-                    if (country != null && country.StateProvinces.Any())
+                    if (country == null || !country.StateProvinces.Any()) return false;
+                    //if yes, then ensure that state is selected
+                    if (string.IsNullOrEmpty(y))
                     {
-                        //if yes, then ensure that state is selected
-                        if (String.IsNullOrEmpty(y))
-                        {
-                            return false;
-                        }
-                        if (country.StateProvinces.FirstOrDefault(x => x.Id == y) != null)
-                            return true;
+                        return false;
                     }
-                    return false;
+                    return country.StateProvinces.FirstOrDefault(s => s.Id == y) != null;
                 }).WithMessage(translationService.GetResource("Address.Fields.StateProvince.Required"));
             }
             if (addressSettings.CompanyRequired && addressSettings.CompanyEnabled)
             {
-                RuleFor(x => x.Company).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.Company.Required"));
+                RuleFor(x => x.Company).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.Company.Required"));
             }
             if (addressSettings.VatNumberRequired && addressSettings.VatNumberEnabled)
             {
-                RuleFor(x => x.VatNumber).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.VatNumber.Required"));
+                RuleFor(x => x.VatNumber).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.VatNumber.Required"));
             }
             if (addressSettings.StreetAddressRequired && addressSettings.StreetAddressEnabled)
             {
-                RuleFor(x => x.Address1).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.StreetAddress.Required"));
+                RuleFor(x => x.Address1).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.StreetAddress.Required"));
             }
             if (addressSettings.StreetAddress2Required && addressSettings.StreetAddress2Enabled)
             {
-                RuleFor(x => x.Address2).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.StreetAddress2.Required"));
+                RuleFor(x => x.Address2).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.StreetAddress2.Required"));
             }
             if (addressSettings.ZipPostalCodeRequired && addressSettings.ZipPostalCodeEnabled)
             {
-                RuleFor(x => x.ZipPostalCode).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.ZipPostalCode.Required"));
+                RuleFor(x => x.ZipPostalCode).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.ZipPostalCode.Required"));
             }
             if (addressSettings.CityRequired && addressSettings.CityEnabled)
             {
-                RuleFor(x => x.City).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.City.Required"));
+                RuleFor(x => x.City).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.City.Required"));
             }
             if (addressSettings.PhoneRequired && addressSettings.PhoneEnabled)
             {
-                RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.Phone.Required"));
+                RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.Phone.Required"));
             }
             if (addressSettings.FaxRequired && addressSettings.FaxEnabled)
             {
-                RuleFor(x => x.FaxNumber).NotEmpty().WithMessage(translationService.GetResource("Account.Fields.Fax.Required"));
+                RuleFor(x => x.FaxNumber).NotEmpty().WithMessage(translationService.GetResource("Address.Fields.Fax.Required"));
             }
+            RuleFor(x => x).CustomAsync(async (x, context, _) =>
+            {
+                var customAttributes = await mediator.Send(new GetParseCustomAddressAttributes
+                    { SelectedAttributes = x.SelectedAttributes });
+                var customAttributeWarnings = await addressAttributeParser.GetAttributeWarnings(customAttributes);
+                foreach (var error in customAttributeWarnings)
+                {
+                    context.AddFailure(error);
+                }
+            });
         }
     }
 }

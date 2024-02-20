@@ -4,13 +4,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Models.Orders
 {
-    public partial class GiftVoucherListModel : BaseModel
+    public class GiftVoucherListModel : BaseModel
     {
-        public GiftVoucherListModel()
-        {
-            ActivatedList = new List<SelectListItem>();
-        }
-
         [GrandResourceDisplayName("Admin.GiftVouchers.List.CouponCode")]
         
         public string CouponCode { get; set; }
@@ -22,6 +17,6 @@ namespace Grand.Web.Admin.Models.Orders
         [GrandResourceDisplayName("Admin.GiftVouchers.List.Activated")]
         public int ActivatedId { get; set; }
         [GrandResourceDisplayName("Admin.GiftVouchers.List.Activated")]
-        public IList<SelectListItem> ActivatedList { get; set; }
+        public IList<SelectListItem> ActivatedList { get; set; } = new List<SelectListItem>();
     }
 }

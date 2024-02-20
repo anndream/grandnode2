@@ -3,14 +3,9 @@ using Grand.Web.Admin.Models.Localization;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class LanguageSelectorModel : BaseModel
+    public class LanguageSelectorModel : BaseModel
     {
-        public LanguageSelectorModel()
-        {
-            AvailableLanguages = new List<LanguageModel>();
-        }
-
-        public IList<LanguageModel> AvailableLanguages { get; set; }
+        public IList<LanguageModel> AvailableLanguages { get; set; } = new List<LanguageModel>();
 
         public LanguageModel CurrentLanguage { get; set; }
     }

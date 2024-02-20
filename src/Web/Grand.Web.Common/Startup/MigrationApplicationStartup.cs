@@ -1,4 +1,4 @@
-﻿using Grand.Domain.Data;
+﻿using Grand.Data;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Configuration;
 using Grand.Infrastructure.Migrations;
@@ -35,11 +35,9 @@ namespace Grand.Web.Common.Startup
 
             var serviceProvider = application.ApplicationServices;
             var appConfig = serviceProvider.GetRequiredService<AppConfig>();
-            if (!appConfig.SkipMigrationProcess)
-            {
-                var migrationProcess = serviceProvider.GetRequiredService<IMigrationProcess>();
-                migrationProcess.RunMigrationProcess();
-            }
+            if (appConfig.SkipMigrationProcess) return;
+            var migrationProcess = serviceProvider.GetRequiredService<IMigrationProcess>();
+            migrationProcess.RunMigrationProcess();
         }
 
         /// <summary>

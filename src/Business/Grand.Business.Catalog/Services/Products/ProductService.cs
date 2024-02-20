@@ -5,20 +5,21 @@ using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Domain;
 using Grand.Domain.Catalog;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Orders;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using MediatR;
+using System.Linq.Expressions;
 
 namespace Grand.Business.Catalog.Services.Products
 {
     /// <summary>
     /// Product service
     /// </summary>
-    public partial class ProductService : IProductService
+    public class ProductService : IProductService
     {
         #region Fields
 
@@ -86,14 +87,14 @@ namespace Grand.Business.Catalog.Services.Products
         /// Gets product
         /// </summary>
         /// <param name="productId">Product identifier</param>
-        /// <param name="fromDB">get data from db (not from cache)</param>
+        /// <param name="fromDb">get data from db (not from cache)</param>
         /// <returns>Product</returns>
-        public virtual async Task<Product> GetProductById(string productId, bool fromDB = false)
+        public virtual async Task<Product> GetProductById(string productId, bool fromDb = false)
         {
             if (string.IsNullOrEmpty(productId))
                 return null;
 
-            if (fromDB)
+            if (fromDb)
                 return await _productRepository.GetByIdAsync(productId);
 
             var key = string.Format(CacheKey.PRODUCTS_BY_ID_KEY, productId);
@@ -107,20 +108,16 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Product</returns>
         public virtual async Task<Product> GetProductByIdIncludeArch(string productId)
         {
-            if (String.IsNullOrEmpty(productId))
+            if (string.IsNullOrEmpty(productId))
                 return null;
-            var product = await GetProductById(productId);
-            if (product == null)
-                product = await _mediator.Send(new GetProductArchByIdQuery() { Id = productId });
-
+            var product = await GetProductById(productId) ?? await _mediator.Send(new GetProductArchByIdQuery { Id = productId });
             return product;
         }
-
-
         /// <summary>
         /// Get products by identifiers
         /// </summary>
         /// <param name="productIds">Product identifiers</param>
+        /// <param name="showHidden">Show hidden</param>
         /// <returns>Products</returns>
         public virtual async Task<IList<Product>> GetProductsByIds(string[] productIds, bool showHidden = false)
         {
@@ -128,10 +125,10 @@ namespace Grand.Business.Catalog.Services.Products
                 return new List<Product>();
 
             var products = new List<Product>();
-            foreach (string id in productIds)
+            foreach (var id in productIds)
             {
                 var product = await GetProductById(id);
-                if (product != null && (showHidden || (_aclService.Authorize(product, _workContext.CurrentCustomer) && _aclService.Authorize(product, _workContext.CurrentStore.Id) && (product.IsAvailable()))))
+                if (product != null && (showHidden || (_aclService.Authorize(product, _workContext.CurrentCustomer) && _aclService.Authorize(product, _workContext.CurrentStore.Id) && product.IsAvailable())))
                     products.Add(product);
             }
             return products;
@@ -141,6 +138,8 @@ namespace Grand.Business.Catalog.Services.Products
         /// Gets products by discount
         /// </summary>
         /// <param name="discountId">Product identifiers</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <param name="pageSize">Page size</param>
         /// <returns>Products</returns>
         public virtual async Task<IPagedList<Product>> GetProductsByDiscount(string discountId, int pageIndex = 0, int pageSize = int.MaxValue)
         {
@@ -158,8 +157,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="product">Product</param>
         public virtual async Task InsertProduct(Product product)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
             //insert
             await _productRepository.InsertAsync(product);
@@ -177,8 +175,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="product">Product</param>
         public virtual async Task UpdateProduct(Product product)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
             var oldProduct = await _productRepository.GetByIdAsync(product.Id);
             //update
@@ -202,7 +199,6 @@ namespace Grand.Business.Catalog.Services.Products
                 .Set(x => x.BasepriceUnitId, product.BasepriceUnitId)
                 .Set(x => x.CallForPrice, product.CallForPrice)
                 .Set(x => x.CatalogPrice, product.CatalogPrice)
-                .Set(x => x.CreatedOnUtc, product.CreatedOnUtc)
                 .Set(x => x.EnteredPrice, product.EnteredPrice)
                 .Set(x => x.CustomerGroups, product.CustomerGroups)
                 .Set(x => x.DeliveryDateId, product.DeliveryDateId)
@@ -248,7 +244,7 @@ namespace Grand.Business.Catalog.Services.Products
                 .Set(x => x.MetaTitle, product.MetaTitle)
                 .Set(x => x.MinEnteredPrice, product.MinEnteredPrice)
                 .Set(x => x.MinStockQuantity, product.MinStockQuantity)
-                .Set(x => x.LowStock, ((product.MinStockQuantity > 0 && product.MinStockQuantity >= product.StockQuantity - product.ReservedQuantity) || product.StockQuantity - product.ReservedQuantity <= 0))
+                .Set(x => x.LowStock, (product.MinStockQuantity > 0 && product.MinStockQuantity >= product.StockQuantity - product.ReservedQuantity) || product.StockQuantity - product.ReservedQuantity <= 0)
                 .Set(x => x.Name, product.Name)
                 .Set(x => x.NotApprovedRatingSum, product.NotApprovedRatingSum)
                 .Set(x => x.NotApprovedTotalReviews, product.NotApprovedTotalReviews)
@@ -295,11 +291,11 @@ namespace Grand.Business.Catalog.Services.Products
                 .Set(x => x.Weight, product.Weight)
                 .Set(x => x.Width, product.Width)
                 .Set(x => x.UserFields, product.UserFields)
-                .Set(x => x.UpdatedOnUtc, DateTime.UtcNow);
+                .Set(x => x.Ticks, DateTime.UtcNow.Ticks);
 
             await _productRepository.UpdateOneAsync(x => x.Id == product.Id, update);
 
-            if (oldProduct.AdditionalShippingCharge != product.AdditionalShippingCharge ||
+            if (!oldProduct.AdditionalShippingCharge.Equals(product.AdditionalShippingCharge) ||
                 oldProduct.IsFreeShipping != product.IsFreeShipping ||
                 oldProduct.IsGiftVoucher != product.IsGiftVoucher ||
                 oldProduct.IsShipEnabled != product.IsShipEnabled ||
@@ -311,12 +307,16 @@ namespace Grand.Business.Catalog.Services.Products
                 await _mediator.Publish(new UpdateProductOnCartEvent(product));
             }
 
-            //raise event 
-            if (!oldProduct.Published && product.Published)
-                await _mediator.Publish(new ProductPublishEvent(product));
-
-            if (oldProduct.Published && !product.Published)
-                await _mediator.Publish(new ProductUnPublishEvent(product));
+            switch (oldProduct.Published)
+            {
+                //raise event 
+                case false when product.Published:
+                    await _mediator.Publish(new ProductPublishEvent(product));
+                    break;
+                case true when !product.Published:
+                    await _mediator.Publish(new ProductUnPublishEvent(product));
+                    break;
+            }
 
             //cache
             await _cacheBase.RemoveByPrefix(string.Format(CacheKey.PRODUCTS_BY_ID_KEY, product.Id));
@@ -329,14 +329,47 @@ namespace Grand.Business.Catalog.Services.Products
             //event notification
             await _mediator.EntityUpdated(product);
         }
+
+        public virtual async Task UpdateProductField<T>(Product product,
+            Expression<Func<Product, T>> expression, T value)
+        {
+            ArgumentNullException.ThrowIfNull(product);
+
+            //update field
+            await _productRepository.UpdateField(product.Id, expression, value);
+
+            //cache
+            await _cacheBase.RemoveByPrefix(CacheKey.PRODUCTS_PATTERN_KEY);
+
+            //event notification
+            await _mediator.EntityUpdated(product);
+
+        }
+        /// <summary>
+        /// Increases the value of a number field  - this method do not clear cache related with product
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="product"></param>
+        /// <param name="expression"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public virtual async Task IncrementProductField<T>(Product product,
+            Expression<Func<Product, T>> expression, T value)
+        {
+            ArgumentNullException.ThrowIfNull(product);
+
+            //inc field
+            await _productRepository.IncField(product.Id, expression, value);
+        }
+
         /// <summary>
         /// Delete a product
         /// </summary>
         /// <param name="product">Product</param>
         public virtual async Task DeleteProduct(Product product)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
             //deleted product
             await _productRepository.DeleteAsync(product);
@@ -348,17 +381,7 @@ namespace Grand.Business.Catalog.Services.Products
             await _mediator.EntityDeleted(product);
         }
 
-        public virtual async Task UpdateMostView(Product product)
-        {
-            await _productRepository.UpdateField(product.Id, x => x.Viewed, product.Viewed + 1);
-        }
-
-        public virtual async Task UpdateSold(Product product, int qty)
-        {
-            await _productRepository.UpdateField(product.Id, x => x.Sold, product.Sold + qty);
-        }
-
-        public virtual async Task UnpublishProduct(Product product)
+        public virtual async Task UnPublishProduct(Product product)
         {
             var update = UpdateBuilder<Product>.Create()
                     .Set(x => x.Published, false)
@@ -425,7 +448,6 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Search products
         /// </summary>
-        /// <param name="filterableSpecificationAttributeOptionIds">The specification attribute option identifiers applied to loaded products (all pages)</param>
         /// <param name="loadFilterableSpecificationAttributeOptionIds">A value indicating whether we should load the specification attribute option identifiers applied to loaded products (all pages)</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
@@ -437,6 +459,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="warehouseId">Warehouse identifier; "" to load all records</param>
         /// <param name="productType">Product type; "" to load all records</param>
         /// <param name="visibleIndividuallyOnly">A values indicating whether to load only products marked as "visible individually"; "false" to load all records; "true" to load "visible individually" only</param>
+        /// <param name="showOnHomePage">Show on home page</param>
         /// <param name="featuredProducts">A value indicating whether loaded products are marked as featured (relates only to categories and collections). 0 to load featured products only, 1 to load not featured products only, null to load all products</param>
         /// <param name="priceMin">Minimum price; null to load all records</param>
         /// <param name="priceMax">Maximum price; null to load all records</param>
@@ -455,6 +478,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// true - load only "Published" products
         /// false - load only "Unpublished" products
         /// </param>
+        /// <param name="markedAsNewOnly">Marked as new</param>
         /// <returns>Products</returns>
         public virtual async Task<(IPagedList<Product> products, IList<string> filterableSpecificationAttributeOptionIds)> SearchProducts(
             bool loadFilterableSpecificationAttributeOptionIds = false,
@@ -486,7 +510,7 @@ namespace Grand.Business.Catalog.Services.Products
             bool? overridePublished = null)
         {
 
-            var model = await _mediator.Send(new GetSearchProductsQuery() {
+            var model = await _mediator.Send(new GetSearchProductsQuery {
                 Customer = _workContext.CurrentCustomer,
                 LoadFilterableSpecificationAttributeOptionIds = loadFilterableSpecificationAttributeOptionIds,
                 PageIndex = pageIndex,
@@ -527,7 +551,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
         /// <returns>Products</returns>
-        public virtual async Task<IPagedList<Product>> GetProductsByProductAtributeId(string productAttributeId,
+        public virtual async Task<IPagedList<Product>> GetProductsByProductAttributeId(string productAttributeId,
             int pageIndex = 0, int pageSize = int.MaxValue)
         {
             var query = from p in _productRepository.Table
@@ -544,6 +568,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="parentGroupedProductId">Parent product identifier (used with grouped products)</param>
         /// <param name="storeId">Store identifier; "" to load all records</param>
         /// <param name="vendorId">Vendor identifier; "" to load all records</param>
+        /// <param name="showHidden">Show hidden</param>
         /// <returns>Products</returns>
         public virtual async Task<IList<Product>> GetAssociatedProducts(string parentGroupedProductId,
             string storeId = "", string vendorId = "", bool showHidden = false)
@@ -600,13 +625,12 @@ namespace Grand.Business.Catalog.Services.Products
                 return null;
 
             sku = sku.Trim();
-            return await Task.FromResult(_productRepository.Table.Where(x => x.Sku == sku).FirstOrDefault());            
+            return await _productRepository.GetOneAsync(x => x.Sku == sku);            
         }
 
         public virtual async Task UpdateAssociatedProduct(Product product)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
             var update = UpdateBuilder<Product>.Create()
                 .Set(x => x.DisplayOrder, product.DisplayOrder)
@@ -634,8 +658,7 @@ namespace Grand.Business.Catalog.Services.Products
 
         public virtual async Task InsertRelatedProduct(RelatedProduct relatedProduct, string productId)
         {
-            if (relatedProduct == null)
-                throw new ArgumentNullException(nameof(relatedProduct));
+            ArgumentNullException.ThrowIfNull(relatedProduct);
 
             await _productRepository.AddToSet(productId, x => x.RelatedProducts, relatedProduct);
 
@@ -652,8 +675,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task DeleteRelatedProduct(RelatedProduct relatedProduct, string productId)
         {
-            if (relatedProduct == null)
-                throw new ArgumentNullException(nameof(relatedProduct));
+            ArgumentNullException.ThrowIfNull(relatedProduct);
 
             await _productRepository.PullFilter(productId, x => x.RelatedProducts, z => z.Id, relatedProduct.Id);
 
@@ -671,8 +693,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task UpdateRelatedProduct(RelatedProduct relatedProduct, string productId)
         {
-            if (relatedProduct == null)
-                throw new ArgumentNullException(nameof(relatedProduct));
+            ArgumentNullException.ThrowIfNull(relatedProduct);
 
             await _productRepository.UpdateToSet(productId, x => x.RelatedProducts, z => z.Id, relatedProduct.Id, relatedProduct);
 
@@ -689,8 +710,7 @@ namespace Grand.Business.Catalog.Services.Products
 
         public virtual async Task InsertSimilarProduct(SimilarProduct similarProduct)
         {
-            if (similarProduct == null)
-                throw new ArgumentNullException(nameof(similarProduct));
+            ArgumentNullException.ThrowIfNull(similarProduct);
 
             await _productRepository.AddToSet(similarProduct.ProductId1, x => x.SimilarProducts, similarProduct);
 
@@ -707,8 +727,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="similarProduct">Similar product</param>
         public virtual async Task UpdateSimilarProduct(SimilarProduct similarProduct)
         {
-            if (similarProduct == null)
-                throw new ArgumentNullException(nameof(similarProduct));
+            ArgumentNullException.ThrowIfNull(similarProduct);
 
             await _productRepository.UpdateToSet(similarProduct.ProductId1, x => x.SimilarProducts, z => z.Id, similarProduct.Id, similarProduct);
 
@@ -724,8 +743,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="similarProduct">Similar product</param>
         public virtual async Task DeleteSimilarProduct(SimilarProduct similarProduct)
         {
-            if (similarProduct == null)
-                throw new ArgumentNullException(nameof(similarProduct));
+            ArgumentNullException.ThrowIfNull(similarProduct);
 
             await _productRepository.PullFilter(similarProduct.ProductId1, x => x.SimilarProducts, z => z.Id, similarProduct.Id);
 
@@ -747,8 +765,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productBundleId">Product bundle ident</param>
         public virtual async Task InsertBundleProduct(BundleProduct bundleProduct, string productBundleId)
         {
-            if (bundleProduct == null)
-                throw new ArgumentNullException(nameof(bundleProduct));
+            ArgumentNullException.ThrowIfNull(bundleProduct);
 
             await _productRepository.AddToSet(productBundleId, x => x.BundleProducts, bundleProduct);
 
@@ -767,8 +784,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productBundleId">Product bundle ident</param>
         public virtual async Task UpdateBundleProduct(BundleProduct bundleProduct, string productBundleId)
         {
-            if (bundleProduct == null)
-                throw new ArgumentNullException(nameof(bundleProduct));
+            ArgumentNullException.ThrowIfNull(bundleProduct);
 
             await _productRepository.UpdateToSet(productBundleId, x => x.BundleProducts, z => z.Id, bundleProduct.Id, bundleProduct);
 
@@ -786,8 +802,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productBundleId">Product bundle ident</param>
         public virtual async Task DeleteBundleProduct(BundleProduct bundleProduct, string productBundleId)
         {
-            if (bundleProduct == null)
-                throw new ArgumentNullException(nameof(bundleProduct));
+            ArgumentNullException.ThrowIfNull(bundleProduct);
 
             await _productRepository.PullFilter(productBundleId, x => x.BundleProducts, z => z.Id, bundleProduct.Id);
 
@@ -808,8 +823,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="crossSellProduct">Cross-sell product</param>
         public virtual async Task InsertCrossSellProduct(CrossSellProduct crossSellProduct)
         {
-            if (crossSellProduct == null)
-                throw new ArgumentNullException(nameof(crossSellProduct));
+            ArgumentNullException.ThrowIfNull(crossSellProduct);
 
             await _productRepository.AddToSet(crossSellProduct.ProductId1, x => x.CrossSellProduct, crossSellProduct.ProductId2);
 
@@ -826,8 +840,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="crossSellProduct">Cross-sell identifier</param>
         public virtual async Task DeleteCrossSellProduct(CrossSellProduct crossSellProduct)
         {
-            if (crossSellProduct == null)
-                throw new ArgumentNullException(nameof(crossSellProduct));
+            ArgumentNullException.ThrowIfNull(crossSellProduct);
 
             await _productRepository.Pull(crossSellProduct.ProductId1, x => x.CrossSellProduct, crossSellProduct.ProductId2);
 
@@ -857,37 +870,33 @@ namespace Grand.Business.Catalog.Services.Products
             var cartProductIds = new List<string>();
             foreach (var sci in cart)
             {
-                string prodId = sci.ProductId;
-                if (!cartProductIds.Contains(prodId))
-                    cartProductIds.Add(prodId);
+                if (!cartProductIds.Contains(sci.ProductId))
+                    cartProductIds.Add(sci.ProductId);
             }
 
             foreach (var sci in cart)
             {
                 var product = await GetProductById(sci.ProductId);
-                if (product == null || !product.Published)
+                if (product is not { Published: true })
                     continue;
 
                 var crossSells = product.CrossSellProduct;
                 foreach (var crossSell in crossSells)
                 {
                     //validate that this product is not added to result yet
-                    //validate that this product is not in the cart
-                    if (result.Find(p => p.Id == crossSell) == null &&
-                        !cartProductIds.Contains(crossSell))
-                    {
-                        var productToAdd = await GetProductById(crossSell);
-                        //validate product
-                        if (productToAdd == null || !productToAdd.Published
-                             || !_aclService.Authorize(productToAdd, _workContext.CurrentCustomer) || !_aclService.Authorize(productToAdd, _workContext.CurrentStore.Id)
-                             || !productToAdd.IsAvailable())
-                            continue;
+                    if (result.Find(p => p.Id == crossSell) != null ||
+                        cartProductIds.Contains(crossSell)) continue;
+                    var productToAdd = await GetProductById(crossSell);
+                    //validate product
+                    if (productToAdd is not { Published: true } 
+                        || !_aclService.Authorize(productToAdd, _workContext.CurrentCustomer) || !_aclService.Authorize(productToAdd, _workContext.CurrentStore.Id) 
+                        || !productToAdd.IsAvailable())
+                        continue;
 
-                        //add a product to result
-                        result.Add(productToAdd);
-                        if (result.Count >= numberOfProducts)
-                            return result;
-                    }
+                    //add a product to result
+                    result.Add(productToAdd);
+                    if (result.Count >= numberOfProducts)
+                        return result;
                 }
             }
             return result;
@@ -900,14 +909,12 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Inserts a recommended product
         /// </summary>
-        /// <param name="recommendedProduct">Recommended product</param>
+        /// <param name="productId">Product ident</param>
+        /// <param name="recommendedProductId">Recommended product</param>
         public virtual async Task InsertRecommendedProduct(string productId, string recommendedProductId)
         {
-            if (productId == null)
-                throw new ArgumentNullException(nameof(productId));
-
-            if (recommendedProductId == null)
-                throw new ArgumentNullException(nameof(recommendedProductId));
+            ArgumentNullException.ThrowIfNull(productId);
+            ArgumentNullException.ThrowIfNull(recommendedProductId);
 
             await _productRepository.AddToSet(productId, x => x.RecommendedProduct, recommendedProductId);
 
@@ -919,14 +926,12 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Deletes a recommended product
         /// </summary>
-        /// <param name="recommendedProduct">Recommended identifier</param>
+        /// <param name="productId">Product ident</param>
+        /// <param name="recommendedProductId">Recommended identifier</param>
         public virtual async Task DeleteRecommendedProduct(string productId, string recommendedProductId)
         {
-            if (productId == null)
-                throw new ArgumentNullException(nameof(productId));
-
-            if (recommendedProductId == null)
-                throw new ArgumentNullException(nameof(recommendedProductId));
+            ArgumentNullException.ThrowIfNull(productId);
+            ArgumentNullException.ThrowIfNull(recommendedProductId);
 
             await _productRepository.Pull(productId, x => x.RecommendedProduct, recommendedProductId);
 
@@ -946,8 +951,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task InsertTierPrice(TierPrice tierPrice, string productId)
         {
-            if (tierPrice == null)
-                throw new ArgumentNullException(nameof(tierPrice));
+            ArgumentNullException.ThrowIfNull(tierPrice);
 
             await _productRepository.AddToSet(productId, x => x.TierPrices, tierPrice);
 
@@ -965,8 +969,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task UpdateTierPrice(TierPrice tierPrice, string productId)
         {
-            if (tierPrice == null)
-                throw new ArgumentNullException(nameof(tierPrice));
+            ArgumentNullException.ThrowIfNull(tierPrice);
 
             await _productRepository.UpdateToSet(productId, x => x.TierPrices, z => z.Id, tierPrice.Id, tierPrice);
 
@@ -983,8 +986,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task DeleteTierPrice(TierPrice tierPrice, string productId)
         {
-            if (tierPrice == null)
-                throw new ArgumentNullException(nameof(tierPrice));
+            ArgumentNullException.ThrowIfNull(tierPrice);
 
             await _productRepository.PullFilter(productId, x => x.TierPrices, x => x.Id, tierPrice.Id);
 
@@ -1005,8 +1007,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productPrice">Product price</param>
         public virtual async Task InsertProductPrice(ProductPrice productPrice)
         {
-            if (productPrice == null)
-                throw new ArgumentNullException(nameof(productPrice));
+            ArgumentNullException.ThrowIfNull(productPrice);
 
             await _productRepository.AddToSet(productPrice.ProductId, x => x.ProductPrices, productPrice);
 
@@ -1020,11 +1021,10 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Updates the product price
         /// </summary>
-        /// <param name="tierPrice">Tier price</param>
+        /// <param name="productPrice">Tier price</param>
         public virtual async Task UpdateProductPrice(ProductPrice productPrice)
         {
-            if (productPrice == null)
-                throw new ArgumentNullException(nameof(productPrice));
+            ArgumentNullException.ThrowIfNull(productPrice);
 
             await _productRepository.UpdateToSet(productPrice.ProductId, x => x.ProductPrices, z => z.Id, productPrice.Id, productPrice);
 
@@ -1041,8 +1041,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productPrice">Product price</param>
         public virtual async Task DeleteProductPrice(ProductPrice productPrice)
         {
-            if (productPrice == null)
-                throw new ArgumentNullException(nameof(productPrice));
+            ArgumentNullException.ThrowIfNull(productPrice);
 
             await _productRepository.PullFilter(productPrice.ProductId, x => x.ProductPrices, x => x.Id, productPrice.Id);
 
@@ -1063,8 +1062,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task InsertProductPicture(ProductPicture productPicture, string productId)
         {
-            if (productPicture == null)
-                throw new ArgumentNullException(nameof(productPicture));
+            ArgumentNullException.ThrowIfNull(productPicture);
 
             await _productRepository.AddToSet(productId, x => x.ProductPictures, productPicture);
 
@@ -1082,8 +1080,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task UpdateProductPicture(ProductPicture productPicture, string productId)
         {
-            if (productPicture == null)
-                throw new ArgumentNullException(nameof(productPicture));
+            ArgumentNullException.ThrowIfNull(productPicture);
 
             await _productRepository.UpdateToSet(productId, x => x.ProductPictures, z => z.Id, productPicture.Id, productPicture);
 
@@ -1100,8 +1097,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task DeleteProductPicture(ProductPicture productPicture, string productId)
         {
-            if (productPicture == null)
-                throw new ArgumentNullException(nameof(productPicture));
+            ArgumentNullException.ThrowIfNull(productPicture);
 
             await _productRepository.PullFilter(productId, x => x.ProductPictures, x => x.Id, productPicture.Id);
 
@@ -1115,15 +1111,14 @@ namespace Grand.Business.Catalog.Services.Products
 
         #region Product warehouse inventory        
         /// <summary>
-        /// Insert product warehouse inwentory
+        /// Insert product warehouse inventory
         /// </summary>
         /// <param name="pwi"></param>
         /// <param name="productId"></param>
         /// <returns></returns>
         public virtual async Task InsertProductWarehouseInventory(ProductWarehouseInventory pwi, string productId)
         {
-            if (pwi == null)
-                throw new ArgumentNullException(nameof(pwi));
+            ArgumentNullException.ThrowIfNull(pwi);
 
             await _productRepository.AddToSet(productId, x => x.ProductWarehouseInventory, pwi);
 
@@ -1141,8 +1136,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns></returns>
         public virtual async Task UpdateProductWarehouseInventory(ProductWarehouseInventory pwi, string productId)
         {
-            if (pwi == null)
-                throw new ArgumentNullException(nameof(pwi));
+            ArgumentNullException.ThrowIfNull(pwi);
 
             await _productRepository.UpdateToSet(productId, x => x.ProductWarehouseInventory, z => z.Id, pwi.Id, pwi);
 
@@ -1158,8 +1152,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task DeleteProductWarehouseInventory(ProductWarehouseInventory pwi, string productId)
         {
-            if (pwi == null)
-                throw new ArgumentNullException(nameof(pwi));
+            ArgumentNullException.ThrowIfNull(pwi);
 
             await _productRepository.PullFilter(productId, x => x.ProductWarehouseInventory, x => x.Id, pwi.Id);
 

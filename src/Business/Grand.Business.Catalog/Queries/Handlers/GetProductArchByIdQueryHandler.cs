@@ -1,6 +1,6 @@
 ﻿using Grand.Business.Core.Queries.Catalog;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Catalog.Queries.Handlers
@@ -16,7 +16,7 @@ namespace Grand.Business.Catalog.Queries.Handlers
 
         public async Task<Product> Handle(GetProductArchByIdQuery request, CancellationToken cancellationToken)
         {
-            return await _productDeletedRepository.GetByIdAsync(request.Id) as Product;
+            return await _productDeletedRepository.GetByIdAsync(request.Id);
         }
     }
 }

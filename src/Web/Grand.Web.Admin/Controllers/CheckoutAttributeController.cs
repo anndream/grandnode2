@@ -3,12 +3,10 @@ using Grand.Business.Core.Interfaces.Checkout.CheckoutAttributes;
 using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Domain.Catalog;
 using Grand.Domain.Directory;
 using Grand.Infrastructure;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Orders;
 using Grand.Web.Common.DataSource;
@@ -19,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.CheckoutAttributes)]
-    public partial class CheckoutAttributeController : BaseAdminController
+    public class CheckoutAttributeController : BaseAdminController
     {
         #region Fields
 
@@ -60,9 +58,15 @@ namespace Grand.Web.Admin.Controllers
         #region Checkout attributes
 
         //list
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.List)]
@@ -164,14 +168,10 @@ namespace Grand.Web.Admin.Controllers
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> Delete(string id,
-            [FromServices] IWorkContext workContext,
-            [FromServices] ICustomerActivityService customerActivityService)
+            [FromServices] IWorkContext workContext)
         {
             var checkoutAttribute = await _checkoutAttributeService.GetCheckoutAttributeById(id);
             await _checkoutAttributeService.DeleteCheckoutAttribute(checkoutAttribute);
-
-            //activity log
-            await customerActivityService.InsertActivity("DeleteCheckoutAttribute", checkoutAttribute.Id, workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(), _translationService.GetResource("ActivityLog.DeleteCheckoutAttribute"), checkoutAttribute.Name);
 
             Success(_translationService.GetResource("Admin.Orders.CheckoutAttributes.Deleted"));
             return RedirectToAction("List");
@@ -213,23 +213,15 @@ namespace Grand.Web.Admin.Controllers
                 //No checkout attribute found with the specified id
                 return RedirectToAction("List");
 
-            model.PrimaryStoreCurrencyCode = (await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)).CurrencyCode;
-            model.BaseWeightIn = (await _measureService.GetMeasureWeightById(_measureSettings.BaseWeightId)).Name;
-
-            if (checkoutAttribute.AttributeControlTypeId == AttributeControlType.ColorSquares)
-            {
-                //ensure valid color is chosen/entered
-                if (String.IsNullOrEmpty(model.ColorSquaresRgb))
-                    ModelState.AddModelError("", "Color is required");
-            }
-
             if (ModelState.IsValid)
             {
                 await _checkoutAttributeViewModelService.InsertCheckoutAttributeValueModel(checkoutAttribute, model);
                 return Content("");
             }
-
+            
             //If we got this far, something failed, redisplay form
+            model.PrimaryStoreCurrencyCode = (await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)).CurrencyCode;
+            model.BaseWeightIn = (await _measureService.GetMeasureWeightById(_measureSettings.BaseWeightId)).Name;
             return View(model);
         }
 
@@ -238,7 +230,7 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> ValueEditPopup(string id, string checkoutAttributeId)
         {
             var checkoutAttribute = await _checkoutAttributeService.GetCheckoutAttributeById(checkoutAttributeId);
-            var cav = checkoutAttribute.CheckoutAttributeValues.Where(x => x.Id == id).FirstOrDefault();
+            var cav = checkoutAttribute.CheckoutAttributeValues.FirstOrDefault(x => x.Id == id);
             if (cav == null)
                 //No checkout attribute value found with the specified id
                 return RedirectToAction("List");
@@ -260,21 +252,11 @@ namespace Grand.Web.Admin.Controllers
         {
             var checkoutAttribute = await _checkoutAttributeService.GetCheckoutAttributeById(model.CheckoutAttributeId);
 
-            var cav = checkoutAttribute.CheckoutAttributeValues.Where(x => x.Id == model.Id).FirstOrDefault();
+            var cav = checkoutAttribute.CheckoutAttributeValues.FirstOrDefault(x => x.Id == model.Id);
             if (cav == null)
                 //No checkout attribute value found with the specified id
                 return RedirectToAction("List");
-
-            model.PrimaryStoreCurrencyCode = (await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)).CurrencyCode;
-            model.BaseWeightIn = (await _measureService.GetMeasureWeightById(_measureSettings.BaseWeightId)).Name;
-
-            if (checkoutAttribute.AttributeControlTypeId == AttributeControlType.ColorSquares)
-            {
-                //ensure valid color is chosen/entered
-                if (String.IsNullOrEmpty(model.ColorSquaresRgb))
-                    ModelState.AddModelError("", "Color is required");
-            }
-
+            
             if (ModelState.IsValid)
             {
                 await _checkoutAttributeViewModelService.UpdateCheckoutAttributeValueModel(checkoutAttribute, cav, model);
@@ -282,6 +264,9 @@ namespace Grand.Web.Admin.Controllers
             }
 
             //If we got this far, something failed, redisplay form
+            model.PrimaryStoreCurrencyCode = (await _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId)).CurrencyCode;
+            model.BaseWeightIn = (await _measureService.GetMeasureWeightById(_measureSettings.BaseWeightId)).Name;
+            
             return View(model);
         }
 
@@ -291,7 +276,7 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> ValueDelete(string id, string checkoutAttributeId)
         {
             var checkoutAttribute = await _checkoutAttributeService.GetCheckoutAttributeById(checkoutAttributeId);
-            var cav = checkoutAttribute.CheckoutAttributeValues.Where(x => x.Id == id).FirstOrDefault();
+            var cav = checkoutAttribute.CheckoutAttributeValues.FirstOrDefault(x => x.Id == id);
             if (cav == null)
                 throw new ArgumentException("No checkout attribute value found with the specified id");
 

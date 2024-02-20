@@ -5,20 +5,13 @@ namespace Grand.Web.Common.TagHelpers
 {
     public class ResourceManager : IResourceManager
     {
-        private List<(IHtmlContent content, int order)> _headScripts;
-        private List<(IHtmlContent content, int order)> _headerScripts;
-        private List<(IHtmlContent content, int order)> _footScripts;
+        private readonly List<(IHtmlContent content, int order)> _headScripts = new();
+        private readonly List<(IHtmlContent content, int order)> _headerScripts = new();
+        private readonly List<(IHtmlContent content, int order)> _footScripts = new();
         private List<IHtmlContent> _templatesHeader;
         private List<IHtmlContent> _templatesFooter;
-        private List<LinkEntry> _links;
+        private readonly List<LinkEntry> _links = new();
 
-        public ResourceManager()
-        {
-            _links = new List<LinkEntry>();
-            _headScripts = new List<(IHtmlContent content, int order)>();
-            _headerScripts = new List<(IHtmlContent content, int order)>();
-            _footScripts = new List<(IHtmlContent content, int order)>();
-        }
         public IEnumerable<IHtmlContent> GetRegisteredHeadScripts()
         {
             return _headScripts.OrderBy(x => x.order).Select(x => x.content);
@@ -34,11 +27,11 @@ namespace Grand.Web.Common.TagHelpers
         }
         public IEnumerable<IHtmlContent> GetRegisteredTemplatesHeader()
         {
-            return _templatesHeader == null ? Enumerable.Empty<IHtmlContent>() : _templatesHeader;
+            return _templatesHeader ?? Enumerable.Empty<IHtmlContent>();
         }
         public IEnumerable<IHtmlContent> GetRegisteredTemplatesFooter()
         {
-            return _templatesFooter == null ? Enumerable.Empty<IHtmlContent>() : _templatesFooter;
+            return _templatesFooter ?? Enumerable.Empty<IHtmlContent>();
         }
 
         public void RegisterHeadScript(IHtmlContent script, int order)
@@ -59,16 +52,12 @@ namespace Grand.Web.Common.TagHelpers
         {
             if (head)
             {
-                if (_templatesHeader == null)
-                    _templatesHeader = new List<IHtmlContent>();
-
+                _templatesHeader ??= new List<IHtmlContent>();
                 _templatesHeader.Add(script);
             }
             else
             {
-                if (_templatesFooter == null)
-                    _templatesFooter = new List<IHtmlContent>();
-
+                _templatesFooter ??= new List<IHtmlContent>();
                 _templatesFooter.Add(script);
             }
         }
@@ -129,12 +118,11 @@ namespace Grand.Web.Common.TagHelpers
             var first = true;
 
             var registeredLinks = _links.OrderBy(x => x.Priority).ToList();
-            for (var i = 0; i < registeredLinks.Count; i++)
+            foreach (var link in registeredLinks)
             {
-                var link = registeredLinks[i];
                 if (!first)
                 {
-                    builder.AppendHtml(System.Environment.NewLine);
+                    builder.AppendHtml(Environment.NewLine);
                 }
 
                 first = false;

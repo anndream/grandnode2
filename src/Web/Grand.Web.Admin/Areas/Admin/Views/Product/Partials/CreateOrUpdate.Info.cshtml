@@ -1,7 +1,6 @@
 ﻿@model ProductModel
 @using Microsoft.AspNetCore.Mvc.Razor;
 @inject Grand.Business.Core.Interfaces.Catalog.Products.IProductTagService productTagService
-@inject IPageHeadBuilder pagebuilder
 @{
     //resources for product tags input
     <link rel="stylesheet" type="text/css" asp-src="@(Common.WwwRoot)/administration/tagEditor/jquery.tag-editor.css" />
@@ -9,16 +8,11 @@
     <script asp-location="Footer" asp-src="@(Common.WwwRoot)/administration/tagEditor/jquery.tag-editor.min.js"></script>
 
 }
-@using Grand.Domain.Catalog;
-@using System.Text;
 <script>
     $(document).ready(function() {
 
-        @if (!Model.IsLoggedInAsVendor)
-        {
-            <text>$("#@Html.IdFor(model => model.ShowOnHomePage)").click(toggleShowOnHomePage);</text>
-            <text>$("#@Html.IdFor(model => model.BestSeller)").click(toggleShowOnHomePage);</text>
-        }
+        $("#@Html.IdFor(model => model.ShowOnHomePage)").click(toggleShowOnHomePage);
+        $("#@Html.IdFor(model => model.BestSeller)").click(toggleShowOnHomePage);
         $("#@Html.IdFor(model => model.ProductTypeId)").change(toggleProductType);
         $("#@Html.IdFor(model => model.RequireOtherProducts)").click(toggleRequireOtherProducts);
         $("#@Html.IdFor(model => model.AvailableForPreOrder)").click(togglePreOrder);
@@ -38,10 +32,7 @@
         $("#@Html.IdFor(model => model.StockAvailability)").click(toggleManageStock);
         $("#@Html.IdFor(model => model.MarkAsNew)").click(toggleMarkAsNew);
 
-        @if (!Model.IsLoggedInAsVendor)
-        {
-            <text>toggleShowOnHomePage();</text>
-        }
+        toggleShowOnHomePage();
         toggleProductType();
         togglePreOrder();
         toggleRequireOtherProducts();
@@ -418,7 +409,7 @@
         var productTags = await productTagService.GetAllProductTags();
         var productTagsSb = new StringBuilder();
         productTagsSb.Append("var initialProductTags = [");
-        for (int i = 0; i < productTags.Count; i++)
+        for (var i = 0; i < productTags.Count; i++)
         {
             var tag = productTags[i];
             productTagsSb.Append("'");
@@ -606,14 +597,14 @@
                 <span asp-validation-for="BrandId"></span>
             </div>
         </div>
-        <div class="form-group" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+        <div class="form-group" >
             <admin-label asp-for="VendorId" />
             <div class="col-md-9 col-sm-9">
                 <admin-input asp-for="VendorId" />
                 <span asp-validation-for="VendorId"></span>
             </div>
         </div>
-        <div class="form-group" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+        <div class="form-group" >
             <admin-label asp-for="ShowOnHomePage" />
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">
@@ -623,14 +614,14 @@
                 <span asp-validation-for="ShowOnHomePage"></span>
             </div>
         </div>
-        <div class="form-group" id="pnlDisplayOrder" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+        <div class="form-group" id="pnlDisplayOrder" >
             <admin-label asp-for="DisplayOrder" />
             <div class="col-md-9 col-sm-9">
                 <admin-input asp-for="DisplayOrder" />
                 <span asp-validation-for="DisplayOrder"></span>
             </div>
         </div>
-        <div class="form-group" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+        <div class="form-group" >
             <admin-label asp-for="BestSeller" />
             <div class="col-md-9 col-sm-9">
                 <label class="mt-checkbox mt-checkbox-outline control control-checkbox">

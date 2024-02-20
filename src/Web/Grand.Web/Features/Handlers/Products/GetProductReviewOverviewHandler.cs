@@ -6,16 +6,12 @@ namespace Grand.Web.Features.Handlers.Products
 {
     public class GetProductReviewOverviewHandler : IRequestHandler<GetProductReviewOverview, ProductReviewOverviewModel>
     {
-        public GetProductReviewOverviewHandler()
-        {
-        }
-
         public async Task<ProductReviewOverviewModel> Handle(GetProductReviewOverview request, CancellationToken cancellationToken)
         {
-            var productReview = new ProductReviewOverviewModel()
-            {
+            var productReview = new ProductReviewOverviewModel {
                 RatingSum = request.Product.ApprovedRatingSum,
                 TotalReviews = request.Product.ApprovedTotalReviews,
+                AvgRating = request.Product.AvgRating,
                 ProductId = request.Product.Id,
                 AllowCustomerReviews = request.Product.AllowCustomerReviews
             };

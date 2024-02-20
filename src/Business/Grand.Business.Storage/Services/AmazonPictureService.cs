@@ -2,14 +2,13 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Business.Core.Interfaces.Storage;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Media;
-using Grand.Infrastructure;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Configuration;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace Grand.Business.Storage.Services
@@ -17,7 +16,7 @@ namespace Grand.Business.Storage.Services
     /// <summary>
     /// Picture service for Amazon
     /// </summary>
-    public partial class AmazonPictureService : PictureService
+    public class AmazonPictureService : PictureService
     {
         #region Fields
 
@@ -32,9 +31,8 @@ namespace Grand.Business.Storage.Services
         #region Ctor
 
         public AmazonPictureService(IRepository<Picture> pictureRepository,
-            ILogger logger,
+            ILogger<AmazonPictureService> logger,
             IMediator mediator,
-            IWorkContext workContext,
             ICacheBase cacheBase,
             IMediaFileStore mediaFileStore,
             MediaSettings mediaSettings,
@@ -43,7 +41,6 @@ namespace Grand.Business.Storage.Services
             : base(pictureRepository,
                 logger,
                 mediator,
-                workContext,
                 cacheBase,
                 mediaFileStore,
                 mediaSettings,
@@ -83,13 +80,14 @@ namespace Grand.Business.Storage.Services
         {
             if (!_bucketExist)
             {
-                _bucketExist = await _s3Client.DoesS3BucketExistAsync(_bucketName);
+
+                _bucketExist = await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, _bucketName);
                 while (_bucketExist == false)
                 {
-                    S3Region s3region = S3Region.FindValue(_config.AmazonRegion);
+                    var s3Region = S3Region.FindValue(_config.AmazonRegion);
                     var putBucketRequest = new PutBucketRequest {
                         BucketName = _bucketName,
-                        BucketRegion = s3region,
+                        BucketRegion = s3Region
                     };
 
                     try
@@ -104,7 +102,7 @@ namespace Grand.Business.Storage.Services
 
                         throw;
                     }
-                    _bucketExist = await _s3Client.DoesS3BucketExistAsync(_bucketName);
+                    _bucketExist = await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, _bucketName);
                 }
             }
         }
@@ -128,7 +126,7 @@ namespace Grand.Business.Storage.Services
         {
             await CheckBucketExists();
 
-            var listObjectsRequest = new ListObjectsV2Request() {
+            var listObjectsRequest = new ListObjectsV2Request {
                 BucketName = _bucketName,
                 Prefix = picture.Id
             };
@@ -147,15 +145,35 @@ namespace Grand.Business.Storage.Services
         /// <returns>Local picture thumb path</returns>
         protected override async Task<string> GetThumbPhysicalPath(string thumbFileName)
         {
+            if (!await GeneratedThumbExists(thumbFileName))
+                return null;
+            
             if (string.IsNullOrEmpty(_distributionDomainName))
             {
                 return await Task.FromResult($"https://{_bucketName}.s3.amazonAws.com/{thumbFileName}");
             }
-            else
-                return await Task.FromResult($"https://{_distributionDomainName}/{thumbFileName}");
-
+            return await Task.FromResult($"https://{_distributionDomainName}/{thumbFileName}");
         }
 
+        /// <summary>
+        /// Get a value indicating whether some file (thumb) already exists
+        /// </summary>
+        /// <param name="thumbFileName">Thumb file name</param>
+        /// <returns>Result</returns>
+        private Task<bool> GeneratedThumbExists(string thumbFileName)
+        {
+            try
+            {
+                var getObjectResponse = _s3Client.GetObjectAsync(_bucketName, thumbFileName).GetAwaiter().GetResult();
+                EnsureValidResponse(getObjectResponse, HttpStatusCode.OK);
+
+                return Task.FromResult(getObjectResponse.BucketName == _bucketName || getObjectResponse.Key == thumbFileName);
+            }
+            catch
+            {
+                return Task.FromResult(false);
+            }
+        }
         /// <summary>
         /// Get picture (thumb) URL 
         /// </summary>
@@ -164,19 +182,12 @@ namespace Grand.Business.Storage.Services
         /// <returns>Local picture thumb path</returns>
         protected override string GetThumbUrl(string thumbFileName, string storeLocation = null)
         {
-            if (string.IsNullOrEmpty(_distributionDomainName))
-            {
-                return $"https://{_bucketName}.s3.amazonAws.com/{thumbFileName}";
-            }
-            else
-                return $"https://{_distributionDomainName}/{thumbFileName}";
-
+            return string.IsNullOrEmpty(_distributionDomainName) ? $"https://{_bucketName}.s3.amazonAws.com/{thumbFileName}" : $"https://{_distributionDomainName}/{thumbFileName}";
         }
 
         /// <summary>
         /// Save a value indicating whether some file (thumb) already exists
         /// </summary>
-        /// <param name="thumbFilePath">Thumb file path (unused in Amazon S3)</param>
         /// <param name="thumbFileName">Thumb file name</param>
         /// <param name="binary">Picture binary</param>
         protected override Task SaveThumb(string thumbFileName, byte[] binary)
@@ -185,11 +196,11 @@ namespace Grand.Business.Storage.Services
 
             using (Stream stream = new MemoryStream(binary))
             {
-                var putObjectRequest = new PutObjectRequest() {
+                var putObjectRequest = new PutObjectRequest {
                     BucketName = _bucketName,
                     InputStream = stream,
                     Key = thumbFileName,
-                    StorageClass = S3StorageClass.Standard,
+                    StorageClass = S3StorageClass.Standard
                 };
                 _s3Client.PutObjectAsync(putObjectRequest).Wait();
             }
@@ -204,7 +215,7 @@ namespace Grand.Business.Storage.Services
         {
             await CheckBucketExists();
 
-            var listObjectsRequest = new ListObjectsV2Request() {
+            var listObjectsRequest = new ListObjectsV2Request {
                 BucketName = _bucketName
             };
             var listObjectsResponse = await _s3Client.ListObjectsV2Async(listObjectsRequest);

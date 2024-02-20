@@ -7,14 +7,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Pages
 {
-    public partial class PageModel : BaseEntityModel, ILocalizedModel<PageLocalizedModel>, IGroupLinkModel, IStoreLinkModel
+    public class PageModel : BaseEntityModel, ILocalizedModel<PageLocalizedModel>, IGroupLinkModel, IStoreLinkModel
     {
-        public PageModel()
-        {
-            AvailablePageLayouts = new List<SelectListItem>();
-            Locales = new List<PageLocalizedModel>();
-        }
-
         //Store acl
         [GrandResourceDisplayName("Admin.Content.Pages.Fields.LimitedToStores")]
         [UIHint("Stores")]
@@ -66,7 +60,7 @@ namespace Grand.Web.Admin.Models.Pages
 
         [GrandResourceDisplayName("Admin.Content.Pages.Fields.PageLayout")]
         public string PageLayoutId { get; set; }
-        public IList<SelectListItem> AvailablePageLayouts { get; set; }
+        public IList<SelectListItem> AvailablePageLayouts { get; set; } = new List<SelectListItem>();
 
         [GrandResourceDisplayName("Admin.Content.Pages.Fields.MetaKeywords")]
 
@@ -84,7 +78,8 @@ namespace Grand.Web.Admin.Models.Pages
 
         public string SeName { get; set; }
 
-        public IList<PageLocalizedModel> Locales { get; set; }
+        public IList<PageLocalizedModel> Locales { get; set; } = new List<PageLocalizedModel>();
+
         //ACL
         [UIHint("CustomerGroups")]
         [GrandResourceDisplayName("Admin.Content.Pages.Fields.LimitedToGroups")]
@@ -99,7 +94,7 @@ namespace Grand.Web.Admin.Models.Pages
         public DateTime? EndDateUtc { get; set; }
     }
 
-    public partial class PageLocalizedModel : ILocalizedModelLocal, ISlugModelLocal
+    public class PageLocalizedModel : ILocalizedModelLocal, ISlugModelLocal
     {
         public string LanguageId { get; set; }
 

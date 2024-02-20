@@ -1,5 +1,5 @@
 using Grand.Domain;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Extensions;
 using MediatR;
@@ -10,7 +10,7 @@ namespace Tax.CountryStateZip.Services
     /// <summary>
     /// Tax rate service
     /// </summary>
-    public partial class TaxRateService : ITaxRateService
+    public class TaxRateService : ITaxRateService
     {
         #region Constants
         private const string TAXRATE_ALL_KEY = "Grand.taxrate.all-{0}-{1}";
@@ -52,8 +52,7 @@ namespace Tax.CountryStateZip.Services
         /// <param name="taxRate">Tax rate</param>
         public virtual async Task DeleteTaxRate(TaxRate taxRate)
         {
-            if (taxRate == null)
-                throw new ArgumentNullException(nameof(taxRate));
+            ArgumentNullException.ThrowIfNull(taxRate);
 
             await _taxRateRepository.DeleteAsync(taxRate);
 
@@ -69,7 +68,7 @@ namespace Tax.CountryStateZip.Services
         /// <returns>Tax rates</returns>
         public virtual async Task<IPagedList<TaxRate>> GetAllTaxRates(int pageIndex = 0, int pageSize = int.MaxValue)
         {
-            string key = string.Format(TAXRATE_ALL_KEY, pageIndex, pageSize);
+            var key = string.Format(TAXRATE_ALL_KEY, pageIndex, pageSize);
             return await _cacheBase.GetAsync(key, async () =>
             {
                 var query = from tr in _taxRateRepository.Table
@@ -95,8 +94,7 @@ namespace Tax.CountryStateZip.Services
         /// <param name="taxRate">Tax rate</param>
         public virtual async Task InsertTaxRate(TaxRate taxRate)
         {
-            if (taxRate == null)
-                throw new ArgumentNullException(nameof(taxRate));
+            ArgumentNullException.ThrowIfNull(taxRate);
 
             await _taxRateRepository.InsertAsync(taxRate);
 
@@ -112,8 +110,7 @@ namespace Tax.CountryStateZip.Services
         /// <param name="taxRate">Tax rate</param>
         public virtual async Task UpdateTaxRate(TaxRate taxRate)
         {
-            if (taxRate == null)
-                throw new ArgumentNullException(nameof(taxRate));
+            ArgumentNullException.ThrowIfNull(taxRate);
 
             await _taxRateRepository.UpdateAsync(taxRate);
 

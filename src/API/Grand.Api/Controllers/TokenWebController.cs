@@ -11,11 +11,16 @@ using MediatR;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 
 namespace Grand.Api.Controllers
 {
-    public class TokenWebController : Controller
+    [ApiExplorerSettings(GroupName = "v2")]
+    [ApiController]
+    [Route("[controller]/[action]")]
+    [SwaggerTag(description: "Create token")]
+    public class TokenWebController : ControllerBase
     {
         private readonly ICustomerService _customerService;
         private readonly IMediator _mediator;
@@ -50,8 +55,16 @@ namespace Grand.Api.Controllers
         {
             if (!_apiConfig.Enabled)
                 return BadRequest("API is disabled");
-
-            var customer = await _customerService.InsertGuestCustomer(_storeHelper.StoreHost);
+            
+            var customer = new Customer {
+                CustomerGuid = Guid.NewGuid(),
+                Active = true,
+                StoreId = _storeHelper.StoreHost.Id,
+                LastActivityDateUtc = DateTime.UtcNow,
+            };
+            
+            customer = await _customerService.InsertGuestCustomer(customer);
+            
             var claims = new Dictionary<string, string> {
                 { "Guid", customer.CustomerGuid.ToString()}
             };
@@ -92,10 +105,10 @@ namespace Grand.Api.Controllers
             if (!_apiConfig.Enabled)
                 return BadRequest("API is disabled");
 
-            string email = null, guid = null;
+            string email;
             Customer customer = null;
             var claims = new Dictionary<string, string>();
-            ClaimsPrincipal principal = null;
+            ClaimsPrincipal principal;
             try
             {
                 principal = _refreshTokenService.GetPrincipalFromToken(tokenDto.AccessToken);
@@ -113,9 +126,12 @@ namespace Grand.Api.Controllers
             }
             else
             {
-                guid = principal.Claims.ToList().FirstOrDefault(x => x.Type == "Guid")?.Value;
-                customer = await _customerService.GetCustomerByGuid(Guid.Parse(guid));
-                claims.Add("Guid", guid);
+                var guid = principal.Claims.ToList().FirstOrDefault(x => x.Type == "Guid")?.Value;
+                if (guid != null)
+                {
+                    customer = await _customerService.GetCustomerByGuid(Guid.Parse(guid));
+                    claims.Add("Guid", guid);
+                }
             }
 
             var customerRefreshToken = await _refreshTokenService.GetCustomerRefreshToken(customer);
@@ -128,7 +144,7 @@ namespace Grand.Api.Controllers
             {
                 return BadRequest("Token expired");
             }
-            var token = await GetToken(claims, customer); ;
+            var token = await GetToken(claims, customer); 
             return Ok(token);
         }
 
@@ -148,8 +164,8 @@ namespace Grand.Api.Controllers
             var refreshTokenValue = _refreshTokenService.GenerateRefreshToken();
             var refreshToken = await _refreshTokenService.SaveRefreshTokenToCustomer(customer, refreshTokenValue);
             claims.Add("RefreshId", refreshToken.RefreshId);
-            var token = await _mediator.Send(new GenerateTokenWebCommand() { Claims = claims });
-            return new TokenDto() {
+            var token = await _mediator.Send(new GenerateTokenWebCommand { Claims = claims });
+            return new TokenDto {
                 AccessToken = token,
                 RefreshToken = refreshTokenValue
             };

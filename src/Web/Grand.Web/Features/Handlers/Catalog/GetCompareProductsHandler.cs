@@ -40,7 +40,7 @@ namespace Grand.Web.Features.Handlers.Catalog
         {
             var model = new CompareProductsModel {
                 IncludeShortDescriptionInCompareProducts = _catalogSettings.IncludeShortDescriptionInCompareProducts,
-                IncludeFullDescriptionInCompareProducts = _catalogSettings.IncludeFullDescriptionInCompareProducts,
+                IncludeFullDescriptionInCompareProducts = _catalogSettings.IncludeFullDescriptionInCompareProducts
             };
 
             var products = new List<Product>();
@@ -48,7 +48,7 @@ namespace Grand.Web.Features.Handlers.Catalog
             foreach (var id in productIds)
             {
                 var product = await _productService.GetProductById(id);
-                if (product != null && product.Published)
+                if (product is { Published: true })
                     products.Add(product);
             }
 
@@ -57,11 +57,11 @@ namespace Grand.Web.Features.Handlers.Catalog
             //availability dates
             products = products.Where(p => p.IsAvailable()).ToList();
 
-            (await _mediator.Send(new GetProductOverview() {
+            (await _mediator.Send(new GetProductOverview {
                 PrepareSpecificationAttributes = true,
                 Products = products,
                 ProductThumbPictureSize = request.PictureProductThumbSize
-            })).ToList().ForEach(model.Products.Add);
+            }, cancellationToken)).ToList().ForEach(model.Products.Add);
 
             return model;
         }
@@ -69,7 +69,7 @@ namespace Grand.Web.Features.Handlers.Catalog
         protected virtual List<string> GetComparedProductIds()
         {
             //try to get cookie
-            if (!_httpContextAccessor.HttpContext.Request.Cookies.TryGetValue(CacheKey.PRODUCTS_COMPARE_COOKIE_NAME, out var productIdsCookie) || string.IsNullOrEmpty(productIdsCookie))
+            if (!_httpContextAccessor.HttpContext!.Request.Cookies.TryGetValue(CacheKey.PRODUCTS_COMPARE_COOKIE_NAME, out var productIdsCookie) || string.IsNullOrEmpty(productIdsCookie))
                 return new List<string>();
 
             //get array of string product identifiers from cookie

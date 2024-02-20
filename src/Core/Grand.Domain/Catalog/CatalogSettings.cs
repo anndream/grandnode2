@@ -4,18 +4,12 @@ namespace Grand.Domain.Catalog
 {
     public class CatalogSettings : ISettings
     {
-        public CatalogSettings()
-        {
-            ProductSortingEnumDisabled = new List<int>();
-            ProductSortingEnumDisplayOrder = new Dictionary<int, int>();
-        }
-
         /// <summary>
         /// Gets or sets a value indicating details pages of unpublished product details pages could be open (for SEO optimization)
         /// </summary>
         public bool AllowViewUnpublishedProductPage { get; set; }
         /// <summary>
-        /// Gets or sets a value indicating customers should see "discontinued" message when visibting details pages of unpublished products (if "AllowViewUnpublishedProductPage" is "true)
+        /// Gets or sets a value indicating customers should see "discontinued" message when visiting details pages of unpublished products (if "AllowViewUnpublishedProductPage" is "true)
         /// </summary>
         public bool DisplayDiscontinuedMessageForUnpublishedProducts { get; set; }
         /// <summary>
@@ -129,6 +123,11 @@ namespace Grand.Domain.Catalog
         /// </summary>
         public bool NotifyStoreOwnerAboutNewProductReviews { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value the filtering by product review
+        /// </summary>
+        public string FilterProductRating { get; set; }
+        
         /// <summary>
         /// Gets or sets a value indicating whether product 'Email a friend' feature is enabled
         /// </summary>
@@ -398,16 +397,22 @@ namespace Grand.Domain.Catalog
         /// <summary>
         /// Gets or sets a list of disabled values of ProductSortingEnum
         /// </summary>
-        public List<int> ProductSortingEnumDisabled { get; set; }
+        public List<int> ProductSortingEnumDisabled { get; set; } = new();
 
         /// <summary>
         /// Gets or sets a display order of ProductSortingEnum values 
         /// </summary>
-        public Dictionary<int, int> ProductSortingEnumDisplayOrder { get; set; }
+        public Dictionary<int, int> ProductSortingEnumDisplayOrder { get; set; } = new();
 
         /// <summary>
         /// Gets or sets a sorting by availability
         /// </summary>
         public bool SortingByAvailability { get; set; }
+
+        /// <summary>
+        /// Gets or sets the max value for page size to use for pagination on all brands/all collection/all vendors/ all categories page 
+        /// </summary>
+        public int MaxCatalogPageSize { get; set; } = 10;
+
     }
 }

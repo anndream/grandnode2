@@ -2,9 +2,7 @@
 using Grand.Business.Core.Interfaces.Catalog.Discounts;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Extensions;
-using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Business.Core.Interfaces.Common.Seo;
 using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Interfaces.Customers;
@@ -14,15 +12,15 @@ using Grand.Domain.Discounts;
 using Grand.Domain.Seo;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Catalog;
 using Grand.Web.Common.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Services
 {
-    public partial class CollectionViewModelService : ICollectionViewModelService
+    public class CollectionViewModelService : ICollectionViewModelService
     {
         #region Fields
 
@@ -30,18 +28,14 @@ namespace Grand.Web.Admin.Services
         private readonly IProductCollectionService _productCollectionService;
         private readonly ICollectionLayoutService _collectionLayoutService;
         private readonly IProductService _productService;
-        private readonly ICustomerService _customerService;
         private readonly IStoreService _storeService;
         private readonly ISlugService _slugService;
         private readonly IPictureService _pictureService;
         private readonly ITranslationService _translationService;
         private readonly IDiscountService _discountService;
-        private readonly ICustomerActivityService _customerActivityService;
         private readonly IVendorService _vendorService;
-        private readonly IDateTimeService _dateTimeService;
         private readonly ILanguageService _languageService;
         private readonly IWorkContext _workContext;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly SeoSettings _seoSettings;
 
         #endregion
@@ -53,36 +47,28 @@ namespace Grand.Web.Admin.Services
             IProductCollectionService productCollectionService,
             ICollectionLayoutService collectionLayoutService,
             IProductService productService,
-            ICustomerService customerService,
             IStoreService storeService,
             ISlugService slugService,
             IPictureService pictureService,
             ITranslationService translationService,
             IDiscountService discountService,
-            ICustomerActivityService customerActivityService,
             IVendorService vendorService,
-            IDateTimeService dateTimeService,
             ILanguageService languageService,
             IWorkContext workContext,
-            IHttpContextAccessor httpContextAccessor,
             SeoSettings seoSettings)
         {
             _collectionLayoutService = collectionLayoutService;
             _collectionService = collectionService;
             _productCollectionService = productCollectionService;
             _productService = productService;
-            _customerService = customerService;
             _storeService = storeService;
             _slugService = slugService;
             _pictureService = pictureService;
             _translationService = translationService;
             _discountService = discountService;
-            _customerActivityService = customerActivityService;
             _vendorService = vendorService;
-            _dateTimeService = dateTimeService;
             _languageService = languageService;
             _workContext = workContext;
-            _httpContextAccessor = httpContextAccessor;
             _seoSettings = seoSettings;
         }
 
@@ -90,8 +76,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual void PrepareSortOptionsModel(CollectionModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             model.AvailableSortOptions = ProductSortingEnum.Position.ToSelectList().ToList();
             model.AvailableSortOptions.Insert(0, new SelectListItem { Text = "None", Value = "-1" });
@@ -99,8 +84,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task PrepareLayoutsModel(CollectionModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             var layouts = await _collectionLayoutService.GetAllCollectionLayouts();
             foreach (var layout in layouts)
@@ -115,12 +99,11 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task PrepareDiscountModel(CollectionModel model, Collection collection, bool excludeProperties)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             model.AvailableDiscounts = (await _discountService
                 .GetAllDiscounts(DiscountType.AssignedToCollections, storeId: _workContext.CurrentCustomer.Id, showHidden: true))
-                .Select(d => d.ToModel(_dateTimeService))
+                .Select(d => d.ToModel())
                 .ToList();
 
             if (!excludeProperties && collection != null)
@@ -132,8 +115,6 @@ namespace Grand.Web.Admin.Services
         public virtual async Task<Collection> InsertCollectionModel(CollectionModel model)
         {
             var collection = model.ToEntity();
-            collection.CreatedOnUtc = DateTime.UtcNow;
-            collection.UpdatedOnUtc = DateTime.UtcNow;
             //discounts
             var allDiscounts = await _discountService.GetAllDiscounts(DiscountType.AssignedToCollections, showHidden: true);
             foreach (var discount in allDiscounts)
@@ -154,18 +135,13 @@ namespace Grand.Web.Admin.Services
             //update picture seo file name
             await _pictureService.UpdatePictureSeoNames(collection.PictureId, collection.Name);
 
-            //activity log
-            _ = _customerActivityService.InsertActivity("AddNewCollection", collection.Id,
-                _workContext.CurrentCustomer, _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.AddNewCollection"), collection.Name);
             return collection;
         }
 
         public virtual async Task<Collection> UpdateCollectionModel(Collection collection, CollectionModel model)
         {
-            string prevPictureId = collection.PictureId;
+            var prevPictureId = collection.PictureId;
             collection = model.ToEntity(collection);
-            collection.UpdatedOnUtc = DateTime.UtcNow;
             collection.Locales = await model.Locales.ToTranslationProperty(collection, x => x.Name, _seoSettings, _slugService, _languageService);
             //discounts
             var allDiscounts = await _discountService.GetAllDiscounts(DiscountType.AssignedToCollections, showHidden: true);
@@ -192,7 +168,7 @@ namespace Grand.Web.Admin.Services
             await _slugService.SaveSlug(collection, model.SeName, "");
 
             //delete an old picture (if deleted or updated)
-            if (!String.IsNullOrEmpty(prevPictureId) && prevPictureId != collection.PictureId)
+            if (!string.IsNullOrEmpty(prevPictureId) && prevPictureId != collection.PictureId)
             {
                 var prevPicture = await _pictureService.GetPictureById(prevPictureId);
                 if (prevPicture != null)
@@ -201,20 +177,12 @@ namespace Grand.Web.Admin.Services
             //update picture seo file name
             await _pictureService.UpdatePictureSeoNames(collection.PictureId, collection.Name);
 
-            //activity log
-            _ = _customerActivityService.InsertActivity("EditCollection", collection.Id,
-                _workContext.CurrentCustomer, _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.EditCollection"), collection.Name);
             return collection;
         }
 
         public virtual async Task DeleteCollection(Collection collection)
         {
             await _collectionService.DeleteCollection(collection);
-            //activity log
-            _ = _customerActivityService.InsertActivity("DeleteCollection", collection.Id,
-                _workContext.CurrentCustomer, _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.DeleteCollection"), collection.Name);
         }
 
         public virtual async Task<CollectionModel.AddCollectionProductModel> PrepareAddCollectionProductModel(string storeId)
@@ -224,17 +192,17 @@ namespace Grand.Web.Admin.Services
             //collections
             model.AvailableCollections.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
             foreach (var m in await _collectionService.GetAllCollections(showHidden: true))
-                model.AvailableCollections.Add(new SelectListItem { Text = m.Name, Value = m.Id.ToString() });
+                model.AvailableCollections.Add(new SelectListItem { Text = m.Name, Value = m.Id });
 
             //stores
             model.AvailableStores.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
             foreach (var s in (await _storeService.GetAllStores()).Where(x => x.Id == storeId || string.IsNullOrWhiteSpace(storeId)))
-                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id });
 
             //vendors
             model.AvailableVendors.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = " " });
             foreach (var v in await _vendorService.GetAllVendors(showHidden: true))
-                model.AvailableVendors.Add(new SelectListItem { Text = v.Name, Value = v.Id.ToString() });
+                model.AvailableVendors.Add(new SelectListItem { Text = v.Name, Value = v.Id });
 
             //product types
             model.AvailableProductTypes = ProductType.SimpleProduct.ToSelectList(_translationService, _workContext, false).ToList();
@@ -245,7 +213,7 @@ namespace Grand.Web.Admin.Services
         public virtual async Task<(IList<ProductModel> products, int totalCount)> PrepareProductModel(CollectionModel.AddCollectionProductModel model, int pageIndex, int pageSize)
         {
             var products = await _productService.PrepareProductList(model.SearchCategoryId, model.SearchBrandId, model.SearchCollectionId, model.SearchStoreId, model.SearchVendorId, model.SearchProductTypeId, model.SearchProductName, pageIndex, pageSize);
-            return (products.Select(x => x.ToModel(_dateTimeService)).ToList(), products.TotalCount);
+            return (products.Select(x => x.ToModel()).ToList(), products.TotalCount);
         }
 
         public virtual async Task<(IEnumerable<CollectionModel.CollectionProductModel> collectionProductModels, int totalCount)> PrepareCollectionProductModel(string collectionId, string storeId, int pageIndex, int pageSize)
@@ -272,7 +240,7 @@ namespace Grand.Web.Admin.Services
             if (product == null)
                 throw new ArgumentException("No product found with the specified id");
 
-            var productCollection = product.ProductCollections.Where(x => x.Id == model.Id).FirstOrDefault();
+            var productCollection = product.ProductCollections.FirstOrDefault(x => x.Id == model.Id);
             if (productCollection == null)
                 throw new ArgumentException("No product collection mapping found with the specified id");
 
@@ -287,7 +255,7 @@ namespace Grand.Web.Admin.Services
             if (product == null)
                 throw new ArgumentException("No product found with the specified id");
 
-            var productCollection = product.ProductCollections.Where(x => x.Id == id).FirstOrDefault();
+            var productCollection = product.ProductCollections.FirstOrDefault(x => x.Id == id);
             if (productCollection == null)
                 throw new ArgumentException("No product collection mapping found with the specified id");
 
@@ -296,42 +264,22 @@ namespace Grand.Web.Admin.Services
         }
         public virtual async Task InsertCollectionProductModel(CollectionModel.AddCollectionProductModel model)
         {
-            foreach (string id in model.SelectedProductIds)
+            foreach (var id in model.SelectedProductIds)
             {
                 var product = await _productService.GetProductById(id);
                 if (product != null)
                 {
-                    var existingProductcollections = product.ProductCollections;
-                    if (product.ProductCollections.Where(x => x.CollectionId == model.CollectionId).Count() == 0)
+                    if (!product.ProductCollections.Any(x => x.CollectionId == model.CollectionId))
                     {
                         await _productCollectionService.InsertProductCollection(
                             new ProductCollection {
                                 CollectionId = model.CollectionId,
                                 IsFeaturedProduct = false,
-                                DisplayOrder = 1,
+                                DisplayOrder = 1
                             }, product.Id);
                     }
                 }
             }
-        }
-        public virtual async Task<(IEnumerable<CollectionModel.ActivityLogModel> activityLogModels, int totalCount)> PrepareActivityLogModel(string collectionId, int pageIndex, int pageSize)
-        {
-            var activityLog = await _customerActivityService.GetCollectionActivities(null, null, collectionId, pageIndex - 1, pageSize);
-            var items = new List<CollectionModel.ActivityLogModel>();
-            foreach (var x in activityLog)
-            {
-                var customer = await _customerService.GetCustomerById(x.CustomerId);
-                var m = new CollectionModel.ActivityLogModel {
-                    Id = x.Id,
-                    ActivityLogTypeName = (await _customerActivityService.GetActivityTypeById(x.ActivityLogTypeId))?.Name,
-                    Comment = x.Comment,
-                    CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc),
-                    CustomerId = x.CustomerId,
-                    CustomerEmail = customer != null ? customer.Email : "null"
-                };
-                items.Add(m);
-            }
-            return (items, activityLog.TotalCount);
         }
     }
 }

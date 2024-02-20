@@ -45,7 +45,6 @@ namespace Grand.Domain.Vendors
         /// Get or sets a value indicating whether vendor can edit information about itself (public store)
         /// </summary>
         public bool AllowVendorsToEditInfo { get; set; }
-
         /// <summary>
         /// Gets or sets a value indicating whether the store owner is notified that the vendor information has been changed
         /// </summary>
@@ -90,11 +89,6 @@ namespace Grand.Domain.Vendors
         /// Gets or sets a number of review on vendor page
         /// </summary>
         public int NumberOfReview { get; set; } = 10;
-
-        /// <summary>
-        /// Gets or sets the identifier of the default admin theme for the vendors
-        /// </summary>
-        public string DefaultAdminTheme { get; set; }
 
         #region Address settings
 
@@ -177,8 +171,7 @@ namespace Grand.Domain.Vendors
         /// </summary>
         public bool FaxRequired { get; set; }
 
-        public AddressSettings AddressSettings => new AddressSettings()
-        {
+        public AddressSettings AddressSettings => new AddressSettings {
             CityEnabled = CityEnabled,
             CityRequired = CityRequired,
             CompanyEnabled = CompanyEnabled,
@@ -195,7 +188,7 @@ namespace Grand.Domain.Vendors
             StreetAddressEnabled = StreetAddressEnabled,
             StreetAddressRequired = StreetAddressRequired,
             ZipPostalCodeEnabled = ZipPostalCodeEnabled,
-            ZipPostalCodeRequired = ZipPostalCodeRequired,
+            ZipPostalCodeRequired = ZipPostalCodeRequired
         };
 
         #endregion

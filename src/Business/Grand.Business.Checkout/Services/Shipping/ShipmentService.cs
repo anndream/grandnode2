@@ -1,6 +1,6 @@
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Domain;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Shipping;
 using Grand.Infrastructure.Extensions;
 using MediatR;
@@ -10,7 +10,7 @@ namespace Grand.Business.Checkout.Services.Shipping
     /// <summary>
     /// Shipment service
     /// </summary>
-    public partial class ShipmentService : IShipmentService
+    public class ShipmentService : IShipmentService
     {
         #region Fields
 
@@ -105,17 +105,7 @@ namespace Grand.Business.Checkout.Services.Shipping
             var query = from o in _shipmentRepository.Table
                         where shipmentIds.Contains(o.Id)
                         select o;
-            var shipments = await Task.FromResult(query.ToList());
-
-            //sort by passed identifiers
-            var sortedOrders = new List<Shipment>();
-            foreach (string id in shipmentIds)
-            {
-                var shipment = shipments.Find(x => x.Id == id);
-                if (shipment != null)
-                    sortedOrders.Add(shipment);
-            }
-            return sortedOrders;
+            return await Task.FromResult(query.ToList());
         }
 
 
@@ -140,8 +130,7 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// <param name="shipment">Shipment</param>
         public virtual async Task InsertShipment(Shipment shipment)
         {
-            if (shipment == null)
-                throw new ArgumentNullException(nameof(shipment));
+            ArgumentNullException.ThrowIfNull(shipment);
             var shipmentExists = _shipmentRepository.Table.FirstOrDefault();
             shipment.ShipmentNumber = shipmentExists != null ? _shipmentRepository.Table.Max(x => x.ShipmentNumber) + 1 : 1;
             await _shipmentRepository.InsertAsync(shipment);
@@ -156,8 +145,7 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// <param name="shipment">Shipment</param>
         public virtual async Task UpdateShipment(Shipment shipment)
         {
-            if (shipment == null)
-                throw new ArgumentNullException(nameof(shipment));
+            ArgumentNullException.ThrowIfNull(shipment);
 
             await _shipmentRepository.UpdateAsync(shipment);
 
@@ -171,8 +159,7 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// <param name="shipment">Shipment</param>
         public virtual async Task DeleteShipment(Shipment shipment)
         {
-            if (shipment == null)
-                throw new ArgumentNullException(nameof(shipment));
+            ArgumentNullException.ThrowIfNull(shipment);
 
             await _shipmentRepository.DeleteAsync(shipment);
 
@@ -188,8 +175,7 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// <param name="shipmentNote">The order note</param>
         public virtual async Task DeleteShipmentNote(ShipmentNote shipmentNote)
         {
-            if (shipmentNote == null)
-                throw new ArgumentNullException(nameof(shipmentNote));
+            ArgumentNullException.ThrowIfNull(shipmentNote);
 
             await _shipmentNoteRepository.DeleteAsync(shipmentNote);
 
@@ -203,8 +189,7 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// <param name="shipmentNote">The shipment note</param>
         public virtual async Task InsertShipmentNote(ShipmentNote shipmentNote)
         {
-            if (shipmentNote == null)
-                throw new ArgumentNullException(nameof(shipmentNote));
+            ArgumentNullException.ThrowIfNull(shipmentNote);
 
             await _shipmentNoteRepository.InsertAsync(shipmentNote);
 
@@ -223,17 +208,16 @@ namespace Grand.Business.Checkout.Services.Shipping
         }
 
         /// <summary>
-        /// Get shipmentnote by id
+        /// Get shipment note by id
         /// </summary>
-        /// <param name="shipmentnoteId">Shipment note identifier</param>
+        /// <param name="shipmentNoteId">Shipment note identifier</param>
         /// <returns>shipmentNote</returns>
-        public virtual Task<ShipmentNote> GetShipmentNote(string shipmentnoteId)
+        public virtual Task<ShipmentNote> GetShipmentNote(string shipmentNoteId)
         {
-            return Task.FromResult(_shipmentNoteRepository.Table.Where(x => x.Id == shipmentnoteId).FirstOrDefault());
+            return Task.FromResult(_shipmentNoteRepository.Table.FirstOrDefault(x => x.Id == shipmentNoteId));
         }
-
-
         #endregion
+        
         #endregion
     }
 }

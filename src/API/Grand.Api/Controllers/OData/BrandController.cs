@@ -6,14 +6,15 @@ using Grand.Business.Core.Utilities.Common.Security;
 using MediatR;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Formatter;
-using Microsoft.AspNetCore.OData.Query;
+using MongoDB.AspNetCore.OData;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 
 namespace Grand.Api.Controllers.OData
 {
-    public partial class BrandController : BaseODataController
+    [Route("odata/Brand")]
+    [ApiExplorerSettings(IgnoreApi = false, GroupName = "v1")]
+    public class BrandController : BaseODataController
     {
         private readonly IMediator _mediator;
         private readonly IPermissionService _permissionService;
@@ -25,13 +26,12 @@ namespace Grand.Api.Controllers.OData
 
         [SwaggerOperation(summary: "Get entities from Brand", OperationId = "GetBrands")]
         [HttpGet]
-        [EnableQuery]
+        [MongoEnableQuery]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Get()
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Brands))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Brands)) return Forbid();
 
             return Ok(await _mediator.Send(new GetGenericQuery<BrandDto, Domain.Catalog.Brand>()));
         }
@@ -41,14 +41,12 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        public async Task<IActionResult> Get(string key)
+        public async Task<IActionResult> GetById([FromRoute] string key)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Brands))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Brands)) return Forbid();
 
             var brand = await _mediator.Send(new GetGenericQuery<BrandDto, Domain.Catalog.Brand>(key));
-            if (!brand.Any())
-                return NotFound();
+            if (!brand.Any()) return NotFound();
 
             return Ok(brand.FirstOrDefault());
         }
@@ -60,15 +58,10 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Post([FromBody] BrandDto model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Brands))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Brands)) return Forbid();
 
-            if (ModelState.IsValid)
-            {
-                model = await _mediator.Send(new AddBrandCommand() { Model = model });
-                return Ok(model);
-            }
-            return BadRequest(ModelState);
+            model = await _mediator.Send(new AddBrandCommand { Model = model });
+            return Ok(model);
         }
 
         [SwaggerOperation(summary: "Update entity in Brand", OperationId = "UpdateBrand")]
@@ -79,51 +72,35 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Put([FromBody] BrandDto model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Brands))
-                return Forbid();
-
+            if (!await _permissionService.Authorize(PermissionSystemName.Brands)) return Forbid();
 
             var brand = await _mediator.Send(new GetGenericQuery<BrandDto, Domain.Catalog.Brand>(model.Id));
-            if (!brand.Any())
-            {
-                return NotFound();
-            }
+            if (!brand.Any()) return NotFound();
 
-            if (ModelState.IsValid)
-            {
-                model = await _mediator.Send(new UpdateBrandCommand() { Model = model });
-                return Ok(model);
-            }
-
-            return BadRequest(ModelState);
+            model = await _mediator.Send(new UpdateBrandCommand { Model = model });
+            return Ok(model);
         }
 
         [SwaggerOperation(summary: "Partially update entity in Brand", OperationId = "PartiallyUpdateBrand")]
-        [HttpPatch]
+        [HttpPatch("{key}")]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Patch([FromODataUri] string key, [FromBody] JsonPatchDocument<BrandDto> model)
+        public async Task<IActionResult> Patch([FromRoute] string key, [FromBody] JsonPatchDocument<BrandDto> model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Brands))
-                return Forbid();
+            if (string.IsNullOrEmpty(key))
+                return BadRequest("Key is null or empty");
+            
+            if (!await _permissionService.Authorize(PermissionSystemName.Brands)) return Forbid();
 
             var brand = await _mediator.Send(new GetGenericQuery<BrandDto, Domain.Catalog.Brand>(key));
-            if (!brand.Any())
-            {
-                return NotFound();
-            }
+            if (!brand.Any()) return NotFound();
+
             var man = brand.FirstOrDefault();
             model.ApplyTo(man);
-
-            if (ModelState.IsValid)
-            {
-                await _mediator.Send(new UpdateBrandCommand() { Model = man });
-                return Ok();
-            }
-
-            return BadRequest(ModelState);
+            await _mediator.Send(new UpdateBrandCommand { Model = man });
+            return Ok();
         }
 
         [SwaggerOperation(summary: "Delete entity in Brand", OperationId = "DeleteBrand")]
@@ -133,17 +110,12 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Delete(string key)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.Brands))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.Brands)) return Forbid();
 
             var brand = await _mediator.Send(new GetGenericQuery<BrandDto, Domain.Catalog.Brand>(key));
-            if (!brand.Any())
-            {
-                return NotFound();
-            }
+            if (!brand.Any()) return NotFound();
 
-            await _mediator.Send(new DeleteBrandCommand() { Model = brand.FirstOrDefault() });
-
+            await _mediator.Send(new DeleteBrandCommand { Model = brand.FirstOrDefault() });
             return Ok();
         }
     }

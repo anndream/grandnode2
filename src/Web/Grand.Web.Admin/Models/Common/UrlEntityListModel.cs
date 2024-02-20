@@ -4,18 +4,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class UrlEntityListModel : BaseModel
+    public class UrlEntityListModel : BaseModel
     {
-        public UrlEntityListModel()
-        {
-            AvailableActiveOptions = new List<SelectListItem>();
-        }
-
         [GrandResourceDisplayName("admin.configuration.senames.Name")]
         public string SeName { get; set; }
 
         [GrandResourceDisplayName("admin.configuration.senames.Active")]
         public int SearchActiveId { get; set; }
-        public IList<SelectListItem> AvailableActiveOptions { get; set; }
+        public IList<SelectListItem> AvailableActiveOptions { get; set; } = new List<SelectListItem>();
     }
 }

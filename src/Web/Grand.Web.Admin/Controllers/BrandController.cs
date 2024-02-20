@@ -1,13 +1,15 @@
-﻿using Grand.Business.Core.Interfaces.Catalog.Brands;
+﻿using Grand.Business.Core.Dto;
 using Grand.Business.Core.Extensions;
+using Grand.Business.Core.Interfaces.Catalog.Brands;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Stores;
+using Grand.Business.Core.Interfaces.ExportImport;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Business.Core.Interfaces.System.ExportImport;
 using Grand.Domain.Catalog;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Catalog;
 using Grand.Web.Admin.Models.Common;
@@ -21,9 +23,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.Brands)]
-    public partial class BrandController : BaseAdminController
+    public class BrandController : BaseAdminController
     {
         #region Fields
+
         private readonly IBrandViewModelService _brandViewModelService;
         private readonly IBrandService _brandService;
         private readonly IWorkContext _workContext;
@@ -31,9 +34,8 @@ namespace Grand.Web.Admin.Controllers
         private readonly ILanguageService _languageService;
         private readonly ITranslationService _translationService;
         private readonly IGroupService _groupService;
-        private readonly IExportManager _exportManager;
-        private readonly IImportManager _importManager;
         private readonly IPictureViewModelService _pictureViewModelService;
+
         #endregion
 
         #region Constructors
@@ -46,8 +48,6 @@ namespace Grand.Web.Admin.Controllers
             ILanguageService languageService,
             ITranslationService translationService,
             IGroupService groupService,
-            IExportManager exportManager,
-            IImportManager importManager,
             IPictureViewModelService pictureViewModelService)
         {
             _brandViewModelService = brandViewModelService;
@@ -57,8 +57,6 @@ namespace Grand.Web.Admin.Controllers
             _languageService = languageService;
             _translationService = translationService;
             _groupService = groupService;
-            _exportManager = exportManager;
-            _importManager = importManager;
             _pictureViewModelService = pictureViewModelService;
         }
 
@@ -84,7 +82,10 @@ namespace Grand.Web.Admin.Controllers
 
         #region List
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
         public async Task<IActionResult> List()
         {
@@ -92,7 +93,7 @@ namespace Grand.Web.Admin.Controllers
             var model = new BrandListModel();
             model.AvailableStores.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
             foreach (var s in (await _storeService.GetAllStores()).Where(x => x.Id == storeId || string.IsNullOrWhiteSpace(storeId)))
-                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id });
 
             return View(model);
         }
@@ -148,7 +149,7 @@ namespace Grand.Web.Admin.Controllers
             {
                 if (await _groupService.IsStaff(_workContext.CurrentCustomer))
                 {
-                    model.Stores = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                    model.Stores = [_workContext.CurrentCustomer.StaffStoreId];
                 }
 
                 var collection = await _brandViewModelService.InsertBrandModel(model);
@@ -178,7 +179,7 @@ namespace Grand.Web.Admin.Controllers
             if (await _groupService.IsStaff(_workContext.CurrentCustomer))
             {
                 if (!brand.LimitedToStores || (brand.LimitedToStores && brand.Stores.Contains(_workContext.CurrentCustomer.StaffStoreId) && brand.Stores.Count > 1))
-                    Warning(_translationService.GetResource("Admin.Catalog.Brands.Permisions"));
+                    Warning(_translationService.GetResource("Admin.Catalog.Brands.Permissions"));
                 else
                 {
                     if (!brand.AccessToEntityByStore(_workContext.CurrentCustomer.StaffStoreId))
@@ -226,7 +227,7 @@ namespace Grand.Web.Admin.Controllers
             {
                 if (await _groupService.IsStaff(_workContext.CurrentCustomer))
                 {
-                    model.Stores = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                    model.Stores = [_workContext.CurrentCustomer.StaffStoreId];
                 }
                 brand = await _brandViewModelService.UpdateBrandModel(brand, model);
                 Success(_translationService.GetResource("Admin.Catalog.Brands.Updated"));
@@ -335,11 +336,11 @@ namespace Grand.Web.Admin.Controllers
         #region Export / Import
 
         [PermissionAuthorizeAction(PermissionActionName.Export)]
-        public async Task<IActionResult> ExportXlsx()
+        public async Task<IActionResult> ExportXlsx([FromServices] IExportManager<Brand> exportManager)
         {
             try
             {
-                var bytes = _exportManager.ExportBrandsToXlsx(await _brandService.GetAllBrands(showHidden: true, storeId: _workContext.CurrentCustomer.StaffStoreId));
+                var bytes = await exportManager.Export(await _brandService.GetAllBrands(showHidden: true, storeId: _workContext.CurrentCustomer.StaffStoreId));
                 return File(bytes, "text/xls", "brands.xlsx");
             }
             catch (Exception exc)
@@ -351,17 +352,13 @@ namespace Grand.Web.Admin.Controllers
 
         [PermissionAuthorizeAction(PermissionActionName.Import)]
         [HttpPost]
-        public async Task<IActionResult> ImportFromXlsx(IFormFile importexcelfile, [FromServices] IWorkContext workContext)
+        public async Task<IActionResult> ImportFromXlsx(IFormFile importexcelfile, [FromServices] IWorkContext workContext, [FromServices] IImportManager<BrandDto> importManager)
         {
-            //a vendor and staff cannot import collections
-            if (workContext.CurrentVendor != null || await _groupService.IsStaff(_workContext.CurrentCustomer))
-                return AccessDeniedView();
-
             try
             {
-                if (importexcelfile != null && importexcelfile.Length > 0)
+                if (importexcelfile is { Length: > 0 })
                 {
-                    await _importManager.ImportBrandFromXlsx(importexcelfile.OpenReadStream());
+                    await importManager.Import(importexcelfile.OpenReadStream());
                 }
                 else
                 {
@@ -379,25 +376,6 @@ namespace Grand.Web.Admin.Controllers
         }
         #endregion
 
-        #region Activity log
-
-        [PermissionAuthorizeAction(PermissionActionName.Preview)]
-        [HttpPost]
-        public async Task<IActionResult> ListActivityLog(DataSourceRequest command, string brandId)
-        {
-            var brand = await _brandService.GetBrandById(brandId);
-            var permission = await CheckAccessToBrand(brand);
-            if (!permission.allow)
-                return ErrorForKendoGridJson(permission.message);
-
-            var (activityLogModels, totalCount) = await _brandViewModelService.PrepareActivityLogModel(brandId, command.Page, command.PageSize);
-            var gridModel = new DataSourceResult {
-                Data = activityLogModels.ToList(),
-                Total = totalCount
-            };
-            return Json(gridModel);
-        }
-        #endregion
     }
 
 }

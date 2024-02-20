@@ -1,10 +1,9 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Stores;
-using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Interfaces.Marketing.Campaigns;
 using Grand.Business.Core.Interfaces.Marketing.Newsletters;
 using Grand.Business.Core.Interfaces.Messages;
-using Grand.Business.Core.Interfaces.System.ExportImport;
+using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Domain.Messages;
 using Grand.Infrastructure;
 using Grand.SharedKernel;
@@ -19,7 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.Campaigns)]
-    public partial class CampaignController : BaseAdminController
+    public class CampaignController : BaseAdminController
     {
         private readonly ICampaignService _campaignService;
         private readonly ICampaignViewModelService _campaignViewModelService;
@@ -28,7 +27,6 @@ namespace Grand.Web.Admin.Controllers
         private readonly ITranslationService _translationService;
         private readonly IWorkContext _workContext;
         private readonly IStoreService _storeService;
-        private readonly IExportManager _exportManager;
         private readonly EmailAccountSettings _emailAccountSettings;
 
         public CampaignController(ICampaignService campaignService, ICampaignViewModelService campaignViewModelService,
@@ -37,7 +35,6 @@ namespace Grand.Web.Admin.Controllers
             ITranslationService translationService,
             IWorkContext workContext,
             IStoreService storeService,
-            IExportManager exportManager,
             EmailAccountSettings emailAccountSettings)
         {
             _campaignService = campaignService;
@@ -48,20 +45,24 @@ namespace Grand.Web.Admin.Controllers
             _translationService = translationService;
             _workContext = workContext;
             _storeService = storeService;
-            _exportManager = exportManager;
         }
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
             var model = await _campaignViewModelService.PrepareCampaignModels();
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = model.campaignModels,
                 Total = model.totalCount
             };
@@ -75,8 +76,7 @@ namespace Grand.Web.Admin.Controllers
             var campaign = await _campaignService.GetCampaignById(campaignId);
             var customers = await _campaignService.CustomerSubscriptions(campaign, command.Page - 1, command.PageSize);
 
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = customers,
                 Total = customers.TotalCount
             };
@@ -90,12 +90,11 @@ namespace Grand.Web.Admin.Controllers
             var campaign = await _campaignService.GetCampaignById(campaignId);
             var history = await _campaignService.GetCampaignHistory(campaign, command.Page - 1, command.PageSize);
 
-            var gridModel = new DataSourceResult
-            {
+            var gridModel = new DataSourceResult {
                 Data = history.Select(x => new
                 {
-                    Email = x.Email,
-                    SentDate = x.CreatedDateUtc,
+                    x.Email,
+                    SentDate = x.CreatedDateUtc
                 }),
                 Total = history.TotalCount
             };
@@ -109,10 +108,16 @@ namespace Grand.Web.Admin.Controllers
             {
                 var campaign = await _campaignService.GetCampaignById(campaignId);
                 var customers = await _campaignService.CustomerSubscriptions(campaign);
-                string result = _exportManager.ExportNewsletterSubscribersToTxt(customers.Select(x => x.Email).ToList());
 
-                string fileName = String.Format("newsletter_emails_campaign_{0}_{1}.txt", campaign.Name, CommonHelper.GenerateRandomDigitCode(4));
-                return File(Encoding.UTF8.GetBytes(result), "text/csv", fileName);
+                var sb = new StringBuilder();
+                foreach (var subscription in customers.Select(x => x.Email).ToList())
+                {
+                    sb.Append(subscription);
+                    sb.Append(Environment.NewLine);  //new line
+                }
+                var fileName =
+                    $"newsletter_emails_campaign_{campaign.Name}_{CommonHelper.GenerateRandomDigitCode(4)}.txt";
+                return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
             }
             catch (Exception exc)
             {
@@ -244,7 +249,6 @@ namespace Grand.Web.Admin.Controllers
 
                 //subscribers of certain store?
                 var store = await _storeService.GetStoreById(campaign.StoreId);
-                var storeId = store != null ? store.Id : "";
                 var subscriptions = await _campaignService.CustomerSubscriptions(campaign);
                 var totalEmailsSent = await _campaignService.SendCampaign(campaign, emailAccount, subscriptions);
                 Success(string.Format(_translationService.GetResource("admin.marketing.Campaigns.MassEmailSentToCustomers"), totalEmailsSent), false);
@@ -275,7 +279,7 @@ namespace Grand.Web.Admin.Controllers
                 return RedirectToAction("List");
             }
             Error(ModelState);
-            return RedirectToAction("Edit", new { id = id });
+            return RedirectToAction("Edit", new { id });
         }
     }
 }

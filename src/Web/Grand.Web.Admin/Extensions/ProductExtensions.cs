@@ -12,16 +12,15 @@ namespace Grand.Web.Admin.Extensions
         /// Get product picture (for shopping cart and order details pages)
         /// </summary>
         /// <param name="product">Product</param>
-        /// <param name="attributes">Atributes </param>
+        /// <param name="attributes">Attributes</param>
+        /// <param name="productService">Product service</param>
         /// <param name="pictureService">Picture service</param>
         /// <returns>Picture</returns>
         public static async Task<Picture> GetProductPicture(this Product product, IList<CustomAttribute> attributes,
             IProductService productService, IPictureService pictureService)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
-            if (pictureService == null)
-                throw new ArgumentNullException(nameof(pictureService));            
+            ArgumentNullException.ThrowIfNull(product);
+            ArgumentNullException.ThrowIfNull(pictureService);
 
             Picture picture = null;
 
@@ -56,7 +55,7 @@ namespace Grand.Web.Admin.Extensions
             }
             if (picture == null)
             {
-                var pp = product.ProductPictures.OrderBy(x => x.DisplayOrder).FirstOrDefault();
+                var pp = product.ProductPictures.MinBy(x => x.DisplayOrder);
                 if (pp != null)
                     picture = await pictureService.GetPictureById(pp.PictureId);
             }

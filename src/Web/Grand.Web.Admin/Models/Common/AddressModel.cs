@@ -2,19 +2,15 @@
 using Grand.Domain.Common;
 using Grand.Infrastructure.ModelBinding;
 using Grand.Infrastructure.Models;
+using Grand.Web.Common.Binders;
+using Grand.Web.Common.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class AddressModel : BaseEntityModel
+    public class AddressModel : BaseEntityModel
     {
-        public AddressModel()
-        {
-            AvailableCountries = new List<SelectListItem>();
-            AvailableStates = new List<SelectListItem>();
-            CustomAddressAttributes = new List<AddressAttributeModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Address.Fields.AddressName")]
         public string Name { get; set; }
 
@@ -73,11 +69,13 @@ namespace Grand.Web.Admin.Models.Common
 
         //formatted custom address attributes
         public string FormattedCustomAddressAttributes { get; set; }
-        public IList<AddressAttributeModel> CustomAddressAttributes { get; set; }
+        public IList<AddressAttributeModel> CustomAddressAttributes { get; set; } = new List<AddressAttributeModel>();
 
-
-        public IList<SelectListItem> AvailableCountries { get; set; }
-        public IList<SelectListItem> AvailableStates { get; set; }
+        [ModelBinder(BinderType = typeof(CustomAttributesBinder))]
+        public IList<CustomAttributeModel> SelectedAttributes { get; set; }
+        
+        public IList<SelectListItem> AvailableCountries { get; set; } = new List<SelectListItem>();
+        public IList<SelectListItem> AvailableStates { get; set; } = new List<SelectListItem>();
 
 
         public bool NameEnabled { get; set; }
@@ -113,13 +111,8 @@ namespace Grand.Web.Admin.Models.Common
 
         #region Nested classes
 
-        public partial class AddressAttributeModel : BaseEntityModel
+        public class AddressAttributeModel : BaseEntityModel
         {
-            public AddressAttributeModel()
-            {
-                Values = new List<AddressAttributeValueModel>();
-            }
-
             public string Name { get; set; }
 
             public bool IsRequired { get; set; }
@@ -131,10 +124,10 @@ namespace Grand.Web.Admin.Models.Common
 
             public AttributeControlType AttributeControlType { get; set; }
 
-            public IList<AddressAttributeValueModel> Values { get; set; }
+            public IList<AddressAttributeValueModel> Values { get; set; } = new List<AddressAttributeValueModel>();
         }
 
-        public partial class AddressAttributeValueModel : BaseEntityModel
+        public class AddressAttributeValueModel : BaseEntityModel
         {
             public string Name { get; set; }
 

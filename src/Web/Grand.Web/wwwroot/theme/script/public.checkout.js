@@ -36,6 +36,7 @@ var vmorder = new Vue({
             UseLoyaltyPoints: null,
             // payment info
             PaymentUrl: null,
+            PaymentMethodSystemName: null,
             // confirm order
             OrderReviewData: null,
             MinOrderTotalWarning: null,
@@ -219,7 +220,7 @@ var vmorder = new Vue({
                                 } else {
                                     index = 0;
                                 }
-                                var elem = model.ShippingMethods[index].Name + '___' + model.ShippingMethods[index].ShippingRateProviderSystemName;
+                                var elem = model.ShippingMethods[index].Name + ':' + model.ShippingMethods[index].ShippingRateProviderSystemName;
                                 vmorder.loadPartialView(elem);
                             }
                             vmorder.updateTotals();
@@ -240,6 +241,7 @@ var vmorder = new Vue({
                         if (response.data.goto_section == "payment_info") {
                             var model = response.data.update_section.model;
                             vmorder.PaymentUrl = model.PaymentUrl;
+                            vmorder.PaymentMethodSystemName = model.SystemName;
                             vmorder.PaymentInfo = true;
                             vmorder.paymentBusy = true;
                             vmorder.validPayment = true;
@@ -658,8 +660,9 @@ var vmorder = new Vue({
                             }
                             if (response.data.update_section !== undefined && response.data.update_section.name == 'payment-info') {
                                 var model = response.data.update_section.model;
-                                vm.PaymentUrl = model.PaymentUrl,
-                                    vm.PaymentInfo = true;
+                                vm.PaymentUrl = model.PaymentUrl;
+                                vm.PaymentMethodSystemName = model.SystemName;
+                                vm.PaymentInfo = true;
 
                                 axios({
                                     baseURL: model.PaymentUrl,
@@ -775,8 +778,7 @@ var vmorder = new Vue({
                 data: null,
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Response-View': 'Json'
+                    'Content-Type': 'application/json'
                 },
                 showLoader: false
             }).then(response => {
@@ -790,8 +792,7 @@ var vmorder = new Vue({
                 data: null,
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Response-View': 'Json'
+                    'Content-Type': 'application/json'
                 },
                 showLoader: false
             }).then(response => {
@@ -836,7 +837,7 @@ var vmorder = new Vue({
             var url = window.location.origin + '/checkout/GetShippingFormPartialView?shippingOption=' + arg_value;
             axios({
                 url: url,
-                method: 'post',
+                method: 'get',
                 showLoader: false
             }).then(function (response) {
                 vmorder.shippingBusy = false;

@@ -4,12 +4,11 @@ using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Payments;
 using Grand.Business.Core.Queries.Checkout.Orders;
 using Grand.Business.Core.Utilities.Checkout;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Business.Core.Interfaces.Messages;
 using Grand.Domain.Localization;
-using Grand.Domain.Logging;
 using Grand.SharedKernel;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Business.Checkout.Commands.Handlers.Orders
 {
@@ -19,7 +18,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly IMediator _mediator;
         private readonly IMessageProviderService _messageProviderService;
-        private readonly ILogger _logger;
+        private readonly ILogger<PartiallyRefundCommandHandler> _logger;
         private readonly IOrderService _orderService;
         private readonly LanguageSettings _languageSettings;
 
@@ -28,7 +27,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
             IPaymentTransactionService paymentTransactionService,
             IMediator mediator,
             IMessageProviderService messageProviderService,
-            ILogger logger,
+            ILogger<PartiallyRefundCommandHandler> logger,
             IOrderService orderService,
             LanguageSettings languageSettings)
         {
@@ -49,7 +48,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
 
             var amountToRefund = command.AmountToRefund;
 
-            var canPartiallyRefund = await _mediator.Send(new CanPartiallyRefundQuery() { AmountToRefund = amountToRefund, PaymentTransaction = paymentTransaction });
+            var canPartiallyRefund = await _mediator.Send(new CanPartiallyRefundQuery { AmountToRefund = amountToRefund, PaymentTransaction = paymentTransaction }, cancellationToken);
             if (!canPartiallyRefund)
                 throw new GrandException("Cannot do partial refund for order.");
 
@@ -77,14 +76,14 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
                     //total amount refunded
                     if (paymentTransaction.TransactionStatus == Domain.Payments.TransactionStatus.Refunded)
                     {
-                        double totalAmountRefunded = order.RefundedAmount + amountToRefund;
+                        var totalAmountRefunded = order.RefundedAmount + amountToRefund;
 
                         order.RefundedAmount = totalAmountRefunded;
                         order.PaymentStatusId = order.RefundedAmount == order.OrderTotal ? Domain.Payments.PaymentStatus.Refunded : Domain.Payments.PaymentStatus.PartiallyRefunded;
                         await _orderService.UpdateOrder(order);
 
                         //check order status
-                        await _mediator.Send(new CheckOrderStatusCommand() { Order = order });
+                        await _mediator.Send(new CheckOrderStatusCommand { Order = order }, cancellationToken);
 
                         //notifications
                         await _messageProviderService.SendOrderRefundedStoreOwnerMessage(order, amountToRefund, _languageSettings.DefaultAdminLanguageId);
@@ -93,30 +92,27 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
 
                     }
                     //raise event       
-                    await _mediator.Publish(new PaymentTransactionRefundedEvent(paymentTransaction, amountToRefund));
+                    await _mediator.Publish(new PaymentTransactionRefundedEvent(paymentTransaction, amountToRefund), cancellationToken);
                 }
             }
             catch (Exception exc)
             {
-                if (result == null)
-                    result = new RefundPaymentResult();
-                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc.ToString()));
+                result ??= new RefundPaymentResult();
+                result.AddError($"Error: {exc.Message}. Full exception: {exc}");
             }
 
             //process errors
-            string error = "";
-            for (int i = 0; i < result.Errors.Count; i++)
+            var error = "";
+            for (var i = 0; i < result.Errors.Count; i++)
             {
-                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                error += $"Error {i}: {result.Errors[i]}";
                 if (i != result.Errors.Count - 1)
                     error += ". ";
             }
-            if (!String.IsNullOrEmpty(error))
-            {
 
-                string logError = string.Format("Error refunding order #{0}. Error: {1}", paymentTransaction.OrderCode, error);
-                await _logger.InsertLog(LogLevel.Error, logError, logError);
-            }
+            if (string.IsNullOrEmpty(error)) return result.Errors;
+            
+            _logger.LogError("Error refunding order #{PaymentTransactionOrderCode}. Error: {Error}", paymentTransaction.OrderCode, error);
             return result.Errors;
         }
     }

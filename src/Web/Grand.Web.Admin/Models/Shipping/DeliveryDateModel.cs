@@ -4,12 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Shipping
 {
-    public partial class DeliveryDateModel : BaseEntityModel, ILocalizedModel<DeliveryDateLocalizedModel>
+    public class DeliveryDateModel : BaseEntityModel, ILocalizedModel<DeliveryDateLocalizedModel>
     {
-        public DeliveryDateModel()
-        {
-            Locales = new List<DeliveryDateLocalizedModel>();
-        }
         [GrandResourceDisplayName("Admin.Configuration.Shipping.DeliveryDates.Fields.Name")]
 
         public string Name { get; set; }
@@ -21,10 +17,10 @@ namespace Grand.Web.Admin.Models.Shipping
 
         public string ColorSquaresRgb { get; set; }
 
-        public IList<DeliveryDateLocalizedModel> Locales { get; set; }
+        public IList<DeliveryDateLocalizedModel> Locales { get; set; } = new List<DeliveryDateLocalizedModel>();
     }
 
-    public partial class DeliveryDateLocalizedModel : ILocalizedModelLocal
+    public class DeliveryDateLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

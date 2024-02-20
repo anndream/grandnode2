@@ -20,11 +20,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.PaymentTransactions)]
-    public partial class PaymentTransactionController : BaseAdminController
+    public class PaymentTransactionController : BaseAdminController
     {
         #region Fields
 
-        private readonly IPaymentService _paymentService;
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly IOrderService _orderService;
         private readonly ITranslationService _translationService;
@@ -33,12 +32,11 @@ namespace Grand.Web.Admin.Controllers
         private readonly IDateTimeService _dateTimeService;
         private readonly IMediator _mediator;
 
-        #endregion Fields
+        #endregion Fields
 
         #region Constructors
 
         public PaymentTransactionController(
-            IPaymentService paymentService,
             ITranslationService translationService,
             IPaymentTransactionService paymentTransactionService,
             IOrderService orderService,
@@ -48,7 +46,6 @@ namespace Grand.Web.Admin.Controllers
             IMediator mediator
             )
         {
-            _paymentService = paymentService;
             _translationService = translationService;
             _paymentTransactionService = paymentTransactionService;
             _orderService = orderService;
@@ -63,7 +60,10 @@ namespace Grand.Web.Admin.Controllers
         #region Methods
 
         //list
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
         public IActionResult List()
         {
@@ -83,11 +83,11 @@ namespace Grand.Web.Admin.Controllers
             {
                 model.StoreId = _workContext.CurrentCustomer.StaffStoreId;
             }
-            DateTime? startDateValue = (model.StartDate == null) ? null
-                : (DateTime?)_dateTimeService.ConvertToUtcTime(model.StartDate.Value, _dateTimeService.CurrentTimeZone);
+            DateTime? startDateValue = model.StartDate == null ? null
+                : _dateTimeService.ConvertToUtcTime(model.StartDate.Value, _dateTimeService.CurrentTimeZone);
 
-            DateTime? endDateValue = (model.EndDate == null) ? null
-                : (DateTime?)_dateTimeService.ConvertToUtcTime(model.EndDate.Value, _dateTimeService.CurrentTimeZone);
+            DateTime? endDateValue = model.EndDate == null ? null
+                : _dateTimeService.ConvertToUtcTime(model.EndDate.Value, _dateTimeService.CurrentTimeZone);
 
             Guid? orderGuid = null;
             if (!string.IsNullOrEmpty(model.OrderNumber))
@@ -105,7 +105,7 @@ namespace Grand.Web.Admin.Controllers
                 createdFromUtc: startDateValue,
                 createdToUtc: endDateValue,
                 storeId: model.StoreId,
-                orderguid: orderGuid,
+                orderGuid: orderGuid,
                 pageIndex: command.Page - 1,
                 pageSize: command.PageSize);
 
@@ -114,28 +114,29 @@ namespace Grand.Web.Admin.Controllers
             foreach (var item in paymentTransactions)
             {
                 var order = await _orderService.GetOrderByGuid(item.OrderGuid);
-                var trmodel = new PaymentTransactionModel();
-                trmodel.Id = item.Id;
-                trmodel.OrderCode = item.OrderCode;
-                trmodel.CustomerEmail = item.CustomerEmail;
-                trmodel.CustomerId = item.CustomerId;
-                trmodel.CurrencyCode = item.CurrencyCode;
-                trmodel.TransactionAmount = item.TransactionAmount;
-                trmodel.PaidAmount = item.PaidAmount;
-                trmodel.PaymentMethodSystemName = item.PaymentMethodSystemName;
-                trmodel.RefundedAmount = item.RefundedAmount;
-                trmodel.OrderId = order?.Id;
-                trmodel.OrderNumber = order?.OrderNumber;
-                trmodel.CreatedOn = _dateTimeService.ConvertToUserTime(item.CreatedOnUtc, DateTimeKind.Utc);
-                trmodel.TransactionStatus = item.TransactionStatus;
-                trmodel.Status = item.TransactionStatus.GetTranslationEnum(_translationService, _workContext);
+                var trmodel = new PaymentTransactionModel {
+                    Id = item.Id,
+                    OrderCode = item.OrderCode,
+                    CustomerEmail = item.CustomerEmail,
+                    CustomerId = item.CustomerId,
+                    CurrencyCode = item.CurrencyCode,
+                    TransactionAmount = item.TransactionAmount,
+                    PaidAmount = item.PaidAmount,
+                    PaymentMethodSystemName = item.PaymentMethodSystemName,
+                    RefundedAmount = item.RefundedAmount,
+                    OrderId = order?.Id,
+                    OrderNumber = order?.OrderNumber,
+                    CreatedOn = _dateTimeService.ConvertToUserTime(item.CreatedOnUtc, DateTimeKind.Utc),
+                    TransactionStatus = item.TransactionStatus,
+                    Status = item.TransactionStatus.GetTranslationEnum(_translationService, _workContext)
+                };
                 dataModel.Add(trmodel);
             }
 
             var gridModel = new DataSourceResult
             {
                 Data = dataModel.ToList(),
-                Total = paymentTransactions.TotalCount,
+                Total = paymentTransactions.TotalCount
             };
 
             return Json(gridModel);
@@ -154,7 +155,7 @@ namespace Grand.Web.Admin.Controllers
             if (order == null)
                 return RedirectToAction("List", "PaymentTransaction");
 
-            var paymentTransaction = await _paymentTransactionService.GetByOrdeGuid(order.OrderGuid);
+            var paymentTransaction = await _paymentTransactionService.GetOrderByGuid(order.OrderGuid);
             if (paymentTransaction == null)
                 //not found
                 return RedirectToAction("List", "PaymentTransaction");
@@ -181,40 +182,39 @@ namespace Grand.Web.Admin.Controllers
 
             var order = await _orderService.GetOrderByGuid(paymentTransaction.OrderGuid);
 
-            var model = new PaymentTransactionModel();
-            model.Id = paymentTransaction.Id;
-            model.OrderCode = paymentTransaction.OrderCode;
-            model.CustomerEmail = string.IsNullOrEmpty(paymentTransaction.CustomerEmail) ? "(null)" : paymentTransaction.CustomerEmail;
-            model.CustomerId = paymentTransaction.CustomerId;
-            model.CurrencyCode = paymentTransaction.CurrencyCode;
-            model.TransactionAmount = paymentTransaction.TransactionAmount;
-            model.PaidAmount = paymentTransaction.PaidAmount;
-            model.PaymentMethodSystemName = paymentTransaction.PaymentMethodSystemName;
-            model.RefundedAmount = paymentTransaction.RefundedAmount;
-            model.OrderId = order?.Id;
-            model.OrderNumber = order?.OrderNumber;
-            model.CreatedOn = _dateTimeService.ConvertToUserTime(paymentTransaction.CreatedOnUtc, DateTimeKind.Utc);
-            model.TransactionStatus = paymentTransaction.TransactionStatus;
-            model.Status = paymentTransaction.TransactionStatus.GetTranslationEnum(_translationService, _workContext);
-            model.IPAddress = paymentTransaction.IPAddress;
-            model.Description = paymentTransaction.Description;
-            model.AdditionalInfo = paymentTransaction.AdditionalInfo;
-	    model.AuthorizationTransactionId = paymentTransaction.AuthorizationTransactionId;
-
-            //payment method buttons
-            //model.CanCancelOrder = await _mediator.Send(new CanCancelOrderQuery() { Order = order });
-            model.CanCapture = await _mediator.Send(new CanCaptureQuery() { PaymentTransaction = paymentTransaction });
-            model.CanMarkAsPaid = await _mediator.Send(new CanMarkPaymentTransactionAsPaidQuery() { PaymentTransaction = paymentTransaction });
-            model.CanRefund = await _mediator.Send(new CanRefundQuery() { PaymentTransaction = paymentTransaction });
-            model.CanRefundOffline = await _mediator.Send(new CanRefundOfflineQuery() { PaymentTransaction = paymentTransaction });
-            model.CanPartiallyRefund = await _mediator.Send(new CanPartiallyRefundQuery() { PaymentTransaction = paymentTransaction, AmountToRefund = 0 });
-            model.CanPartiallyRefundOffline = await _mediator.Send(new CanPartiallyRefundOfflineQuery() { PaymentTransaction = paymentTransaction, AmountToRefund = 0 });
-            model.CanPartiallyPaidOffline = await _mediator.Send(new CanPartiallyPaidOfflineQuery() { PaymentTransaction = paymentTransaction, AmountToPaid = 0 });
-            model.CanVoid = await _mediator.Send(new CanVoidQuery() { PaymentTransaction = paymentTransaction });
-            model.CanVoidOffline = await _mediator.Send(new CanVoidOfflineQuery() { PaymentTransaction = paymentTransaction });
-
-            model.MaxAmountToRefund = paymentTransaction.TransactionAmount - paymentTransaction.RefundedAmount;
-            model.MaxAmountToPaid = paymentTransaction.TransactionAmount - paymentTransaction.PaidAmount;
+            var model = new PaymentTransactionModel {
+                Id = paymentTransaction.Id,
+                OrderCode = paymentTransaction.OrderCode,
+                CustomerEmail = string.IsNullOrEmpty(paymentTransaction.CustomerEmail) ? "(null)" : paymentTransaction.CustomerEmail,
+                CustomerId = paymentTransaction.CustomerId,
+                CurrencyCode = paymentTransaction.CurrencyCode,
+                TransactionAmount = paymentTransaction.TransactionAmount,
+                PaidAmount = paymentTransaction.PaidAmount,
+                PaymentMethodSystemName = paymentTransaction.PaymentMethodSystemName,
+                RefundedAmount = paymentTransaction.RefundedAmount,
+                OrderId = order?.Id,
+                OrderNumber = order?.OrderNumber,
+                CreatedOn = _dateTimeService.ConvertToUserTime(paymentTransaction.CreatedOnUtc, DateTimeKind.Utc),
+                TransactionStatus = paymentTransaction.TransactionStatus,
+                Status = paymentTransaction.TransactionStatus.GetTranslationEnum(_translationService, _workContext),
+                IPAddress = paymentTransaction.IPAddress,
+                Description = paymentTransaction.Description,
+                AdditionalInfo = paymentTransaction.AdditionalInfo,
+                AuthorizationTransactionId = paymentTransaction.AuthorizationTransactionId,
+                //payment method buttons
+                //model.CanCancelOrder = await _mediator.Send(new CanCancelOrderQuery() { Order = order });
+                CanCapture = await _mediator.Send(new CanCaptureQuery { PaymentTransaction = paymentTransaction }),
+                CanMarkAsPaid = await _mediator.Send(new CanMarkPaymentTransactionAsPaidQuery { PaymentTransaction = paymentTransaction }),
+                CanRefund = await _mediator.Send(new CanRefundQuery { PaymentTransaction = paymentTransaction }),
+                CanRefundOffline = await _mediator.Send(new CanRefundOfflineQuery { PaymentTransaction = paymentTransaction }),
+                CanPartiallyRefund = await _mediator.Send(new CanPartiallyRefundQuery { PaymentTransaction = paymentTransaction, AmountToRefund = 0 }),
+                CanPartiallyRefundOffline = await _mediator.Send(new CanPartiallyRefundOfflineQuery { PaymentTransaction = paymentTransaction, AmountToRefund = 0 }),
+                CanPartiallyPaidOffline = await _mediator.Send(new CanPartiallyPaidOfflineQuery { PaymentTransaction = paymentTransaction, AmountToPaid = 0 }),
+                CanVoid = await _mediator.Send(new CanVoidQuery { PaymentTransaction = paymentTransaction }),
+                CanVoidOffline = await _mediator.Send(new CanVoidOfflineQuery { PaymentTransaction = paymentTransaction }),
+                MaxAmountToRefund = paymentTransaction.TransactionAmount - paymentTransaction.RefundedAmount,
+                MaxAmountToPaid = paymentTransaction.TransactionAmount - paymentTransaction.PaidAmount
+            };
 
             return View(model);
 
@@ -236,18 +236,18 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                var errors = await _mediator.Send(new CaptureCommand() { PaymentTransaction = paymentTransaction });
+                var errors = await _mediator.Send(new CaptureCommand { PaymentTransaction = paymentTransaction });
 
                 foreach (var error in errors)
                     Error(error);
 
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
             catch (Exception exc)
             {
                 //error
                 Error(exc, false);
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
 
         }
@@ -267,14 +267,14 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                await _mediator.Send(new MarkAsPaidCommand() { PaymentTransaction = paymentTransaction });
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                await _mediator.Send(new MarkAsPaidCommand { PaymentTransaction = paymentTransaction });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
             catch (Exception exc)
             {
                 //error
                 Error(exc, false);
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
         }
 
@@ -293,17 +293,17 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                var errors = await _mediator.Send(new RefundCommand() { PaymentTransaction = paymentTransaction });
+                var errors = await _mediator.Send(new RefundCommand { PaymentTransaction = paymentTransaction });
                 foreach (var error in errors)
                     Error(error);
 
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
             catch (Exception exc)
             {
                 //error
                 Error(exc, false);
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
         }
 
@@ -322,14 +322,14 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                await _mediator.Send(new RefundOfflineCommand() { PaymentTransaction = paymentTransaction });
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                await _mediator.Send(new RefundOfflineCommand { PaymentTransaction = paymentTransaction });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
             catch (Exception exc)
             {
                 //error
                 Error(exc, false);
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
         }
 
@@ -348,17 +348,17 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                var errors = await _mediator.Send(new VoidCommand() { PaymentTransaction = paymentTransaction });
+                var errors = await _mediator.Send(new VoidCommand { PaymentTransaction = paymentTransaction });
                 foreach (var error in errors)
                     Error(error);
 
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
             catch (Exception exc)
             {
                 //error
                 Error(exc, false);
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
         }
 
@@ -377,14 +377,14 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                await _mediator.Send(new VoidOfflineCommand() { PaymentTransaction = paymentTransaction });
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                await _mediator.Send(new VoidOfflineCommand { PaymentTransaction = paymentTransaction });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
             catch (Exception exc)
             {
                 //error
                 Error(exc, false);
-                return RedirectToAction("Edit", "PaymentTransaction", new { id = id });
+                return RedirectToAction("Edit", "PaymentTransaction", new { id });
             }
         }
 
@@ -400,10 +400,11 @@ namespace Grand.Web.Admin.Controllers
                 return RedirectToAction("List", "PaymentTransaction");
             }
 
-            var model = new PaymentTransactionModel();
-            model.Id = paymentTransaction.Id;
-            model.MaxAmountToRefund = paymentTransaction.TransactionAmount - paymentTransaction.RefundedAmount;
-            model.CurrencyCode = paymentTransaction.CurrencyCode;
+            var model = new PaymentTransactionModel {
+                Id = paymentTransaction.Id,
+                MaxAmountToRefund = paymentTransaction.TransactionAmount - paymentTransaction.RefundedAmount,
+                CurrencyCode = paymentTransaction.CurrencyCode
+            };
 
             return View(model);
         }
@@ -423,11 +424,11 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                double amountToRefund = model.AmountToRefund;
+                var amountToRefund = model.AmountToRefund;
                 if (amountToRefund <= 0)
                     throw new GrandException("Enter amount to refund");
 
-                double maxAmountToRefund = paymentTransaction.TransactionAmount - paymentTransaction.RefundedAmount;
+                var maxAmountToRefund = paymentTransaction.TransactionAmount - paymentTransaction.RefundedAmount;
                 if (amountToRefund > maxAmountToRefund)
                     amountToRefund = maxAmountToRefund;
 
@@ -469,10 +470,11 @@ namespace Grand.Web.Admin.Controllers
                 return RedirectToAction("List", "PaymentTransaction");
             }
 
-            var model = new PaymentTransactionModel();
-            model.Id = paymentTransaction.Id;
-            model.MaxAmountToPaid = paymentTransaction.TransactionAmount - paymentTransaction.PaidAmount;
-            model.CurrencyCode = paymentTransaction.CurrencyCode;
+            var model = new PaymentTransactionModel {
+                Id = paymentTransaction.Id,
+                MaxAmountToPaid = paymentTransaction.TransactionAmount - paymentTransaction.PaidAmount,
+                CurrencyCode = paymentTransaction.CurrencyCode
+            };
 
             return View(model);
         }
@@ -492,11 +494,11 @@ namespace Grand.Web.Admin.Controllers
 
             try
             {
-                double amountToPaid = model.AmountToPaid;
+                var amountToPaid = model.AmountToPaid;
                 if (amountToPaid <= 0)
                     throw new GrandException("Enter amount to refund");
 
-                double maxAmountToPaid = paymentTransaction.TransactionAmount - paymentTransaction.PaidAmount;
+                var maxAmountToPaid = paymentTransaction.TransactionAmount - paymentTransaction.PaidAmount;
                 if (amountToPaid > maxAmountToPaid)
                     amountToPaid = maxAmountToPaid;
 
@@ -525,10 +527,6 @@ namespace Grand.Web.Admin.Controllers
             {
                 return RedirectToAction("List", "MerchandiseReturn");
             }
-
-            if (_workContext.CurrentVendor != null)
-                return RedirectToAction("List", "PaymentTransaction");
-
             if (ModelState.IsValid)
             {
                 await _paymentTransactionService.DeletePaymentTransaction(paymentTransaction);

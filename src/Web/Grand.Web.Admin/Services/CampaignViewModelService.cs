@@ -1,24 +1,22 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Stores;
-using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Marketing.Campaigns;
 using Grand.Business.Core.Interfaces.Marketing.Customers;
 using Grand.Business.Core.Interfaces.Marketing.Newsletters;
 using Grand.Business.Core.Interfaces.Messages;
 using Grand.Domain.Messages;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Messages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Services
 {
-    public partial class CampaignViewModelService : ICampaignViewModelService
+    public class CampaignViewModelService : ICampaignViewModelService
     {
 
         private readonly ICampaignService _campaignService;
-        private readonly ICustomerService _customerService;
         private readonly IGroupService _groupService;
         private readonly IDateTimeService _dateTimeService;
         private readonly IEmailAccountService _emailAccountService;
@@ -29,7 +27,6 @@ namespace Grand.Web.Admin.Services
         private readonly INewsletterCategoryService _newsletterCategoryService;
 
         public CampaignViewModelService(ICampaignService campaignService,
-            ICustomerService customerService,
             IGroupService groupService,
             IDateTimeService dateTimeService,
             IEmailAccountService emailAccountService,
@@ -40,7 +37,6 @@ namespace Grand.Web.Admin.Services
             INewsletterCategoryService newsletterCategoryService)
         {
             _campaignService = campaignService;
-            _customerService = customerService;
             _groupService = groupService;
             _dateTimeService = dateTimeService;
             _emailAccountService = emailAccountService;
@@ -51,24 +47,9 @@ namespace Grand.Web.Admin.Services
             _newsletterCategoryService = newsletterCategoryService;
         }
 
-        protected virtual string FormatTokens(string[] tokens)
-        {
-            var sb = new StringBuilder();
-            for (int i = 0; i < tokens.Length; i++)
-            {
-                string token = tokens[i];
-                sb.Append(token);
-                if (i != tokens.Length - 1)
-                    sb.Append(", ");
-            }
-
-            return sb.ToString();
-        }
-
         protected virtual async Task PrepareStoresModel(CampaignModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             var stores = await _storeService.GetAllStores();
             foreach (var store in stores)
@@ -76,15 +57,14 @@ namespace Grand.Web.Admin.Services
                 model.AvailableStores.Add(new SelectListItem
                 {
                     Text = store.Shortcut,
-                    Value = store.Id.ToString()
+                    Value = store.Id
                 });
             }
         }
 
         protected virtual async Task PrepareLanguagesModel(CampaignModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             var languages = await _languageService.GetAllLanguages();
             foreach (var lang in languages)
@@ -92,33 +72,30 @@ namespace Grand.Web.Admin.Services
                 model.AvailableLanguages.Add(new SelectListItem
                 {
                     Text = lang.Name,
-                    Value = lang.Id.ToString()
+                    Value = lang.Id
                 });
             }
         }
 
         protected virtual async Task PrepareCustomerTagsModel(CampaignModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-            model.AvailableCustomerTags = (await _customerTagService.GetAllCustomerTags()).Select(ct => new SelectListItem() { Text = ct.Name, Value = ct.Id, Selected = model.CustomerTags.Contains(ct.Id) }).ToList();
-            model.CustomerTags = model.CustomerTags == null ? new List<string>() : model.CustomerTags;
+            ArgumentNullException.ThrowIfNull(model);
+            model.AvailableCustomerTags = (await _customerTagService.GetAllCustomerTags()).Select(ct => new SelectListItem { Text = ct.Name, Value = ct.Id, Selected = model.CustomerTags.Contains(ct.Id) }).ToList();
+            model.CustomerTags ??= new List<string>();
         }
 
         protected virtual async Task PrepareCustomerGroupsModel(CampaignModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-            model.AvailableCustomerGroups = (await _groupService.GetAllCustomerGroups()).Select(ct => new SelectListItem() { Text = ct.Name, Value = ct.Id, Selected = model.CustomerGroups.Contains(ct.Id) }).ToList();
-            model.CustomerGroups = model.CustomerGroups == null ? new List<string>() : model.CustomerGroups;
+            ArgumentNullException.ThrowIfNull(model);
+            model.AvailableCustomerGroups = (await _groupService.GetAllCustomerGroups()).Select(ct => new SelectListItem { Text = ct.Name, Value = ct.Id, Selected = model.CustomerGroups.Contains(ct.Id) }).ToList();
+            model.CustomerGroups ??= new List<string>();
         }
 
         protected virtual async Task PrepareNewsletterCategoriesModel(CampaignModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-            model.AvailableNewsletterCategories = (await _newsletterCategoryService.GetAllNewsletterCategory()).Select(ct => new SelectListItem() { Text = ct.Name, Value = ct.Id, Selected = model.NewsletterCategories.Contains(ct.Id) }).ToList();
-            model.NewsletterCategories = model.NewsletterCategories == null ? new List<string>() : model.NewsletterCategories;
+            ArgumentNullException.ThrowIfNull(model);
+            model.AvailableNewsletterCategories = (await _newsletterCategoryService.GetAllNewsletterCategory()).Select(ct => new SelectListItem { Text = ct.Name, Value = ct.Id, Selected = model.NewsletterCategories.Contains(ct.Id) }).ToList();
+            model.NewsletterCategories ??= new List<string>();
         }
 
         protected virtual async Task PrepareEmailAccounts(CampaignModel model)
@@ -130,8 +107,9 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task<CampaignModel> PrepareCampaignModel()
         {
-            var model = new CampaignModel();
-            model.AllowedTokens = _messageTokenProvider.GetListOfCampaignAllowedTokens();
+            var model = new CampaignModel {
+                AllowedTokens = _messageTokenProvider.GetListOfCampaignAllowedTokens()
+            };
             //stores
             await PrepareStoresModel(model);
             //languages
@@ -189,7 +167,6 @@ namespace Grand.Web.Admin.Services
         public virtual async Task<Campaign> InsertCampaignModel(CampaignModel model)
         {
             var campaign = model.ToEntity();
-            campaign.CreatedOnUtc = DateTime.UtcNow;
             await _campaignService.InsertCampaign(campaign);
             return campaign;
         }

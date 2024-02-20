@@ -3,7 +3,7 @@ namespace Grand.Infrastructure.Configuration
     /// <summary>
     /// Represents a Extensions Config
     /// </summary>
-    public partial class ExtensionsConfig
+    public class ExtensionsConfig
     {
         /// <summary>
         /// Indicates whether we disabled upload plugins/themes
@@ -25,5 +25,9 @@ namespace Grand.Infrastructure.Configuration
         /// </summary>
         public bool UseRoslynScripts { get; set; }        
         
+        /// <summary>
+        ///List of installed plugins (comma separated) 
+        /// </summary>
+        public string InstalledPlugins { get; set; }
     }
 }

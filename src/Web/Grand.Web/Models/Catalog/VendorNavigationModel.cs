@@ -2,19 +2,14 @@
 
 namespace Grand.Web.Models.Catalog
 {
-    public partial class VendorNavigationModel : BaseModel
+    public class VendorNavigationModel : BaseModel
     {
-        public VendorNavigationModel()
-        {
-            Vendors = new List<VendorBriefInfoModel>();
-        }
-
-        public IList<VendorBriefInfoModel> Vendors { get; set; }
+        public IList<VendorBriefInfoModel> Vendors { get; set; } = new List<VendorBriefInfoModel>();
 
         public int TotalVendors { get; set; }
     }
 
-    public partial class VendorBriefInfoModel : BaseEntityModel
+    public class VendorBriefInfoModel : BaseEntityModel
     {
         public string Name { get; set; }
 

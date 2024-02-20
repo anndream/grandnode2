@@ -1,5 +1,5 @@
 ﻿using Grand.Domain.Common;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
@@ -22,22 +22,21 @@ namespace Grand.Web.Common.Middleware
 
             IRepository<GrandNodeVersion> repository)
         {
-            if (context == null || context.Request == null)
+            if (context?.Request == null)
             {
-                await _next(context);
                 return;
             }
 
             var version = cacheBase.Get(CacheKey.GRAND_NODE_VERSION, () => repository.Table.FirstOrDefault());
             if (version == null)
             {
-                await context.Response.WriteAsync($"The database does not exist.");
+                await context.Response.WriteAsync("The database does not exist.");
                 return;
             }
 
             if (!version.DataBaseVersion.Equals(GrandVersion.SupportedDBVersion))
             {
-                await context.Response.WriteAsync($"The database version is not supported in this software version. " +
+                await context.Response.WriteAsync("The database version is not supported in this software version. " +
                     $"Supported version: {GrandVersion.SupportedDBVersion} , your version: {version.DataBaseVersion}");
             }
             else

@@ -8,14 +8,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Orders
 {
-    public partial class CheckoutAttributeModel : BaseEntityModel, ILocalizedModel<CheckoutAttributeLocalizedModel>, IGroupLinkModel, IStoreLinkModel
+    public class CheckoutAttributeModel : BaseEntityModel, ILocalizedModel<CheckoutAttributeLocalizedModel>, IGroupLinkModel, IStoreLinkModel
     {
-        public CheckoutAttributeModel()
-        {
-            Locales = new List<CheckoutAttributeLocalizedModel>();
-            AvailableTaxCategories = new List<SelectListItem>();
-        }
-
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Fields.Name")]
 
         public string Name { get; set; }
@@ -35,7 +29,7 @@ namespace Grand.Web.Admin.Models.Orders
 
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Fields.TaxCategory")]
         public string TaxCategoryId { get; set; }
-        public IList<SelectListItem> AvailableTaxCategories { get; set; }
+        public IList<SelectListItem> AvailableTaxCategories { get; set; } = new List<SelectListItem>();
 
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Fields.AttributeControlType")]
         public int AttributeControlTypeId { get; set; }
@@ -65,7 +59,7 @@ namespace Grand.Web.Admin.Models.Orders
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Fields.DefaultValue")]
         public string DefaultValue { get; set; }
 
-        public IList<CheckoutAttributeLocalizedModel> Locales { get; set; }
+        public IList<CheckoutAttributeLocalizedModel> Locales { get; set; } = new List<CheckoutAttributeLocalizedModel>();
 
         //condition
         public bool ConditionAllowed { get; set; }
@@ -81,7 +75,7 @@ namespace Grand.Web.Admin.Models.Orders
         public string[] CustomerGroups { get; set; }
     }
 
-    public partial class ConditionModel : BaseEntityModel
+    public class ConditionModel : BaseEntityModel
     {
         [GrandResourceDisplayName("Admin.Orders.CheckoutAttributes.Condition.EnableCondition")]
         public bool EnableCondition { get; set; }
@@ -91,7 +85,7 @@ namespace Grand.Web.Admin.Models.Orders
 
         public IList<AttributeConditionModel> ConditionAttributes { get; set; }
     }
-    public partial class AttributeConditionModel : BaseEntityModel
+    public class AttributeConditionModel : BaseEntityModel
     {
         public string Name { get; set; }
 
@@ -101,7 +95,7 @@ namespace Grand.Web.Admin.Models.Orders
 
         public string SelectedValueId { get; set; }
     }
-    public partial class CheckoutAttributeLocalizedModel : ILocalizedModelLocal
+    public class CheckoutAttributeLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

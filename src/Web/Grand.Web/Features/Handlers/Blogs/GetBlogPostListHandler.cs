@@ -1,16 +1,16 @@
-﻿using Grand.Infrastructure;
-using Grand.Domain;
-using Grand.Domain.Blogs;
-using Grand.Domain.Media;
+﻿using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Cms;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Storage;
+using Grand.Domain;
+using Grand.Domain.Blogs;
+using Grand.Domain.Media;
+using Grand.Infrastructure;
 using Grand.Web.Features.Models.Blogs;
 using Grand.Web.Models.Blogs;
 using Grand.Web.Models.Media;
 using MediatR;
-using Grand.Business.Core.Extensions;
 
 namespace Grand.Web.Features.Handlers.Blogs
 {
@@ -45,12 +45,15 @@ namespace Grand.Web.Features.Handlers.Blogs
         }
         public async Task<BlogPostListModel> Handle(GetBlogPostList request, CancellationToken cancellationToken)
         {
-            var model = new BlogPostListModel();
-            model.PagingFilteringContext.Tag = request.Command.Tag;
-            model.PagingFilteringContext.Month = request.Command.Month;
-            model.PagingFilteringContext.CategorySeName = request.Command.CategorySeName;
-            model.WorkingLanguageId = _workContext.WorkingLanguage.Id;
-            model.SearchKeyword = request.Command.SearchKeyword;
+            var model = new BlogPostListModel {
+                PagingFilteringContext = {
+                    Tag = request.Command.Tag,
+                    Month = request.Command.Month,
+                    CategorySeName = request.Command.CategorySeName
+                },
+                WorkingLanguageId = _workContext.WorkingLanguage.Id,
+                SearchKeyword = request.Command.SearchKeyword
+            };
 
             if (request.Command.PageSize <= 0) request.Command.PageSize = _blogSettings.PostsPageSize;
             if (request.Command.PageNumber <= 0) request.Command.PageNumber = 1;
@@ -93,11 +96,8 @@ namespace Grand.Web.Features.Handlers.Blogs
 
         private async Task PrepareBlogPostModel(BlogPostModel model, BlogPost blogPost)
         {
-            if (blogPost == null)
-                throw new ArgumentNullException(nameof(blogPost));
-
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(blogPost);
+            ArgumentNullException.ThrowIfNull(model);
 
             model.Id = blogPost.Id;
             model.MetaTitle = blogPost.GetTranslation(x => x.MetaTitle, _workContext.WorkingLanguage.Id);
@@ -128,17 +128,16 @@ namespace Grand.Web.Features.Handlers.Blogs
                     FullSizeImageUrl = await _pictureService.GetPictureUrl(blogPost.PictureId),
                     ImageUrl = await _pictureService.GetPictureUrl(blogPost.PictureId, _mediaSettings.BlogThumbPictureSize),
                     Style = picture?.Style,
-                    ExtraField = picture?.ExtraField
+                    ExtraField = picture?.ExtraField,
+                    //"title" attribute
+                    Title = picture != null && !string.IsNullOrEmpty(picture.GetTranslation(x => x.TitleAttribute, _workContext.WorkingLanguage.Id)) ?
+                        picture.GetTranslation(x => x.TitleAttribute, _workContext.WorkingLanguage.Id) :
+                        string.Format(_translationService.GetResource("Media.Blog.ImageLinkTitleFormat"), blogPost.Title),
+                    //"alt" attribute
+                    AlternateText = picture != null && !string.IsNullOrEmpty(picture.GetTranslation(x => x.AltAttribute, _workContext.WorkingLanguage.Id)) ?
+                        picture.GetTranslation(x => x.AltAttribute, _workContext.WorkingLanguage.Id) :
+                        string.Format(_translationService.GetResource("Media.Blog.ImageAlternateTextFormat"), blogPost.Title)
                 };
-
-                //"title" attribute
-                pictureModel.Title = (picture != null && !string.IsNullOrEmpty(picture.GetTranslation(x => x.TitleAttribute, _workContext.WorkingLanguage.Id))) ?
-                    picture.GetTranslation(x => x.TitleAttribute, _workContext.WorkingLanguage.Id) :
-                    string.Format(_translationService.GetResource("Media.Blog.ImageLinkTitleFormat"), blogPost.Title);
-                //"alt" attribute
-                pictureModel.AlternateText = (picture != null && !string.IsNullOrEmpty(picture.GetTranslation(x => x.AltAttribute, _workContext.WorkingLanguage.Id))) ?
-                    picture.GetTranslation(x => x.AltAttribute, _workContext.WorkingLanguage.Id) :
-                    string.Format(_translationService.GetResource("Media.Blog.ImageAlternateTextFormat"), blogPost.Title);
 
                 model.PictureModel = pictureModel;
             }

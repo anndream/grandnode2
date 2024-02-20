@@ -3,12 +3,11 @@ using Grand.Business.Core.Interfaces.Checkout.Orders;
 using Grand.Business.Core.Interfaces.Checkout.Payments;
 using Grand.Business.Core.Queries.Checkout.Orders;
 using Grand.Business.Core.Utilities.Checkout;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Domain.Logging;
 using Grand.Domain.Payments;
 using Grand.SharedKernel;
 using MediatR;
 using Grand.Business.Core.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Business.Checkout.Commands.Handlers.Orders
 {
@@ -18,14 +17,14 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
         private readonly IPaymentTransactionService _paymentTransaction;
         private readonly IOrderService _orderService;
         private readonly IMediator _mediator;
-        private readonly ILogger _logger;
+        private readonly ILogger<CaptureCommandHandler> _logger;
 
         public CaptureCommandHandler(
             IPaymentService paymentService,
             IPaymentTransactionService paymentTransaction,
             IMediator mediator,
             IOrderService orderService,
-            ILogger logger)
+            ILogger<CaptureCommandHandler> logger)
         {
             _paymentService = paymentService;
             _paymentTransaction = paymentTransaction;
@@ -40,7 +39,7 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
             if (paymentTransaction == null)
                 throw new ArgumentNullException(nameof(command.PaymentTransaction));
 
-            var canCapture = await _mediator.Send(new CanCaptureQuery() { PaymentTransaction = paymentTransaction });
+            var canCapture = await _mediator.Send(new CanCaptureQuery { PaymentTransaction = paymentTransaction }, cancellationToken);
             if (!canCapture)
                 throw new GrandException("Cannot do capture for order.");
 
@@ -69,34 +68,33 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
                         order.PaymentStatusId = PaymentStatus.Paid;
                         order.PaidDateUtc = DateTime.UtcNow;
                         await _orderService.UpdateOrder(order);
-                        await _mediator.Send(new CheckOrderStatusCommand() { Order = order });
+                        await _mediator.Send(new CheckOrderStatusCommand { Order = order }, cancellationToken);
                         if (order.PaymentStatusId == PaymentStatus.Paid)
                         {
-                            await _mediator.Send(new ProcessOrderPaidCommand() { Order = order });
+                            await _mediator.Send(new ProcessOrderPaidCommand { Order = order }, cancellationToken);
                         }
                     }
                 }
             }
             catch (Exception exc)
             {
-                if (result == null)
-                    result = new CapturePaymentResult();
-                result.AddError(string.Format("Error: {0}. Full exception: {1}", exc.Message, exc));
+                result ??= new CapturePaymentResult();
+                result.AddError($"Error: {exc.Message}. Full exception: {exc}");
             }
 
 
             //process errors
-            string error = "";
-            for (int i = 0; i < result.Errors.Count; i++)
+            var error = "";
+            for (var i = 0; i < result.Errors.Count; i++)
             {
-                error += string.Format("Error {0}: {1}", i, result.Errors[i]);
+                error += $"Error {i}: {result.Errors[i]}";
                 if (i != result.Errors.Count - 1)
                     error += ". ";
             }
-            if (!String.IsNullOrEmpty(error))
+            if (!string.IsNullOrEmpty(error))
             {
                 //log it
-                await _logger.InsertLog(LogLevel.Error, $"Error capturing order code # {paymentTransaction.OrderCode}. Error: {error}", $"Error capturing order code # {paymentTransaction.OrderCode}. Error: {error}");
+                _logger.LogError("Error capturing order code # {PaymentTransactionOrderCode}. Error: {Error}", paymentTransaction.OrderCode, error);
             }
             return result.Errors;
         }

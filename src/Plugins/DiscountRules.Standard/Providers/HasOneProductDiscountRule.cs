@@ -2,9 +2,9 @@ using Grand.Business.Core.Interfaces.Catalog.Discounts;
 using Grand.Business.Core.Utilities.Catalog;
 using Grand.Domain.Orders;
 
-namespace DiscountRules.Provider
+namespace DiscountRules.Standard.Providers
 {
-    public partial class HasOneProductDiscountRule : IDiscountRule
+    public class HasOneProductDiscountRule : IDiscountRule
     {
         private readonly ShoppingCartSettings _shoppingCartSettings;
 
@@ -20,13 +20,12 @@ namespace DiscountRules.Provider
         /// <returns>true - requirement is met; otherwise, false</returns>
         public async Task<DiscountRuleValidationResult> CheckRequirement(DiscountRuleValidationRequest request)
         {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
+            ArgumentNullException.ThrowIfNull(request);
 
             //invalid by default
             var result = new DiscountRuleValidationResult();
 
-            var restrictedProductIds = string.IsNullOrEmpty(request.DiscountRule.Metadata) ? new List<string>() : request.DiscountRule.Metadata.Split(',').ToList();
+            var restrictedProductIds = string.IsNullOrEmpty(request.DiscountRule.Metadata) ? [] : request.DiscountRule.Metadata.Split(',').ToList();
 
             if (!restrictedProductIds.Any())
             {
@@ -48,7 +47,7 @@ namespace DiscountRules.Provider
             var cart = cartQuery.ToList();
 
             //process
-            bool found = false;
+            var found = false;
             foreach (var restrictedProduct in restrictedProductIds)
             {
                 if (string.IsNullOrWhiteSpace(restrictedProduct))
@@ -62,50 +61,40 @@ namespace DiscountRules.Provider
                         {
                             //the third way (the quantity rage specified)
                             //{Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
-                            string restrictedProductId = restrictedProduct.Split(new[] { ':' })[0];
+                            var restrictedProductId = restrictedProduct.Split([':'])[0];
 
-                            int quantityMin;
-                            if (!int.TryParse(restrictedProduct.Split(new[] { ':' })[1].Split(new[] { '-' })[0], out quantityMin))
+                            if (!int.TryParse(restrictedProduct.Split([':'])[1].Split(['-'])[0], out var quantityMin))
                                 //parsing error; exit;
                                 return result;
-                            int quantityMax;
-                            if (!int.TryParse(restrictedProduct.Split(new[] { ':' })[1].Split(new[] { '-' })[1], out quantityMax))
+                            if (!int.TryParse(restrictedProduct.Split([':'])[1].Split(['-'])[1], out var quantityMax))
                                 //parsing error; exit;
                                 return result;
 
-                            if (sci.ProductId == restrictedProductId && quantityMin <= sci.TotalQuantity && sci.TotalQuantity <= quantityMax)
-                            {
-                                found = true;
-                                break;
-                            }
+                            if (sci.ProductId != restrictedProductId || quantityMin > sci.TotalQuantity ||
+                                sci.TotalQuantity > quantityMax) continue;
+                            found = true;
+                            break;
                         }
                         else
                         {
                             //the second way (the quantity specified)
                             //{Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
-                            string restrictedProductId = restrictedProduct.Split(new[] { ':' })[0];
+                            var restrictedProductId = restrictedProduct.Split([':'])[0];
 
-                            int quantity;
-                            if (!int.TryParse(restrictedProduct.Split(new[] { ':' })[1], out quantity))
+                            if (!int.TryParse(restrictedProduct.Split([':'])[1], out var quantity))
                                 //parsing error; exit;
                                 return result;
 
-                            if (sci.ProductId == restrictedProductId && sci.TotalQuantity == quantity)
-                            {
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        //the first way (the quantity is not specified)
-                        if (sci.ProductId == restrictedProduct)
-                        {
+                            if (sci.ProductId != restrictedProductId || sci.TotalQuantity != quantity) continue;
                             found = true;
                             break;
                         }
                     }
+
+                    //the first way (the quantity is not specified)
+                    if (sci.ProductId != restrictedProduct) continue;
+                    found = true;
+                    break;
                 }
 
                 if (found)
@@ -114,14 +103,11 @@ namespace DiscountRules.Provider
                 }
             }
 
-            if (found)
-            {
-                //valid
-                result.IsValid = true;
-                return result;
-            }
+            if (!found) return await Task.FromResult(result);
+            //valid
+            result.IsValid = true;
+            return result;
 
-            return await Task.FromResult(result);
         }
 
         /// <summary>
@@ -133,9 +119,9 @@ namespace DiscountRules.Provider
         public string GetConfigurationUrl(string discountId, string discountRequirementId)
         {
             //configured 
-            string result = "Admin/HasOneProduct/Configure/?discountId=" + discountId;
+            var result = "Admin/HasOneProduct/Configure/?discountId=" + discountId;
             if (!string.IsNullOrEmpty(discountRequirementId))
-                result += string.Format("&discountRequirementId={0}", discountRequirementId);
+                result += $"&discountRequirementId={discountRequirementId}";
             return result;
         }
 

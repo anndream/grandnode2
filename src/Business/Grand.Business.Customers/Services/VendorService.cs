@@ -1,7 +1,7 @@
 using Grand.Business.Core.Interfaces.Customers;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Vendors;
 using MediatR;
 
@@ -10,7 +10,7 @@ namespace Grand.Business.Customers.Services
     /// <summary>
     /// Vendor service
     /// </summary>
-    public partial class VendorService : IVendorService
+    public class VendorService : IVendorService
     {
         #region Fields
 
@@ -26,6 +26,7 @@ namespace Grand.Business.Customers.Services
         /// Ctor
         /// </summary>
         /// <param name="vendorRepository">Vendor repository</param>
+        /// <param name="vendorReviewRepository">Vendor review repository</param>
         /// <param name="mediator">Mediator</param>
         public VendorService(IRepository<Vendor> vendorRepository, IRepository<VendorReview> vendorReviewRepository,
             IMediator mediator)
@@ -63,7 +64,7 @@ namespace Grand.Business.Customers.Services
             var query = from p in _vendorRepository.Table
                         select p;
 
-            if (!String.IsNullOrWhiteSpace(name))
+            if (!string.IsNullOrWhiteSpace(name))
                 query = query.Where(v => v.Name.ToLower().Contains(name.ToLower()));
             if (!showHidden)
                 query = query.Where(v => v.Active);
@@ -78,8 +79,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendor">Vendor</param>
         public virtual async Task InsertVendor(Vendor vendor)
         {
-            if (vendor == null)
-                throw new ArgumentNullException(nameof(vendor));
+            ArgumentNullException.ThrowIfNull(vendor);
 
             await _vendorRepository.InsertAsync(vendor);
 
@@ -93,8 +93,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendor">Vendor</param>
         public virtual async Task UpdateVendor(Vendor vendor)
         {
-            if (vendor == null)
-                throw new ArgumentNullException(nameof(vendor));
+            ArgumentNullException.ThrowIfNull(vendor);
 
             await _vendorRepository.UpdateAsync(vendor);
 
@@ -108,8 +107,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendor">Vendor</param>
         public virtual async Task DeleteVendor(Vendor vendor)
         {
-            if (vendor == null)
-                throw new ArgumentNullException(nameof(vendor));
+            ArgumentNullException.ThrowIfNull(vendor);
 
             vendor.Deleted = true;
             await UpdateVendor(vendor);
@@ -119,17 +117,15 @@ namespace Grand.Business.Customers.Services
         /// <summary>
         /// Gets a vendor note note
         /// </summary>
+        /// <param name="vendorId">Vendor ident</param>
         /// <param name="vendorNoteId">The vendor note identifier</param>
         /// <returns>Vendor note</returns>
         public virtual async Task<VendorNote> GetVendorNoteById(string vendorId, string vendorNoteId)
         {
-            if (String.IsNullOrEmpty(vendorNoteId))
+            if (string.IsNullOrEmpty(vendorNoteId))
                 return null;
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
-            if (vendor == null)
-                return null;
-
-            return vendor.VendorNotes.FirstOrDefault(x => x.Id == vendorNoteId);
+            return vendor?.VendorNotes.FirstOrDefault(x => x.Id == vendorNoteId);
         }
         /// <summary>
         /// Insert vendor note
@@ -139,8 +135,7 @@ namespace Grand.Business.Customers.Services
         /// <returns></returns>
         public virtual async Task InsertVendorNote(VendorNote vendorNote, string vendorId)
         {
-            if (vendorNote == null)
-                throw new ArgumentNullException(nameof(vendorNote));
+            ArgumentNullException.ThrowIfNull(vendorNote);
 
             await _vendorRepository.AddToSet(vendorId, x => x.VendorNotes, vendorNote);
 
@@ -155,8 +150,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendorId">Vendor ident</param>
         public virtual async Task DeleteVendorNote(VendorNote vendorNote, string vendorId)
         {
-            if (vendorNote == null)
-                throw new ArgumentNullException(nameof(vendorNote));
+            ArgumentNullException.ThrowIfNull(vendorNote);
 
             await _vendorRepository.PullFilter(vendorId, x => x.VendorNotes, x => x.Id, vendorNote.Id);
 
@@ -187,6 +181,9 @@ namespace Grand.Business.Customers.Services
         /// <param name="fromUtc">Item creation from; null to load all records</param>
         /// <param name="toUtc">Item item creation to; null to load all records</param>
         /// <param name="message">Search title or review text; null to load all records</param>
+        /// <param name="vendorId"></param>
+        /// <param name="pageIndex"></param>
+        /// <param name="pageSize"></param>
         /// <returns>Reviews</returns>
         public virtual async Task<IPagedList<VendorReview>> GetAllVendorReviews(string customerId, bool? approved,
             DateTime? fromUtc = null, DateTime? toUtc = null,
@@ -197,15 +194,15 @@ namespace Grand.Business.Customers.Services
 
             if (approved.HasValue)
                 query = query.Where(c => c.IsApproved == approved.Value);
-            if (!String.IsNullOrEmpty(customerId))
+            if (!string.IsNullOrEmpty(customerId))
                 query = query.Where(c => c.CustomerId == customerId);
             if (fromUtc.HasValue)
                 query = query.Where(c => fromUtc.Value <= c.CreatedOnUtc);
             if (toUtc.HasValue)
                 query = query.Where(c => toUtc.Value >= c.CreatedOnUtc);
-            if (!String.IsNullOrEmpty(message))
+            if (!string.IsNullOrEmpty(message))
                 query = query.Where(c => c.Title.Contains(message) || c.ReviewText.Contains(message));
-            if (!String.IsNullOrEmpty(vendorId))
+            if (!string.IsNullOrEmpty(vendorId))
                 query = query.Where(c => c.VendorId == vendorId);
             query = query.OrderByDescending(c => c.CreatedOnUtc);
             return await PagedList<VendorReview>.Create(query, pageIndex, pageSize);
@@ -218,13 +215,12 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendor">Vendor</param>
         public virtual async Task UpdateVendorReviewTotals(Vendor vendor)
         {
-            if (vendor == null)
-                throw new ArgumentNullException(nameof(vendor));
+            ArgumentNullException.ThrowIfNull(vendor);
 
-            int approvedRatingSum = 0;
-            int notApprovedRatingSum = 0;
-            int approvedTotalReviews = 0;
-            int notApprovedTotalReviews = 0;
+            var approvedRatingSum = 0;
+            var notApprovedRatingSum = 0;
+            var approvedTotalReviews = 0;
+            var notApprovedTotalReviews = 0;
             var reviews = _vendorReviewRepository.Table.Where(x => x.VendorId == vendor.Id);
             foreach (var pr in reviews)
             {
@@ -257,22 +253,21 @@ namespace Grand.Business.Customers.Services
             await _mediator.EntityUpdated(vendor);
         }
 
-        public virtual async Task UpdateVendorReview(VendorReview vendorreview)
+        public virtual async Task UpdateVendorReview(VendorReview vendorReview)
         {
-            if (vendorreview == null)
-                throw new ArgumentNullException(nameof(vendorreview));
+            ArgumentNullException.ThrowIfNull(vendorReview);
 
             var update = UpdateBuilder<VendorReview>.Create()
-                .Set(x => x.Title, vendorreview.Title)
-                .Set(x => x.ReviewText, vendorreview.ReviewText)
-                .Set(x => x.IsApproved, vendorreview.IsApproved)
-                .Set(x => x.HelpfulYesTotal, vendorreview.HelpfulYesTotal)
-                .Set(x => x.HelpfulNoTotal, vendorreview.HelpfulNoTotal);
+                .Set(x => x.Title, vendorReview.Title)
+                .Set(x => x.ReviewText, vendorReview.ReviewText)
+                .Set(x => x.IsApproved, vendorReview.IsApproved)
+                .Set(x => x.HelpfulYesTotal, vendorReview.HelpfulYesTotal)
+                .Set(x => x.HelpfulNoTotal, vendorReview.HelpfulNoTotal);
 
-            await _vendorReviewRepository.UpdateOneAsync(x => x.Id == vendorreview.Id, update);
+            await _vendorReviewRepository.UpdateOneAsync(x => x.Id == vendorReview.Id, update);
 
             //event notification
-            await _mediator.EntityUpdated(vendorreview);
+            await _mediator.EntityUpdated(vendorReview);
         }
 
         /// <summary>
@@ -281,8 +276,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendorReview">Vendor review</param>
         public virtual async Task InsertVendorReview(VendorReview vendorReview)
         {
-            if (vendorReview == null)
-                throw new ArgumentNullException(nameof(vendorReview));
+            ArgumentNullException.ThrowIfNull(vendorReview);
 
             await _vendorReviewRepository.InsertAsync(vendorReview);
 
@@ -296,8 +290,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="vendorReview">Vendor review</param>
         public virtual async Task DeleteVendorReview(VendorReview vendorReview)
         {
-            if (vendorReview == null)
-                throw new ArgumentNullException(nameof(vendorReview));
+            ArgumentNullException.ThrowIfNull(vendorReview);
 
             await _vendorReviewRepository.DeleteAsync(vendorReview);
 

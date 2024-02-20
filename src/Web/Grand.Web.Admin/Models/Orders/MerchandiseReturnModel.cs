@@ -5,13 +5,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Orders
 {
-    public partial class MerchandiseReturnModel : BaseEntityModel
+    public class MerchandiseReturnModel : BaseEntityModel
     {
-        public MerchandiseReturnModel()
-        {
-            Items = new List<MerchandiseReturnItemModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Orders.MerchandiseReturns.Fields.ID")]
         public override string Id { get; set; }
 
@@ -57,7 +52,7 @@ namespace Grand.Web.Admin.Models.Orders
         [GrandResourceDisplayName("Admin.Orders.MerchandiseReturns.Fields.PickupAddress")]
         public AddressModel PickupAddress { get; set; }
 
-        public List<MerchandiseReturnItemModel> Items { get; set; }
+        public List<MerchandiseReturnItemModel> Items { get; set; } = new();
 
         [GrandResourceDisplayName("Admin.Orders.MerchandiseReturns.NotifyCustomer")]
         public bool NotifyCustomer { get; set; }
@@ -71,12 +66,14 @@ namespace Grand.Web.Admin.Models.Orders
         [GrandResourceDisplayName("Admin.Orders.MerchandiseReturns.MerchandiseReturnNotes.Fields.Download")]
         [UIHint("Download")]
         public string AddMerchandiseReturnNoteDownloadId { get; set; }
-
+        
         public class MerchandiseReturnItemModel : BaseEntityModel
         {
             public string ProductId { get; set; }
 
             public string ProductName { get; set; }
+
+            public string ProductSku { get; set; }
 
             public string UnitPrice { get; set; }
 
@@ -87,7 +84,7 @@ namespace Grand.Web.Admin.Models.Orders
             public string RequestedAction { get; set; }
         }
 
-        public partial class MerchandiseReturnNote : BaseEntityModel
+        public class MerchandiseReturnNote : BaseEntityModel
         {
             public string MerchandiseReturnId { get; set; }
             [GrandResourceDisplayName("Admin.Orders.MerchandiseReturns.MerchandiseReturnNotes.Fields.DisplayToCustomer")]

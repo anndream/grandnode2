@@ -17,7 +17,7 @@ namespace Grand.Web.Admin.Validators.Catalog
         {
             if (!string.IsNullOrEmpty(workContext.CurrentCustomer.StaffStoreId))
             {
-                RuleFor(x => x).MustAsync(async (x, y, context) =>
+                RuleFor(x => x).MustAsync(async (x, _, _) =>
                 {
                     var product = await productService.GetProductById(x.ProductId);
                     if (product != null)
@@ -25,19 +25,28 @@ namespace Grand.Web.Admin.Validators.Catalog
                             return false;
 
                     return true;
-                }).WithMessage(translationService.GetResource("Admin.Catalog.Products.Permisions"));
+                }).WithMessage(translationService.GetResource("Admin.Catalog.Products.Permissions"));
             }
-            else if (workContext.CurrentVendor != null)
+        }
+    }
+    public class TierPriceDeleteModelValidator : BaseGrandValidator<ProductModel.TierPriceDeleteModel>
+    {
+        public TierPriceDeleteModelValidator(
+            IEnumerable<IValidatorConsumer<ProductModel.TierPriceDeleteModel>> validators,
+            ITranslationService translationService, IProductService productService, IWorkContext workContext)
+            : base(validators)
+        {
+            if (!string.IsNullOrEmpty(workContext.CurrentCustomer.StaffStoreId))
             {
-                RuleFor(x => x).MustAsync(async (x, y, context) =>
+                RuleFor(x => x).MustAsync(async (x, _, _) =>
                 {
                     var product = await productService.GetProductById(x.ProductId);
                     if (product != null)
-                        if (product != null && product.VendorId != workContext.CurrentVendor.Id)
+                        if (!product.AccessToEntityByStore(workContext.CurrentCustomer.StaffStoreId))
                             return false;
 
                     return true;
-                }).WithMessage(translationService.GetResource("Admin.Catalog.Products.Permisions"));
+                }).WithMessage(translationService.GetResource("Admin.Catalog.Products.Permissions"));
             }
         }
     }

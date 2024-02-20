@@ -6,12 +6,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Directory
 {
-    public partial class CurrencyModel : BaseEntityModel, ILocalizedModel<CurrencyLocalizedModel>, IStoreLinkModel
+    public class CurrencyModel : BaseEntityModel, ILocalizedModel<CurrencyLocalizedModel>, IStoreLinkModel
     {
-        public CurrencyModel()
-        {
-            Locales = new List<CurrencyLocalizedModel>();
-        }
         [GrandResourceDisplayName("Admin.Configuration.Currencies.Fields.Name")]
 
         public string Name { get; set; }
@@ -49,7 +45,7 @@ namespace Grand.Web.Admin.Models.Directory
         [GrandResourceDisplayName("Admin.Configuration.Currencies.Fields.IsPrimaryStoreCurrency")]
         public bool IsPrimaryStoreCurrency { get; set; }
 
-        public IList<CurrencyLocalizedModel> Locales { get; set; }
+        public IList<CurrencyLocalizedModel> Locales { get; set; } = new List<CurrencyLocalizedModel>();
 
         [GrandResourceDisplayName("Admin.Configuration.Currencies.Fields.RoundingType")]
         public int RoundingTypeId { get; set; }
@@ -64,7 +60,7 @@ namespace Grand.Web.Admin.Models.Directory
 
     }
 
-    public partial class CurrencyLocalizedModel : ILocalizedModelLocal
+    public class CurrencyLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

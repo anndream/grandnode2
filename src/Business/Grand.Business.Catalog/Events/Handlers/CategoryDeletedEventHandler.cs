@@ -1,5 +1,5 @@
 ﻿using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Seo;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
@@ -29,7 +29,7 @@ namespace Grand.Business.Catalog.Events.Handlers
         public async Task Handle(EntityDeleted<Category> notification, CancellationToken cancellationToken)
         {
             //delete url
-            await _entityUrlRepository.DeleteManyAsync(x => x.EntityId == notification.Entity.Id && x.EntityName == "Category");
+            await _entityUrlRepository.DeleteManyAsync(x => x.EntityId == notification.Entity.Id && x.EntityName == EntityTypes.Category);
 
             //delete on the product
             await _productRepository.PullFilter(string.Empty, x => x.ProductCategories, z => z.CategoryId, notification.Entity.Id);

@@ -6,13 +6,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Messages
 {
-    public partial class NewsletterCategoryModel : BaseEntityModel, ILocalizedModel<NewsletterCategoryLocalizedModel>, IStoreLinkModel
+    public class NewsletterCategoryModel : BaseEntityModel, ILocalizedModel<NewsletterCategoryLocalizedModel>, IStoreLinkModel
     {
-        public NewsletterCategoryModel()
-        {
-            Locales = new List<NewsletterCategoryLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("admin.marketing.NewsletterCategory.Fields.Name")]
 
         public string Name { get; set; }
@@ -30,10 +25,10 @@ namespace Grand.Web.Admin.Models.Messages
 
         [GrandResourceDisplayName("admin.marketing.NewsletterCategory.Fields.DisplayOrder")]
         public int DisplayOrder { get; set; }
-        public IList<NewsletterCategoryLocalizedModel> Locales { get; set; }
+        public IList<NewsletterCategoryLocalizedModel> Locales { get; set; } = new List<NewsletterCategoryLocalizedModel>();
     }
 
-    public partial class NewsletterCategoryLocalizedModel : ILocalizedModelLocal
+    public class NewsletterCategoryLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

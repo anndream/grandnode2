@@ -5,20 +5,12 @@ namespace Grand.Web.Admin.Models.Settings
 {
     public class ContentSettingsModel : BaseModel
     {
-
-        public ContentSettingsModel()
-        {
-            BlogSettings = new BlogSettingsModel();
-            NewsSettings = new NewsSettingsModel();
-            KnowledgebaseSettings = new KnowledgebaseSettingsModel();
-
-        }
         public string ActiveStore { get; set; }
-        public BlogSettingsModel BlogSettings { get; set; }
-        public NewsSettingsModel NewsSettings { get; set; }
-        public KnowledgebaseSettingsModel KnowledgebaseSettings { get; set; }
+        public BlogSettingsModel BlogSettings { get; set; } = new();
+        public NewsSettingsModel NewsSettings { get; set; } = new();
+        public KnowledgebaseSettingsModel KnowledgebaseSettings { get; set; } = new();
 
-        public partial class BlogSettingsModel : BaseModel
+        public class BlogSettingsModel : BaseModel
         {
             
             [GrandResourceDisplayName("Admin.Settings.Blog.Enabled")]
@@ -49,7 +41,7 @@ namespace Grand.Web.Admin.Models.Settings
             public bool ShowBlogPostsInSearchAutoComplete { get; set; }
         }
 
-        public partial class NewsSettingsModel : BaseModel
+        public class NewsSettingsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.Settings.News.Enabled")]
             public bool Enabled { get; set; }
@@ -71,7 +63,7 @@ namespace Grand.Web.Admin.Models.Settings
 
         }
 
-        public partial class KnowledgebaseSettingsModel : BaseModel
+        public class KnowledgebaseSettingsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.KnowledgebaseSettings.Enabled")]
             public bool Enabled { get; set; }

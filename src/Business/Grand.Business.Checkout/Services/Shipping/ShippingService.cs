@@ -1,9 +1,6 @@
 using Grand.Business.Core.Interfaces.Checkout.Shipping;
 using Grand.Business.Core.Utilities.Checkout;
-using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
-using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using Grand.Domain.Orders;
@@ -11,18 +8,18 @@ using Grand.Domain.Shipping;
 using Grand.Domain.Stores;
 using Grand.Infrastructure.Extensions;
 using Grand.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Business.Checkout.Services.Shipping
 {
     /// <summary>
     /// Shipping service
     /// </summary>
-    public partial class ShippingService : IShippingService
+    public class ShippingService : IShippingService
     {
         #region Fields
 
-        private readonly ILogger _logger;
-        private readonly ITranslationService _translationService;
+        private readonly ILogger<ShippingService> _logger;
         private readonly ICountryService _countryService;
         private readonly IEnumerable<IShippingRateCalculationProvider> _shippingRateCalculationProvider;
         private readonly ShippingSettings _shippingSettings;
@@ -36,15 +33,13 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// Ctor
         /// </summary>
         public ShippingService(
-            ILogger logger,
-            ITranslationService translationService,
+            ILogger<ShippingService> logger,
             ICountryService countryService,
             IEnumerable<IShippingRateCalculationProvider> shippingRateCalculationProvider,
             ShippingProviderSettings shippingProviderSettings,
             ShippingSettings shippingSettings)
         {
             _logger = logger;
-            _translationService = translationService;
             _countryService = countryService;
             _shippingRateCalculationProvider = shippingRateCalculationProvider;
             _shippingProviderSettings = shippingProviderSettings;
@@ -153,17 +148,17 @@ namespace Grand.Business.Checkout.Services.Shipping
         /// <summary>
         ///  Gets available shipping options
         /// </summary>
+        /// <param name="customer"></param>
         /// <param name="cart">Shopping cart</param>
         /// <param name="shippingAddress">Shipping address</param>
         /// <param name="allowedShippingRateMethodSystemName">Filter by Shipping rate method identifier; null to load shipping options of all Shipping rate  methods</param>
-        /// <param name="storeId">Load records allowed only in a specified store; pass "" to load all records</param>
+        /// <param name="store">Store</param>
         /// <returns>Shipping options</returns>
         public virtual async Task<GetShippingOptionResponse> GetShippingOptions(Customer customer, IList<ShoppingCartItem> cart,
             Address shippingAddress, string allowedShippingRateMethodSystemName = "",
             Store store = null)
         {
-            if (cart == null)
-                throw new ArgumentNullException(nameof(cart));
+            ArgumentNullException.ThrowIfNull(cart);
 
             var result = new GetShippingOptionResponse();
 
@@ -172,7 +167,7 @@ namespace Grand.Business.Checkout.Services.Shipping
 
             var shippingRateMethods = await LoadActiveShippingRateCalculationProviders(customer, store?.Id, cart);
             //filter by system name
-            if (!String.IsNullOrWhiteSpace(allowedShippingRateMethodSystemName))
+            if (!string.IsNullOrWhiteSpace(allowedShippingRateMethodSystemName))
             {
                 shippingRateMethods = shippingRateMethods
                     .Where(srcm => allowedShippingRateMethodSystemName.Equals(srcm.SystemName, StringComparison.OrdinalIgnoreCase))
@@ -182,73 +177,46 @@ namespace Grand.Business.Checkout.Services.Shipping
                 throw new GrandException("Shipping rate  method could not be loaded");
 
             //request shipping options from each Shipping rate  methods
-            foreach (var srcm in shippingRateMethods)
+            foreach (var shippingRateMethod in shippingRateMethods)
             {
                 //request shipping options (separately for each package-request)
-                IList<ShippingOption> srcmShippingOptions = null;
-
-                var getShippingOptionResponse = await srcm.GetShippingOptions(shippingOptionRequest);
+                IList<ShippingOption> shippingRateMethodOptions;
+                var getShippingOptionResponse = await shippingRateMethod.GetShippingOptions(shippingOptionRequest);
 
                 if (getShippingOptionResponse.Success)
                 {
                     //success
-                    if (srcmShippingOptions == null)
-                    {
-                        //first shipping option request
-                        srcmShippingOptions = getShippingOptionResponse.ShippingOptions;
-                    }
-                    else
-                    {
-                        //get shipping options which already exist for prior requested packages for this scrm (i.e. common options)
-                        srcmShippingOptions = srcmShippingOptions
-                            .Where(existingso => getShippingOptionResponse.ShippingOptions.Any(newso => newso.Name == existingso.Name))
-                            .ToList();
-
-                        //and sum the rates
-                        foreach (var existingso in srcmShippingOptions)
-                        {
-                            existingso.Rate += getShippingOptionResponse
-                                .ShippingOptions
-                                .First(newso => newso.Name == existingso.Name)
-                                .Rate;
-                        }
-                    }
+                    shippingRateMethodOptions = getShippingOptionResponse.ShippingOptions;
                 }
                 else
                 {
                     //errors
-                    foreach (string error in getShippingOptionResponse.Errors)
+                    foreach (var error in getShippingOptionResponse.Errors)
                     {
                         result.AddError(error);
-                        _ = _logger.Warning(string.Format("Shipping ({0}). {1}", srcm.FriendlyName, error));
+                        _logger.LogWarning("Shipping ({FriendlyName}) {Error}", shippingRateMethod.FriendlyName, error);
                     }
                     //clear the shipping options in this case
-                    srcmShippingOptions = new List<ShippingOption>();
                     break;
                 }
-
-
-                // add this scrm's options to the result
-                if (srcmShippingOptions != null)
+                if (shippingRateMethodOptions == null) continue;
+                foreach (var so in shippingRateMethodOptions)
                 {
-                    foreach (var so in srcmShippingOptions)
-                    {
-                        //set system name if not set yet
-                        if (String.IsNullOrEmpty(so.ShippingRateProviderSystemName))
-                            so.ShippingRateProviderSystemName = srcm.SystemName;
+                    //set system name if not set yet
+                    if (string.IsNullOrEmpty(so.ShippingRateProviderSystemName))
+                        so.ShippingRateProviderSystemName = shippingRateMethod.SystemName;
 
-                        result.ShippingOptions.Add(so);
-                    }
+                    result.ShippingOptions.Add(so);
                 }
             }
 
-            //returnvalidoptions if there are any (no matter of the errors returned by other shipping rate compuation methods).
+            //return valid options if there are any (no matter of the errors returned by other shipping rate computation methods).
             if (!result.ShippingOptions.Any() && !result.Errors.Any())
                 result.Errors.Clear();
 
             //no shipping options loaded
             if (result.ShippingOptions.Count == 0 && result.Errors.Count == 0)
-                result.Errors.Add(_translationService.GetResource("Checkout.ShippingOptionCouldNotBeLoaded"));
+                result.Errors.Add("Shipping options could not be loaded");
 
             return result;
         }

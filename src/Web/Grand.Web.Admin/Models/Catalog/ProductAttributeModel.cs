@@ -6,13 +6,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Catalog
 {
-    public partial class ProductAttributeModel : BaseEntityModel, ILocalizedModel<ProductAttributeLocalizedModel>, IStoreLinkModel
+    public class ProductAttributeModel : BaseEntityModel, ILocalizedModel<ProductAttributeLocalizedModel>, IStoreLinkModel
     {
-        public ProductAttributeModel()
-        {
-            Locales = new List<ProductAttributeLocalizedModel>();
-        }
-
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ProductAttributes.Fields.Name")]
         public string Name { get; set; }
 
@@ -27,11 +22,11 @@ namespace Grand.Web.Admin.Models.Catalog
         [UIHint("Stores")]
         public string[] Stores { get; set; }
 
-        public IList<ProductAttributeLocalizedModel> Locales { get; set; }
+        public IList<ProductAttributeLocalizedModel> Locales { get; set; } = new List<ProductAttributeLocalizedModel>();
 
         #region Nested classes
 
-        public partial class UsedByProductModel : BaseEntityModel
+        public class UsedByProductModel : BaseEntityModel
         {
             [GrandResourceDisplayName("Admin.Catalog.Attributes.ProductAttributes.UsedByProducts.Product")]
             public string ProductName { get; set; }
@@ -42,7 +37,7 @@ namespace Grand.Web.Admin.Models.Catalog
         #endregion
     }
 
-    public partial class ProductAttributeLocalizedModel : ILocalizedModelLocal
+    public class ProductAttributeLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 
@@ -55,13 +50,8 @@ namespace Grand.Web.Admin.Models.Catalog
         public string Description { get; set; }
     }
 
-    public partial class PredefinedProductAttributeValueModel : BaseEntityModel, ILocalizedModel<PredefinedProductAttributeValueLocalizedModel>
+    public class PredefinedProductAttributeValueModel : BaseEntityModel, ILocalizedModel<PredefinedProductAttributeValueLocalizedModel>
     {
-        public PredefinedProductAttributeValueModel()
-        {
-            Locales = new List<PredefinedProductAttributeValueLocalizedModel>();
-        }
-
         public string ProductAttributeId { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ProductAttributes.PredefinedValues.Fields.Name")]
@@ -89,9 +79,9 @@ namespace Grand.Web.Admin.Models.Catalog
         [GrandResourceDisplayName("Admin.Catalog.Attributes.ProductAttributes.PredefinedValues.Fields.DisplayOrder")]
         public int DisplayOrder { get; set; }
 
-        public IList<PredefinedProductAttributeValueLocalizedModel> Locales { get; set; }
+        public IList<PredefinedProductAttributeValueLocalizedModel> Locales { get; set; } = new List<PredefinedProductAttributeValueLocalizedModel>();
     }
-    public partial class PredefinedProductAttributeValueLocalizedModel : ILocalizedModelLocal
+    public class PredefinedProductAttributeValueLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

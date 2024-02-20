@@ -4,7 +4,7 @@ using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Catalog.Services.Products
@@ -12,7 +12,7 @@ namespace Grand.Business.Catalog.Services.Products
     /// <summary>
     /// Specification attribute service
     /// </summary>
-    public partial class SpecificationAttributeService : ISpecificationAttributeService
+    public class SpecificationAttributeService : ISpecificationAttributeService
     {
         #region Fields
 
@@ -52,14 +52,14 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Specification attribute</returns>
         public virtual async Task<SpecificationAttribute> GetSpecificationAttributeById(string specificationAttributeId)
         {
-            string key = string.Format(CacheKey.SPECIFICATION_BY_ID_KEY, specificationAttributeId);
+            var key = string.Format(CacheKey.SPECIFICATION_BY_ID_KEY, specificationAttributeId);
             return await _cacheBase.GetAsync(key, () => _specificationAttributeRepository.GetByIdAsync(specificationAttributeId));
         }
 
         /// <summary>
-        /// Gets a specification attribute by sename
+        /// Gets a specification attribute by se-name
         /// </summary>
-        /// <param name="sename">Sename</param>
+        /// <param name="sename">Se-name</param>
         /// <returns>Specification attribute</returns>
         public virtual async Task<SpecificationAttribute> GetSpecificationAttributeBySeName(string sename)
         {
@@ -70,8 +70,8 @@ namespace Grand.Business.Catalog.Services.Products
 
             var key = string.Format(CacheKey.SPECIFICATION_BY_SENAME, sename);
             return await _cacheBase.GetAsync(key, async () => 
-                    await Task.FromResult(_specificationAttributeRepository.Table.Where(x => x.SeName == sename)
-                .FirstOrDefault()));
+                    await Task.FromResult(_specificationAttributeRepository.Table
+                        .FirstOrDefault(x => x.SeName == sename)));
         }
 
 
@@ -96,8 +96,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="specificationAttribute">The specification attribute</param>
         public virtual async Task InsertSpecificationAttribute(SpecificationAttribute specificationAttribute)
         {
-            if (specificationAttribute == null)
-                throw new ArgumentNullException(nameof(specificationAttribute));
+            ArgumentNullException.ThrowIfNull(specificationAttribute);
 
             await _specificationAttributeRepository.InsertAsync(specificationAttribute);
 
@@ -114,8 +113,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="specificationAttribute">The specification attribute</param>
         public virtual async Task UpdateSpecificationAttribute(SpecificationAttribute specificationAttribute)
         {
-            if (specificationAttribute == null)
-                throw new ArgumentNullException(nameof(specificationAttribute));
+            ArgumentNullException.ThrowIfNull(specificationAttribute);
 
             await _specificationAttributeRepository.UpdateAsync(specificationAttribute);
 
@@ -131,8 +129,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="specificationAttribute">The specification attribute</param>
         public virtual async Task DeleteSpecificationAttribute(SpecificationAttribute specificationAttribute)
         {
-            if (specificationAttribute == null)
-                throw new ArgumentNullException(nameof(specificationAttribute));
+            ArgumentNullException.ThrowIfNull(specificationAttribute);
 
             //delete from all product collections
             await _productRepository.PullFilter(string.Empty, x => x.ProductSpecificationAttributes, z => z.SpecificationAttributeId, specificationAttribute.Id);
@@ -161,7 +158,7 @@ namespace Grand.Business.Catalog.Services.Products
             if (string.IsNullOrEmpty(specificationAttributeOptionId))
                 return await Task.FromResult<SpecificationAttribute>(null);
 
-            string key = string.Format(CacheKey.SPECIFICATION_BY_OPTIONID_KEY, specificationAttributeOptionId);
+            var key = string.Format(CacheKey.SPECIFICATION_BY_OPTIONID_KEY, specificationAttributeOptionId);
             return await _cacheBase.GetAsync(key, async () =>
             {
                 var query = from p in _specificationAttributeRepository.Table
@@ -177,14 +174,13 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="specificationAttributeOption">The specification attribute option</param>
         public virtual async Task DeleteSpecificationAttributeOption(SpecificationAttributeOption specificationAttributeOption)
         {
-            if (specificationAttributeOption == null)
-                throw new ArgumentNullException(nameof(specificationAttributeOption));
+            ArgumentNullException.ThrowIfNull(specificationAttributeOption);
 
             //delete from all product collections
             await _productRepository.PullFilter(string.Empty, x => x.ProductSpecificationAttributes, z => z.SpecificationAttributeOptionId, specificationAttributeOption.Id);
 
             var specificationAttribute = await GetSpecificationAttributeByOptionId(specificationAttributeOption.Id);
-            var sao = specificationAttribute.SpecificationAttributeOptions.Where(x => x.Id == specificationAttributeOption.Id).FirstOrDefault();
+            var sao = specificationAttribute.SpecificationAttributeOptions.FirstOrDefault(x => x.Id == specificationAttributeOption.Id);
             if (sao == null)
                 throw new ArgumentException("No specification attribute option found with the specified id");
 
@@ -212,8 +208,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task InsertProductSpecificationAttribute(ProductSpecificationAttribute productSpecificationAttribute, string productId)
         {
-            if (productSpecificationAttribute == null)
-                throw new ArgumentNullException(nameof(productSpecificationAttribute));
+            ArgumentNullException.ThrowIfNull(productSpecificationAttribute);
 
             await _productRepository.AddToSet(productId, x => x.ProductSpecificationAttributes, productSpecificationAttribute);
 
@@ -231,8 +226,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task UpdateProductSpecificationAttribute(ProductSpecificationAttribute productSpecificationAttribute, string productId)
         {
-            if (productSpecificationAttribute == null)
-                throw new ArgumentNullException(nameof(productSpecificationAttribute));
+            ArgumentNullException.ThrowIfNull(productSpecificationAttribute);
 
             await _productRepository.UpdateToSet(productId, x => x.ProductSpecificationAttributes, z => z.Id, productSpecificationAttribute.Id, productSpecificationAttribute);
 
@@ -249,8 +243,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productId">Product ident</param>
         public virtual async Task DeleteProductSpecificationAttribute(ProductSpecificationAttribute productSpecificationAttribute, string productId)
         {
-            if (productSpecificationAttribute == null)
-                throw new ArgumentNullException(nameof(productSpecificationAttribute));
+            ArgumentNullException.ThrowIfNull(productSpecificationAttribute);
 
             await _productRepository.PullFilter(productId, x => x.ProductSpecificationAttributes, x => x.Id, productSpecificationAttribute.Id);
 

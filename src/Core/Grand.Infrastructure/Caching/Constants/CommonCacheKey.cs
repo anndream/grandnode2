@@ -26,7 +26,7 @@
         /// Key for caching
         /// </summary>
         /// <remarks>
-        /// {0} : discont ID
+        /// {0} : discount ID
         /// </remarks>
         public static string DISCOUNTS_BY_ID_KEY => "Grand.discount.id-{0}";
 
@@ -117,12 +117,11 @@
         /// </summary>
         /// <remarks>
         /// {0} : picture ID
-        /// {1} : store ID
-        /// {2} : target size
-        /// {3} : showDefaultPicture
-        /// {4} : storeLocation
+        /// {1} : target size
+        /// {2} : showDefaultPicture
+        /// {3} : storeLocation
         /// </remarks>
-        public static string PICTURE_BY_KEY => "Grand.picture-{0}-{1}-{2}-{3}-{4}";
+        public static string PICTURE_BY_KEY => "Grand.picture-{0}-{1}-{2}-{3}";
 
         #region Seo
 
@@ -135,11 +134,6 @@
         /// {2} : language ID
         /// </remarks>
         public static string URLEntity_ACTIVE_BY_ID_NAME_LANGUAGE_KEY => "Grand.urlEntity.active.id-name-language-{0}-{1}-{2}";
-
-        /// <summary>
-        /// Key for caching
-        /// </summary>
-        public static string URLEntity_ALL_KEY => "Grand.urlEntity.all";
 
         /// <summary>
         /// Key for caching
@@ -218,7 +212,7 @@
         /// Key for caching
         /// </summary>
         /// <remarks>
-        /// {0} : page systemname
+        /// {0} : page system name
         /// {1} : store id
         /// </remarks>
         public static string PAGES_BY_SYSTEMNAME => "Grand.pages.systemname-{0}-{1}";

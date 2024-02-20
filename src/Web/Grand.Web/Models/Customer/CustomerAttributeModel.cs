@@ -3,13 +3,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Models.Customer
 {
-    public partial class CustomerAttributeModel : BaseEntityModel
+    public class CustomerAttributeModel : BaseEntityModel
     {
-        public CustomerAttributeModel()
-        {
-            Values = new List<CustomerAttributeValueModel>();
-        }
-
         public string Name { get; set; }
 
         public bool IsRequired { get; set; }
@@ -22,11 +17,10 @@ namespace Grand.Web.Models.Customer
 
         public AttributeControlType AttributeControlType { get; set; }
 
-        public IList<CustomerAttributeValueModel> Values { get; set; }
-
+        public IList<CustomerAttributeValueModel> Values { get; set; } = new List<CustomerAttributeValueModel>();
     }
 
-    public partial class CustomerAttributeValueModel : BaseEntityModel
+    public class CustomerAttributeValueModel : BaseEntityModel
     {
         public string Name { get; set; }
 

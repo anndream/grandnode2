@@ -10,7 +10,7 @@ namespace Grand.Business.Catalog.Services.Products
     /// <summary>
     /// Copy Product service
     /// </summary>
-    public partial class CopyProductService : ICopyProductService
+    public class CopyProductService : ICopyProductService
     {
         #region Fields
 
@@ -48,8 +48,7 @@ namespace Grand.Business.Catalog.Services.Products
         public virtual async Task<Product> CopyProduct(Product product, string newName,
             bool isPublished = true, bool copyAssociatedProducts = true)
         {
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
+            ArgumentNullException.ThrowIfNull(product);
 
             if (string.IsNullOrEmpty(newName))
                 newName = $"{product.Name} - CopyProduct";
@@ -147,8 +146,6 @@ namespace Grand.Business.Catalog.Services.Products
                 AvailableEndDateTimeUtc = product.AvailableEndDateTimeUtc,
                 DisplayOrder = product.DisplayOrder,
                 Published = isPublished,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
                 Locales = product.Locales,
                 CustomerGroups = product.CustomerGroups,
                 Stores = product.Stores
@@ -172,7 +169,7 @@ namespace Grand.Business.Catalog.Services.Products
                 productCopy.ProductCollections.Add(productCollections);
             }
 
-            // product <-> releated products mappings
+            // product <-> related products mappings
             foreach (var relatedProduct in product.RelatedProducts)
             {
                 productCopy.RelatedProducts.Add(relatedProduct);
@@ -228,7 +225,7 @@ namespace Grand.Business.Catalog.Services.Products
             await _productService.InsertProduct(productCopy);
 
             //search engine name
-            string seName = await productCopy.ValidateSeName("", productCopy.Name, true, _seoSettings, _slugService, _languageService);
+            var seName = await productCopy.ValidateSeName("", productCopy.Name, true, _seoSettings, _slugService, _languageService);
             productCopy.SeName = seName;
             await _productService.UpdateProduct(productCopy);
             await _slugService.SaveSlug(productCopy, seName, "");

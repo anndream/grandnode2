@@ -5,7 +5,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- master
+- main
 
 pool:
   vmImage: ubuntu-latest
@@ -25,16 +25,21 @@ services:
 
 steps:
 - task: UseDotNet@2
-  displayName: 'Install .NET Core SDK 6'
+  displayName: 'Install .NET Core SDK 8'
   inputs:
-    version: '6.0.x'
+    version: '8.0.x'
+
+- task: NuGetToolInstaller@1
+  displayName: 'Install NuGet >=6.3.0-0'
+  inputs:
+    versionSpec: '>=6.3.0-0'
+    checkLatest: true
 
 - task: NuGetCommand@2
   inputs:
     command: 'restore'
     restoreSolution: '**/*.sln'
     feedsToUse: 'select'
-    vstsFeed: 'ac9ef43d-5e52-40a8-a3ae-09d4d3dd8a78'
 
 - task: DotNetCoreCLI@2
   inputs:
@@ -50,22 +55,12 @@ steps:
     arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
     publishTestResults: true
     projects: '**/Tests/**/*.csproj'
-  
+
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage report'
   inputs:
     codeCoverageTool: 'Cobertura'
     summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
-
-- task: Docker@2
-  displayName: 'Build and push to dockerhub'
-  inputs:
-    containerRegistry: 'DockerHub'
-    repository: 'grandnode/grandnode2'
-    command: 'buildAndPush'
-    tags: |
-      latest
-    Dockerfile: '**/Dockerfile'
 
 - task: DotNetCoreCLI@2
   inputs:

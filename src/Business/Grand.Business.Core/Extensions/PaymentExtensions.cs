@@ -19,18 +19,10 @@ namespace Grand.Business.Core.Extensions
         public static bool IsPaymentMethodActive(this IPaymentProvider paymentMethod,
             PaymentSettings paymentSettings)
         {
-            if (paymentMethod == null)
-                throw new ArgumentNullException(nameof(paymentMethod));
+            ArgumentNullException.ThrowIfNull(paymentMethod);
+            ArgumentNullException.ThrowIfNull(paymentSettings);
 
-            if (paymentSettings == null)
-                throw new ArgumentNullException(nameof(paymentSettings));
-
-            if (paymentSettings.ActivePaymentProviderSystemNames == null)
-                return false;
-            foreach (var activeMethodSystemName in paymentSettings.ActivePaymentProviderSystemNames)
-                if (paymentMethod.SystemName.Equals(activeMethodSystemName, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            return false;
+            return paymentSettings.ActivePaymentProviderSystemNames != null && paymentSettings.ActivePaymentProviderSystemNames.Any(activeMethodSystemName => paymentMethod.SystemName.Equals(activeMethodSystemName, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -46,8 +38,7 @@ namespace Grand.Business.Core.Extensions
             IOrderCalculationService orderTotalCalculationService, IList<ShoppingCartItem> cart,
             double fee, bool usePercentage)
         {
-            if (paymentMethod == null)
-                throw new ArgumentNullException(nameof(paymentMethod));
+            ArgumentNullException.ThrowIfNull(paymentMethod);
             if (fee <= 0)
                 return fee;
 
@@ -56,7 +47,7 @@ namespace Grand.Business.Core.Extensions
             {
                 //percentage
                 var shoppingCartSubTotal = await orderTotalCalculationService.GetShoppingCartSubTotal(cart, true);
-                result = (double)((((float)shoppingCartSubTotal.subTotalWithDiscount) * ((float)fee)) / 100f);
+                result = (float)shoppingCartSubTotal.subTotalWithDiscount * (float)fee / 100f;
             }
             else
             {

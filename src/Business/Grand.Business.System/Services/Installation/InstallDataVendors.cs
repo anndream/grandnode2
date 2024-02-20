@@ -1,11 +1,10 @@
 ﻿using Grand.Business.Core.Extensions;
-using Grand.Business.Core.Interfaces.System.Installation;
 using Grand.Domain.Seo;
 using Grand.Domain.Vendors;
 
 namespace Grand.Business.System.Services.Installation
 {
-    public partial class InstallationService : IInstallationService
+    public partial class InstallationService
     {
         protected virtual async Task InstallVendors()
         {
@@ -22,7 +21,7 @@ namespace Grand.Business.System.Services.Installation
                     DisplayOrder = 1,
                     PageSize = 6,
                     AllowCustomersToSelectPageSize = true,
-                    PageSizeOptions = "6, 3, 9, 18",
+                    PageSizeOptions = "6, 3, 9, 18"
                 },
                 new Vendor
                 {
@@ -35,11 +34,11 @@ namespace Grand.Business.System.Services.Installation
                     DisplayOrder = 2,
                     PageSize = 6,
                     AllowCustomersToSelectPageSize = true,
-                    PageSizeOptions = "6, 3, 9, 18",
+                    PageSizeOptions = "6, 3, 9, 18"
                 }
             };
 
-            await _vendorRepository.InsertAsync(vendors);
+            vendors.ForEach(x=>_vendorRepository.Insert(x));
 
             //search engine names
             foreach (var vendor in vendors)

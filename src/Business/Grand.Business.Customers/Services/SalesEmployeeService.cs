@@ -3,7 +3,7 @@ using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Customers.Services
@@ -35,7 +35,7 @@ namespace Grand.Business.Customers.Services
         /// <returns>SalesEmployee</returns>
         public virtual Task<SalesEmployee> GetSalesEmployeeById(string salesEmployeeId)
         {
-            string key = string.Format(CacheKey.SALESEMPLOYEE_BY_ID_KEY, salesEmployeeId);
+            var key = string.Format(CacheKey.SALESEMPLOYEE_BY_ID_KEY, salesEmployeeId);
             return _cacheBase.GetAsync(key, () => _salesEmployeeRepository.GetByIdAsync(salesEmployeeId));
         }
 
@@ -60,8 +60,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="salesEmployee">Sales Employee</param>
         public virtual async Task InsertSalesEmployee(SalesEmployee salesEmployee)
         {
-            if (salesEmployee == null)
-                throw new ArgumentNullException(nameof(salesEmployee));
+            ArgumentNullException.ThrowIfNull(salesEmployee);
 
             await _salesEmployeeRepository.InsertAsync(salesEmployee);
 
@@ -78,8 +77,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="salesEmployee">Sales Employee</param>
         public virtual async Task UpdateSalesEmployee(SalesEmployee salesEmployee)
         {
-            if (salesEmployee == null)
-                throw new ArgumentNullException(nameof(salesEmployee));
+            ArgumentNullException.ThrowIfNull(salesEmployee);
 
             await _salesEmployeeRepository.UpdateAsync(salesEmployee);
 
@@ -93,11 +91,10 @@ namespace Grand.Business.Customers.Services
         /// <summary>
         /// Deletes a sales employee
         /// </summary>
-        /// <param name="warehouse">The sales employee</param>
+        /// <param name="salesEmployee">The sales employee</param>
         public virtual async Task DeleteSalesEmployee(SalesEmployee salesEmployee)
         {
-            if (salesEmployee == null)
-                throw new ArgumentNullException(nameof(salesEmployee));
+            ArgumentNullException.ThrowIfNull(salesEmployee);
 
             await _salesEmployeeRepository.DeleteAsync(salesEmployee);
 

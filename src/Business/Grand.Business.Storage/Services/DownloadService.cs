@@ -1,5 +1,5 @@
 using Grand.Business.Core.Interfaces.Storage;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Media;
 using Grand.Infrastructure.Extensions;
 using MediatR;
@@ -9,7 +9,7 @@ namespace Grand.Business.Storage.Services
     /// <summary>
     /// Download service
     /// </summary>
-    public partial class DownloadService : IDownloadService
+    public class DownloadService : IDownloadService
     {
         #region Fields
 
@@ -50,11 +50,11 @@ namespace Grand.Business.Storage.Services
             if (string.IsNullOrEmpty(downloadId))
                 return null;
 
-            var _download = await _downloadRepository.GetByIdAsync(downloadId);
-            if (_download != null && !_download.UseDownloadUrl)
-                _download.DownloadBinary = await DownloadAsBytes(_download.DownloadObjectId);
+            var download = await _downloadRepository.GetByIdAsync(downloadId);
+            if (download is { UseDownloadUrl: false })
+                download.DownloadBinary = await DownloadAsBytes(download.DownloadObjectId);
 
-            return _download;
+            return download;
         }
 
         protected virtual async Task<byte[]> DownloadAsBytes(string objectId)
@@ -77,7 +77,7 @@ namespace Grand.Business.Storage.Services
                         select o;
 
             var order = query.FirstOrDefault();
-            if (!order.UseDownloadUrl)
+            if (order is { UseDownloadUrl: false })
                 order.DownloadBinary = await DownloadAsBytes(order.DownloadObjectId);
 
             return await Task.FromResult(order);
@@ -89,8 +89,7 @@ namespace Grand.Business.Storage.Services
         /// <param name="download">Download</param>
         public virtual async Task InsertDownload(Download download)
         {
-            if (download == null)
-                throw new ArgumentNullException(nameof(download));
+            ArgumentNullException.ThrowIfNull(download);
             if (!download.UseDownloadUrl)
             {
                 download.DownloadObjectId = await _storeFilesContext.BucketUploadFromBytes(download.Filename, download.DownloadBinary);
@@ -108,8 +107,7 @@ namespace Grand.Business.Storage.Services
         /// <param name="download">Download</param>
         public virtual async Task UpdateDownload(Download download)
         {
-            if (download == null)
-                throw new ArgumentNullException(nameof(download));
+            ArgumentNullException.ThrowIfNull(download);
 
             await _downloadRepository.UpdateAsync(download);
 
@@ -122,8 +120,7 @@ namespace Grand.Business.Storage.Services
         /// <param name="download">Download</param>
         public virtual async Task DeleteDownload(Download download)
         {
-            if (download == null)
-                throw new ArgumentNullException(nameof(download));
+            ArgumentNullException.ThrowIfNull(download);
 
             await _downloadRepository.DeleteAsync(download);
 

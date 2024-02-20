@@ -3,7 +3,7 @@ using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Customers.Services
@@ -11,7 +11,7 @@ namespace Grand.Business.Customers.Services
     /// <summary>
     /// Customer attribute service
     /// </summary>
-    public partial class CustomerAttributeService : ICustomerAttributeService
+    public class CustomerAttributeService : ICustomerAttributeService
     {
         #region Fields
 
@@ -48,7 +48,7 @@ namespace Grand.Business.Customers.Services
         /// <returns>Customer attributes</returns>
         public virtual async Task<IList<CustomerAttribute>> GetAllCustomerAttributes()
         {
-            string key = CacheKey.CUSTOMERATTRIBUTES_ALL_KEY;
+            var key = CacheKey.CUSTOMERATTRIBUTES_ALL_KEY;
             return await _cacheBase.GetAsync(key, async () =>
             {
                 var query = from ca in _customerAttributeRepository.Table
@@ -65,7 +65,7 @@ namespace Grand.Business.Customers.Services
         /// <returns>Customer attribute</returns>
         public virtual Task<CustomerAttribute> GetCustomerAttributeById(string customerAttributeId)
         {
-            string key = string.Format(CacheKey.CUSTOMERATTRIBUTES_BY_ID_KEY, customerAttributeId);
+            var key = string.Format(CacheKey.CUSTOMERATTRIBUTES_BY_ID_KEY, customerAttributeId);
             return _cacheBase.GetAsync(key, () => _customerAttributeRepository.GetByIdAsync(customerAttributeId));
         }
 
@@ -75,8 +75,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerAttribute">Customer attribute</param>
         public virtual async Task InsertCustomerAttribute(CustomerAttribute customerAttribute)
         {
-            if (customerAttribute == null)
-                throw new ArgumentNullException(nameof(customerAttribute));
+            ArgumentNullException.ThrowIfNull(customerAttribute);
 
             await _customerAttributeRepository.InsertAsync(customerAttribute);
 
@@ -93,8 +92,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerAttribute">Customer attribute</param>
         public virtual async Task UpdateCustomerAttribute(CustomerAttribute customerAttribute)
         {
-            if (customerAttribute == null)
-                throw new ArgumentNullException(nameof(customerAttribute));
+            ArgumentNullException.ThrowIfNull(customerAttribute);
 
             await _customerAttributeRepository.UpdateAsync(customerAttribute);
 
@@ -111,8 +109,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerAttribute">Customer attribute</param>
         public virtual async Task DeleteCustomerAttribute(CustomerAttribute customerAttribute)
         {
-            if (customerAttribute == null)
-                throw new ArgumentNullException(nameof(customerAttribute));
+            ArgumentNullException.ThrowIfNull(customerAttribute);
 
             await _customerAttributeRepository.DeleteAsync(customerAttribute);
 
@@ -130,8 +127,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerAttributeValue">Customer attribute value</param>
         public virtual async Task InsertCustomerAttributeValue(CustomerAttributeValue customerAttributeValue)
         {
-            if (customerAttributeValue == null)
-                throw new ArgumentNullException(nameof(customerAttributeValue));
+            ArgumentNullException.ThrowIfNull(customerAttributeValue);
 
             var ca = await _customerAttributeRepository.GetByIdAsync(customerAttributeValue.CustomerAttributeId);
             ca.CustomerAttributeValues.Add(customerAttributeValue);
@@ -151,8 +147,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerAttributeValue">Customer attribute value</param>
         public virtual async Task UpdateCustomerAttributeValue(CustomerAttributeValue customerAttributeValue)
         {
-            if (customerAttributeValue == null)
-                throw new ArgumentNullException(nameof(customerAttributeValue));
+            ArgumentNullException.ThrowIfNull(customerAttributeValue);
 
             var ca = await _customerAttributeRepository.GetByIdAsync(customerAttributeValue.CustomerAttributeId);
             ca.CustomerAttributeValues.Remove(ca.CustomerAttributeValues.FirstOrDefault(c => c.Id == customerAttributeValue.Id));
@@ -173,8 +168,7 @@ namespace Grand.Business.Customers.Services
         /// <param name="customerAttributeValue">Customer attribute value</param>
         public virtual async Task DeleteCustomerAttributeValue(CustomerAttributeValue customerAttributeValue)
         {
-            if (customerAttributeValue == null)
-                throw new ArgumentNullException(nameof(customerAttributeValue));
+            ArgumentNullException.ThrowIfNull(customerAttributeValue);
 
             var ca = await _customerAttributeRepository.GetByIdAsync(customerAttributeValue.CustomerAttributeId);
             ca.CustomerAttributeValues.Remove(ca.CustomerAttributeValues.FirstOrDefault(c => c.Id == customerAttributeValue.Id));

@@ -1,4 +1,4 @@
-﻿@model Grand.Web.Models.Catalog.SearchModel
+﻿@model SearchModel
 @inject IPageHeadBuilder pagebuilder
 @{
     Layout = "_TwoColumns";
@@ -134,7 +134,7 @@
                 <partial name="Partials/Pagination" />
             </template>
         </div>
-        @if (!String.IsNullOrEmpty(Model.Warning))
+        @if (!string.IsNullOrEmpty(Model.Warning))
         {
             <div class="warning alert alert-danger my-3">
                 @Model.Warning
@@ -153,9 +153,6 @@
 @section filters
 {
     @*Rendering filtering section*@
-    @if (Model.PagingFilteringContext.SpecificationFilter.Enabled)
-    {
-        <partial name="Partials/Filtering" model="Model.PagingFilteringContext.SpecificationFilter" />
-    }
+    <partial name="Partials/Filtering" model="Model.PagingFilteringContext.SpecificationFilter" />
 }
 <partial name="Partials/ModelScript" model="@Json.Serialize(Model)" />

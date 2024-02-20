@@ -1,5 +1,6 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Seo;
+using Grand.Domain.Seo;
 using Grand.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -23,9 +24,9 @@ namespace Grand.Web.Common.Routing
             _config = config;
         }
 
-        protected async ValueTask<string> GetSeName(string entityId, string entityName, string languageId)
+        private async ValueTask<string> GetSeName(string entityId, string entityName, string languageId)
         {
-            string result = string.Empty;
+            var result = string.Empty;
             if (!string.IsNullOrEmpty(languageId))
             {
                 result = await _slugService.GetActiveSlug(entityId, entityName, languageId);
@@ -41,9 +42,6 @@ namespace Grand.Web.Common.Routing
 
         public override async ValueTask<RouteValueDictionary> TransformAsync(HttpContext context, RouteValueDictionary values)
         {
-            if (values == null)
-                return null;
-
             var slug = values["SeName"];
             if (slug == null)
                 return values;
@@ -73,14 +71,13 @@ namespace Grand.Web.Common.Routing
             //otherwise it can cause some issues when customers choose a new language but a slug stays the same
             if (_config.SeoFriendlyUrlsForLanguagesEnabled)
             {
-                var urllanguage = values["language"];
-                if (urllanguage != null && !string.IsNullOrEmpty(urllanguage.ToString()))
+                var urlLanguage = values["language"];
+                if (urlLanguage != null && !string.IsNullOrEmpty(urlLanguage.ToString()))
                 {
-                    var language = (await _languageService.GetAllLanguages()).FirstOrDefault(x => x.UniqueSeoCode.ToLowerInvariant() == urllanguage.ToString().ToLowerInvariant());
-                    if (language == null)
-                        language = (await _languageService.GetAllLanguages()).FirstOrDefault();
+                    var language = (await _languageService.GetAllLanguages()).FirstOrDefault(x => x.UniqueSeoCode.ToLowerInvariant() == urlLanguage.ToString()?.ToLowerInvariant()) ??
+                                   (await _languageService.GetAllLanguages()).FirstOrDefault();
 
-                    var slugForCurrentLanguage = await GetSeName(entityUrl.EntityId, entityUrl.EntityName, language.Id);
+                    var slugForCurrentLanguage = await GetSeName(entityUrl.EntityId, entityUrl.EntityName, language?.Id);
                     if (!string.IsNullOrEmpty(slugForCurrentLanguage) && !slugForCurrentLanguage.Equals(slug.ToString(), StringComparison.OrdinalIgnoreCase))
                     {
                         values["controller"] = "Common";
@@ -92,80 +89,82 @@ namespace Grand.Web.Common.Routing
                     }
                 }
             }
-            else
-            {
-                //TODO - redirect when current lang is not the same as slug lang
-            }
 
-            switch (entityUrl.EntityName.ToLowerInvariant())
+            switch (entityUrl.EntityName)
             {
-                case "product":
+                case EntityTypes.Product:
                     values["controller"] = "Product";
                     values["action"] = "ProductDetails";
                     values["productid"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "category":
+                case EntityTypes.Category:
                     values["controller"] = "Catalog";
                     values["action"] = "Category";
                     values["categoryid"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "brand":
+                case EntityTypes.Brand:
                     values["controller"] = "Catalog";
                     values["action"] = "Brand";
                     values["brandid"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "collection":
+                case EntityTypes.Collection:
                     values["controller"] = "Catalog";
                     values["action"] = "Collection";
                     values["collectionid"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "vendor":
+                case EntityTypes.Vendor:
                     values["controller"] = "Catalog";
                     values["action"] = "Vendor";
                     values["vendorid"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "newsitem":
+                case EntityTypes.NewsItem:
                     values["controller"] = "News";
                     values["action"] = "NewsItem";
                     values["newsItemId"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "blogpost":
+                case EntityTypes.BlogPost:
                     values["controller"] = "Blog";
                     values["action"] = "BlogPost";
                     values["blogPostId"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "page":
+                case EntityTypes.Page:
                     values["controller"] = "Page";
                     values["action"] = "PageDetails";
                     values["pageId"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "knowledgebasearticle":
+                case EntityTypes.KnowledgeBaseArticle:
                     values["controller"] = "Knowledgebase";
                     values["action"] = "KnowledgebaseArticle";
                     values["articleId"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "knowledgebasecategory":
+                case EntityTypes.KnowledgeBaseCategory:
                     values["controller"] = "Knowledgebase";
                     values["action"] = "ArticlesByCategory";
                     values["categoryId"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
-                case "course":
+                case EntityTypes.Course:
                     values["controller"] = "Course";
                     values["action"] = "Details";
                     values["courseId"] = entityUrl.EntityId;
                     values["SeName"] = entityUrl.Slug;
                     break;
                 default:
+                    if (!string.IsNullOrEmpty(entityUrl.Controller) && !string.IsNullOrEmpty(entityUrl.Action))
+                    {
+                        values["controller"] = entityUrl.Controller;
+                        values["action"] = entityUrl.Action;
+                        values["SeName"] = entityUrl.Slug;
+                    }
                     break;
             }
             return values;

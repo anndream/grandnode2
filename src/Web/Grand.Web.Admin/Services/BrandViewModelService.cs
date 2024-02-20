@@ -3,39 +3,33 @@ using Grand.Business.Core.Interfaces.Catalog.Discounts;
 using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Business.Core.Interfaces.Common.Seo;
-using Grand.Business.Core.Interfaces.Customers;
 using Grand.Business.Core.Interfaces.Storage;
 using Grand.Domain.Catalog;
 using Grand.Domain.Discounts;
 using Grand.Domain.Seo;
 using Grand.Infrastructure;
 using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Interfaces;
 using Grand.Web.Admin.Models.Catalog;
 using Grand.Web.Common.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Grand.Web.Admin.Services
 {
-    public partial class BrandViewModelService : IBrandViewModelService
+    public class BrandViewModelService : IBrandViewModelService
     {
         #region Fields
 
         private readonly IBrandService _brandService;
         private readonly IBrandLayoutService _brandLayoutService;
-        private readonly ICustomerService _customerService;
         private readonly ISlugService _slugService;
         private readonly IPictureService _pictureService;
-        private readonly ITranslationService _translationService;
         private readonly IDiscountService _discountService;
-        private readonly ICustomerActivityService _customerActivityService;
         private readonly IDateTimeService _dateTimeService;
         private readonly ILanguageService _languageService;
         private readonly IWorkContext _workContext;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly SeoSettings _seoSettings;
 
         #endregion
@@ -45,30 +39,22 @@ namespace Grand.Web.Admin.Services
         public BrandViewModelService(
             IBrandService brandService,
             IBrandLayoutService brandLayoutService,
-            ICustomerService customerService,
             ISlugService slugService,
             IPictureService pictureService,
-            ITranslationService translationService,
             IDiscountService discountService,
-            ICustomerActivityService customerActivityService,
             IDateTimeService dateTimeService,
             ILanguageService languageService,
             IWorkContext workContext,
-            IHttpContextAccessor httpContextAccessor,
             SeoSettings seoSettings)
         {
             _brandLayoutService = brandLayoutService;
             _brandService = brandService;
-            _customerService = customerService;
             _slugService = slugService;
             _pictureService = pictureService;
-            _translationService = translationService;
             _discountService = discountService;
-            _customerActivityService = customerActivityService;
             _dateTimeService = dateTimeService;
             _languageService = languageService;
             _workContext = workContext;
-            _httpContextAccessor = httpContextAccessor;
             _seoSettings = seoSettings;
         }
 
@@ -76,8 +62,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual void PrepareSortOptionsModel(BrandModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             model.AvailableSortOptions = ProductSortingEnum.Position.ToSelectList().ToList();
             model.AvailableSortOptions.Insert(0, new SelectListItem { Text = "None", Value = "-1" });
@@ -85,8 +70,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task PrepareLayoutsModel(BrandModel model)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             var layouts = await _brandLayoutService.GetAllBrandLayouts();
             foreach (var layout in layouts)
@@ -101,8 +85,7 @@ namespace Grand.Web.Admin.Services
 
         public virtual async Task PrepareDiscountModel(BrandModel model, Brand brand, bool excludeProperties)
         {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
+            ArgumentNullException.ThrowIfNull(model);
 
             model.AvailableDiscounts = (await _discountService
                 .GetAllDiscounts(DiscountType.AssignedToBrands, storeId: _workContext.CurrentCustomer.Id, showHidden: true))
@@ -118,8 +101,6 @@ namespace Grand.Web.Admin.Services
         public virtual async Task<Brand> InsertBrandModel(BrandModel model)
         {
             var brand = model.ToEntity();
-            brand.CreatedOnUtc = DateTime.UtcNow;
-            brand.UpdatedOnUtc = DateTime.UtcNow;
             //discounts
             var allDiscounts = await _discountService.GetAllDiscounts(DiscountType.AssignedToBrands, showHidden: true);
             foreach (var discount in allDiscounts)
@@ -140,18 +121,13 @@ namespace Grand.Web.Admin.Services
             //update picture seo file name
             await _pictureService.UpdatePictureSeoNames(brand.PictureId, brand.Name);
 
-            //activity log
-            _ = _customerActivityService.InsertActivity("AddNewBrand", brand.Id,
-                _workContext.CurrentCustomer, _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.AddNewBrand"), brand.Name);
             return brand;
         }
 
         public virtual async Task<Brand> UpdateBrandModel(Brand brand, BrandModel model)
         {
-            string prevPictureId = brand.PictureId;
+            var prevPictureId = brand.PictureId;
             brand = model.ToEntity(brand);
-            brand.UpdatedOnUtc = DateTime.UtcNow;
             brand.Locales = await model.Locales.ToTranslationProperty(brand, x => x.Name, _seoSettings, _slugService, _languageService);
             //discounts
             var allDiscounts = await _discountService.GetAllDiscounts(DiscountType.AssignedToBrands, showHidden: true);
@@ -178,7 +154,7 @@ namespace Grand.Web.Admin.Services
             await _slugService.SaveSlug(brand, model.SeName, "");
 
             //delete an old picture (if deleted or updated)
-            if (!String.IsNullOrEmpty(prevPictureId) && prevPictureId != brand.PictureId)
+            if (!string.IsNullOrEmpty(prevPictureId) && prevPictureId != brand.PictureId)
             {
                 var prevPicture = await _pictureService.GetPictureById(prevPictureId);
                 if (prevPicture != null)
@@ -187,40 +163,13 @@ namespace Grand.Web.Admin.Services
             //update picture seo file name
             await _pictureService.UpdatePictureSeoNames(brand.PictureId, brand.Name);
 
-            //activity log
-            _ = _customerActivityService.InsertActivity("EditBrand", brand.Id,
-                _workContext.CurrentCustomer, _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.EditBrand"), brand.Name);
             return brand;
         }
 
         public virtual async Task DeleteBrand(Brand brand)
         {
             await _brandService.DeleteBrand(brand);
-            //activity log
-            _ = _customerActivityService.InsertActivity("DeleteBrand", brand.Id,
-                _workContext.CurrentCustomer, _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
-                _translationService.GetResource("ActivityLog.DeleteBrand"), brand.Name);
         }
 
-        public virtual async Task<(IEnumerable<BrandModel.ActivityLogModel> activityLogModels, int totalCount)> PrepareActivityLogModel(string brandId, int pageIndex, int pageSize)
-        {
-            var activityLog = await _customerActivityService.GetBrandActivities(null, null, brandId, pageIndex - 1, pageSize);
-            var items = new List<BrandModel.ActivityLogModel>();
-            foreach (var x in activityLog)
-            {
-                var customer = await _customerService.GetCustomerById(x.CustomerId);
-                var m = new BrandModel.ActivityLogModel {
-                    Id = x.Id,
-                    ActivityLogTypeName = (await _customerActivityService.GetActivityTypeById(x.ActivityLogTypeId))?.Name,
-                    Comment = x.Comment,
-                    CreatedOn = _dateTimeService.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc),
-                    CustomerId = x.CustomerId,
-                    CustomerEmail = customer != null ? customer.Email : "null"
-                };
-                items.Add(m);
-            }
-            return (items, activityLog.TotalCount);
-        }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using Grand.Business.Core.Interfaces.Marketing.Courses;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Courses;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Marketing.Services.Courses
@@ -36,13 +36,12 @@ namespace Grand.Business.Marketing.Services.Courses
                                where a.CustomerId == customerId && a.LessonId == lessonId
                                select a).FirstOrDefault());
 
-            return query != null ? query.Finished : false;
+            return query is { Finished: true };
         }
 
         public virtual async Task<CourseAction> InsertAsync(CourseAction courseAction)
         {
-            if (courseAction == null)
-                throw new ArgumentNullException(nameof(courseAction));
+            ArgumentNullException.ThrowIfNull(courseAction);
 
             await _courseActionRepository.InsertAsync(courseAction);
 
@@ -54,8 +53,7 @@ namespace Grand.Business.Marketing.Services.Courses
 
         public virtual async Task<CourseAction> Update(CourseAction courseAction)
         {
-            if (courseAction == null)
-                throw new ArgumentNullException(nameof(courseAction));
+            ArgumentNullException.ThrowIfNull(courseAction);
 
             await _courseActionRepository.UpdateAsync(courseAction);
 

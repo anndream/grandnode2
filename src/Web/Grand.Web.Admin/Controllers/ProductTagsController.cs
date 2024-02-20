@@ -6,14 +6,13 @@ using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Extensions;
 using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Seo;
-using Grand.Web.Admin.Extensions;
 using Grand.Web.Admin.Models.Catalog;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.ProductTags)]
-    public partial class ProductTagsController : BaseAdminController
+    public class ProductTagsController : BaseAdminController
     {
         private readonly IProductTagService _productTagService;
         private readonly IProductService _productService;
@@ -35,29 +34,36 @@ namespace Grand.Web.Admin.Controllers
             _seoSettings = seoSettings;
         }
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
         public async Task<IActionResult> List(DataSourceRequest command)
         {
-            var tags = (await _productTagService.GetAllProductTags());
+            var tags = await _productTagService.GetAllProductTags();
             var productTags = new List<ProductTagModel>();
             foreach (var item in tags)
             {
-                var ptag = new ProductTagModel();
-                ptag.Id = item.Id;
-                ptag.Name = item.Name;
-                ptag.ProductCount = await _productTagService.GetProductCount(item.Id, "");
+                var ptag = new ProductTagModel {
+                    Id = item.Id,
+                    Name = item.Name,
+                    ProductCount = await _productTagService.GetProductCount(item.Id)
+                };
                 productTags.Add(ptag);
             }
 
             var gridModel = new DataSourceResult
             {
                 Data = productTags.OrderByDescending(x => x.ProductCount).PagedForCommand(command),
-                Total = tags.Count()
+                Total = tags.Count
             };
 
             return Json(gridModel);
@@ -74,8 +80,7 @@ namespace Grand.Web.Admin.Controllers
             {
                 Data = products.Select(x => new
                 {
-                    Id = x.Id,
-                    Name = x.Name,
+                    x.Id, x.Name
                 }),
                 Total = products.TotalCount
             };
@@ -96,7 +101,7 @@ namespace Grand.Web.Admin.Controllers
             {
                 Id = productTag.Id,
                 Name = productTag.Name,
-                ProductCount = await _productTagService.GetProductCount(productTag.Id, "")
+                ProductCount = await _productTagService.GetProductCount(productTag.Id)
             };
             //locales
             await AddLocales(_languageService, model.Locales, (locale, languageId) =>

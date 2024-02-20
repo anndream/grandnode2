@@ -1,19 +1,24 @@
-﻿using Grand.Infrastructure.Tests.Plugins;
+﻿using Grand.Infrastructure.Plugins;
 using Grand.SharedKernel.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Grand.Infrastructure.Plugins.Tests
+namespace Grand.Infrastructure.Tests.Plugins
 {
     [TestClass()]
     public class BasePluginTests
     {
         SampleBasePlugin sampleBasePlugin;
-        public BasePluginTests()
+
+        [TestInitialize()]
+        public void Init()
         {
             CommonPath.BaseDirectory = NUnit.Framework.TestContext.CurrentContext.TestDirectory;
-            sampleBasePlugin = new SampleBasePlugin();
-        }
+            if (File.Exists(CommonPath.InstalledPluginsFilePath))
+                File.Delete(CommonPath.InstalledPluginsFilePath);
 
+            sampleBasePlugin = new SampleBasePlugin();
+
+        }
         [TestMethod()]
         public void ConfigurationUrlTest()
         {
@@ -35,7 +40,7 @@ namespace Grand.Infrastructure.Plugins.Tests
             await sampleBasePlugin.Install();
             await sampleBasePlugin.Uninstall();
             var plugins = PluginExtensions.ParseInstalledPluginsFile(CommonPath.InstalledPluginsFilePath);
-            Assert.AreEqual(0, plugins.Count());
+            Assert.AreEqual(0, plugins.Count);
         }
 
         [TestMethod()]
@@ -43,7 +48,7 @@ namespace Grand.Infrastructure.Plugins.Tests
         {
             await sampleBasePlugin.Uninstall();
             var plugins = PluginExtensions.ParseInstalledPluginsFile(CommonPath.InstalledPluginsFilePath);
-            Assert.AreEqual(0, plugins.Count());
+            Assert.AreEqual(0, plugins.Count);
         }
     }
 }

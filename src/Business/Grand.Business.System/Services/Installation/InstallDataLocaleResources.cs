@@ -1,11 +1,10 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.System.Installation;
 using Grand.SharedKernel.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Grand.Business.System.Services.Installation
 {
-    public partial class InstallationService : IInstallationService
+    public partial class InstallationService
     {
         protected virtual async Task InstallLocaleResources()
         {

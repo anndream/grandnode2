@@ -6,14 +6,16 @@ using Grand.Business.Core.Utilities.Common.Security;
 using MediatR;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Formatter;
 using Microsoft.AspNetCore.OData.Query;
+using MongoDB.AspNetCore.OData;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 
 namespace Grand.Api.Controllers.OData
 {
-    public partial class ProductAttributeController : BaseODataController
+    [Route("odata/ProductAttribute")]
+    [ApiExplorerSettings(IgnoreApi = false, GroupName = "v1")]
+    public class ProductAttributeController : BaseODataController
     {
         private readonly IMediator _mediator;
         private readonly IPermissionService _permissionService;
@@ -31,27 +33,24 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Get(string key)
+        public async Task<IActionResult> Get([FromRoute] string key)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes)) return Forbid();
 
             var productAttribute = await _mediator.Send(new GetGenericQuery<ProductAttributeDto, Domain.Catalog.ProductAttribute>(key));
-            if (!productAttribute.Any())
-                return NotFound();
+            if (!productAttribute.Any()) return NotFound();
 
             return Ok(productAttribute.FirstOrDefault());
         }
 
         [SwaggerOperation(summary: "Get entities from ProductAttribute", OperationId = "GetProductAttributes")]
         [HttpGet]
-        [EnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
+        [MongoEnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Get()
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes)) return Forbid();
 
             return Ok(await _mediator.Send(new GetGenericQuery<ProductAttributeDto, Domain.Catalog.ProductAttribute>()));
         }
@@ -63,15 +62,10 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Post([FromBody] ProductAttributeDto model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes)) return Forbid();
 
-            if (ModelState.IsValid)
-            {
-                model = await _mediator.Send(new AddProductAttributeCommand() { Model = model });
-                return Ok(model);
-            }
-            return BadRequest(ModelState);
+            model = await _mediator.Send(new AddProductAttributeCommand { Model = model });
+            return Ok(model);
         }
 
         [SwaggerOperation(summary: "Update entity in ProductAttribute", OperationId = "UpdateProductAttribute")]
@@ -81,41 +75,32 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Put([FromBody] ProductAttributeDto model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes)) return Forbid();
 
-            if (ModelState.IsValid)
-            {
-                model = await _mediator.Send(new UpdateProductAttributeCommand() { Model = model });
-                return Ok(model);
-            }
-            return BadRequest(ModelState);
+            model = await _mediator.Send(new UpdateProductAttributeCommand { Model = model });
+            return Ok(model);
         }
 
         [SwaggerOperation(summary: "Partially update entity in ProductAttribute", OperationId = "PartiallyUpdateProductAttribute")]
-        [HttpPatch]
+        [HttpPatch("{key}")]
         [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Patch([FromODataUri] string key, [FromBody] JsonPatchDocument<ProductAttributeDto> model)
+        public async Task<IActionResult> Patch([FromRoute] string key, [FromBody] JsonPatchDocument<ProductAttributeDto> model)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes))
-                return Forbid();
+            if (string.IsNullOrEmpty(key))
+                return BadRequest("Key is null or empty");
+            
+            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes)) return Forbid();
 
             var productAttribute = await _mediator.Send(new GetGenericQuery<ProductAttributeDto, Domain.Catalog.ProductAttribute>(key));
-            if (!productAttribute.Any())
-                return NotFound();
+            if (!productAttribute.Any()) return NotFound();
 
             var pa = productAttribute.FirstOrDefault();
             model.ApplyTo(pa);
-
-            if (ModelState.IsValid)
-            {
-                pa = await _mediator.Send(new UpdateProductAttributeCommand() { Model = pa });
-                return Ok(pa);
-            }
-            return BadRequest(ModelState);
+            pa = await _mediator.Send(new UpdateProductAttributeCommand { Model = pa });
+            return Ok(pa);
         }
 
         [SwaggerOperation(summary: "Delete entity from ProductAttribute", OperationId = "DeleteProductAttribute")]
@@ -125,14 +110,12 @@ namespace Grand.Api.Controllers.OData
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Delete(string key)
         {
-            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes))
-                return Forbid();
+            if (!await _permissionService.Authorize(PermissionSystemName.ProductAttributes)) return Forbid();
 
             var productAttribute = await _mediator.Send(new GetGenericQuery<ProductAttributeDto, Domain.Catalog.ProductAttribute>(key));
-            if (!productAttribute.Any())
-                return NotFound();
+            if (!productAttribute.Any()) return NotFound();
 
-            await _mediator.Send(new DeleteProductAttributeCommand() { Model = productAttribute.FirstOrDefault() });
+            await _mediator.Send(new DeleteProductAttributeCommand { Model = productAttribute.FirstOrDefault() });
             return Ok();
         }
     }

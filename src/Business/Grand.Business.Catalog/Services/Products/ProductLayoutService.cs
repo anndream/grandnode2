@@ -1,7 +1,7 @@
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
@@ -11,7 +11,7 @@ namespace Grand.Business.Catalog.Services.Products
     /// <summary>
     /// Product layout service
     /// </summary>
-    public partial class ProductLayoutService : IProductLayoutService
+    public class ProductLayoutService : IProductLayoutService
     {
         #region Fields
 
@@ -65,7 +65,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Product layout</returns>
         public virtual Task<ProductLayout> GetProductLayoutById(string productLayoutId)
         {
-            string key = string.Format(CacheKey.PRODUCT_LAYOUT_BY_ID_KEY, productLayoutId);
+            var key = string.Format(CacheKey.PRODUCT_LAYOUT_BY_ID_KEY, productLayoutId);
             return _cacheBase.GetAsync(key, () => _productLayoutRepository.GetByIdAsync(productLayoutId));
         }
 
@@ -75,8 +75,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productLayout">Product layout</param>
         public virtual async Task InsertProductLayout(ProductLayout productLayout)
         {
-            if (productLayout == null)
-                throw new ArgumentNullException(nameof(productLayout));
+            ArgumentNullException.ThrowIfNull(productLayout);
 
             await _productLayoutRepository.InsertAsync(productLayout);
 
@@ -93,8 +92,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productLayout">Product layout</param>
         public virtual async Task UpdateProductLayout(ProductLayout productLayout)
         {
-            if (productLayout == null)
-                throw new ArgumentNullException(nameof(productLayout));
+            ArgumentNullException.ThrowIfNull(productLayout);
 
             await _productLayoutRepository.UpdateAsync(productLayout);
 
@@ -111,8 +109,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="productLayout">Product layout</param>
         public virtual async Task DeleteProductLayout(ProductLayout productLayout)
         {
-            if (productLayout == null)
-                throw new ArgumentNullException(nameof(productLayout));
+            ArgumentNullException.ThrowIfNull(productLayout);
 
             await _productLayoutRepository.DeleteAsync(productLayout);
 

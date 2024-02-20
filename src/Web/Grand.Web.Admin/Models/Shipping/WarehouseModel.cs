@@ -4,12 +4,10 @@ using Grand.Web.Admin.Models.Common;
 
 namespace Grand.Web.Admin.Models.Shipping
 {
-    public partial class WarehouseModel : BaseEntityModel
+    public class WarehouseModel : BaseEntityModel
     {
-        public WarehouseModel()
-        {
-            Address = new AddressModel();
-        }
+        [GrandResourceDisplayName("Admin.Configuration.Shipping.Warehouses.Fields.Code")]
+        public string Code { get; set; }
 
         [GrandResourceDisplayName("Admin.Configuration.Shipping.Warehouses.Fields.Name")]
         public string Name { get; set; }
@@ -24,7 +22,7 @@ namespace Grand.Web.Admin.Models.Shipping
         public double? Longitude { get; set; }
 
         [GrandResourceDisplayName("Admin.Configuration.Shipping.Warehouses.Fields.Address")]
-        public AddressModel Address { get; set; }
+        public AddressModel Address { get; set; } = new();
 
         [GrandResourceDisplayName("Admin.Configuration.Shipping.Warehouses.Fields.DisplayOrder")]
         public int DisplayOrder { get; set; }

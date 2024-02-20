@@ -180,14 +180,14 @@
                                                 @Loc["Checkout.TermsOfService.IAccept"]
                                                 @if (!Model.TermsOfServicePopup)
                                                 {
-                                                    <a href="@Url.RouteUrl("Page", new { SeName = PageSeNameConstants.Conditionsofuse })" target="_blank">
+                                                    <a href="@Url.RouteUrl("Page", new { SeName = "conditionsofuse" })" target="_blank">
                                                         @Loc["Checkout.TermsOfService.Read"]
                                                     </a>
                                                 }
                                                 else
                                                 {
                                                     <span class="read"
-                                                          onclick="window.open('@Url.RouteUrl("PagePopup", new { SystemName = PageSeNameConstants.Conditionsofuse })', 450, 500, true)">
+                                                          onclick="window.open('@Url.RouteUrl("PagePopup", new { SystemName = "conditionsofuse" })', 450, 500, true)">
                                                         @Loc["Checkout.TermsOfService.Read"]
                                                     </span>
                                                 }
@@ -213,7 +213,7 @@
                                             <b-button type="button" id="checkoutasguest" v-if="vmorder.cart.ShowCheckoutAsGuestButton" @@click="location.href='@Url.RouteUrl("Checkout")'" variant="secondary" class="checkout-as-guest-button mx-sm-1 mx-0">
                                                 @Loc["Account.Login.CheckoutAsGuest"]
                                             </b-button>
-                                            <b-button id="checkout" name="checkout" @@click="document.querySelector('#shopping-cart-form').setAttribute('action', '@Url.RouteUrl("StartCheckout")');document.querySelector('#shopping-cart-form').submit();" variant="info" class="checkout-button mt-sm-0 mt-1">
+                                            <b-button id="checkout" name="checkout" @@click="vmorder.checkout(false)" variant="info" class="checkout-button mt-sm-0 mt-1">
                                                 <span v-if="vmorder.cart.IsGuest">
                                                     @Loc["Checkout.Button.Login"]
                                                 </span>

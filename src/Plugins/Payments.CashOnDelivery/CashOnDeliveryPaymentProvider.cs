@@ -15,18 +15,17 @@ namespace Payments.CashOnDelivery
     public class CashOnDeliveryPaymentProvider : IPaymentProvider
     {
         private readonly ITranslationService _translationService;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         private readonly CashOnDeliveryPaymentSettings _cashOnDeliveryPaymentSettings;
 
         public CashOnDeliveryPaymentProvider(
             ITranslationService translationService,
-            IServiceProvider serviceProvider,
-            CashOnDeliveryPaymentSettings cashOnDeliveryPaymentSettings
-            )
+            IHttpContextAccessor httpContextAccessor,
+            CashOnDeliveryPaymentSettings cashOnDeliveryPaymentSettings)
         {
             _translationService = translationService;
-            _serviceProvider = serviceProvider;
+            _httpContextAccessor = httpContextAccessor;
             _cashOnDeliveryPaymentSettings = cashOnDeliveryPaymentSettings;
         }
 
@@ -52,8 +51,9 @@ namespace Payments.CashOnDelivery
         }
         public async Task<ProcessPaymentResult> ProcessPayment(PaymentTransaction paymentTransaction)
         {
-            var result = new ProcessPaymentResult();
-            result.NewPaymentTransactionStatus = TransactionStatus.Pending;
+            var result = new ProcessPaymentResult {
+                NewPaymentTransactionStatus = TransactionStatus.Pending
+            };
             return await Task.FromResult(result);
         }
 
@@ -88,9 +88,9 @@ namespace Payments.CashOnDelivery
             if (_cashOnDeliveryPaymentSettings.AdditionalFeePercentage)
             {
                 //percentage
-                var orderTotalCalculationService = _serviceProvider.GetRequiredService<IOrderCalculationService>();
+                var orderTotalCalculationService = _httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<IOrderCalculationService>();
                 var subtotal = await orderTotalCalculationService.GetShoppingCartSubTotal(cart, true);
-                result = (double)((((float)subtotal.subTotalWithDiscount) * ((float)_cashOnDeliveryPaymentSettings.AdditionalFee)) / 100f);
+                result = (float)subtotal.subTotalWithDiscount * (float)_cashOnDeliveryPaymentSettings.AdditionalFee / 100f;
             }
             else
             {
@@ -98,24 +98,22 @@ namespace Payments.CashOnDelivery
                 result = _cashOnDeliveryPaymentSettings.AdditionalFee;
             }
 
-            if (result > 0)
-            {
-                var currencyService = _serviceProvider.GetRequiredService<ICurrencyService>();
-                var workContext = _serviceProvider.GetRequiredService<IWorkContext>();
-                result = await currencyService.ConvertFromPrimaryStoreCurrency(result, workContext.WorkingCurrency);
-            }
+            if (!(result > 0)) return result;
+            var currencyService = _httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<ICurrencyService>();
+            var workContext = _httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<IWorkContext>();
+            result = await currencyService.ConvertFromPrimaryStoreCurrency(result, workContext.WorkingCurrency);
 
             //return result;
             return result;
         }
 
-        public async Task<IList<string>> ValidatePaymentForm(IFormCollection form)
+        public async Task<IList<string>> ValidatePaymentForm(IDictionary<string, string> model)
         {
             var warnings = new List<string>();
             return await Task.FromResult(warnings);
         }
 
-        public async Task<PaymentTransaction> SavePaymentInfo(IFormCollection form)
+        public async Task<PaymentTransaction> SavePaymentInfo(IDictionary<string, string> model)
         {
             return await Task.FromResult<PaymentTransaction>(null);
         }
@@ -134,8 +132,7 @@ namespace Payments.CashOnDelivery
 
         public async Task<bool> CanRePostRedirectPayment(PaymentTransaction paymentTransaction)
         {
-            if (paymentTransaction == null)
-                throw new ArgumentNullException(nameof(paymentTransaction));
+            ArgumentNullException.ThrowIfNull(paymentTransaction);
 
             //it's not a redirection payment method. So we always return false
             return await Task.FromResult(false);
@@ -161,7 +158,7 @@ namespace Payments.CashOnDelivery
         /// <returns>Result</returns>
         public async Task CancelPayment(PaymentTransaction paymentTransaction)
         {
-            var paymentTransactionService = _serviceProvider.GetRequiredService<IPaymentTransactionService>();
+            var paymentTransactionService = _httpContextAccessor.HttpContext!.RequestServices.GetRequiredService<IPaymentTransactionService>();
             paymentTransaction.TransactionStatus = TransactionStatus.Canceled;
             await paymentTransactionService.UpdatePaymentTransaction(paymentTransaction);
         }

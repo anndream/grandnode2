@@ -64,8 +64,10 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
                 var orderPaidAttachmentFileName = _orderSettings.AttachPdfInvoiceToOrderPaidEmail && !_orderSettings.AttachPdfInvoiceToBinary ?
                     "order.pdf" : null;
 
-                var orderPaidAttachments = _orderSettings.AttachPdfInvoiceToOrderPaidEmail && _orderSettings.AttachPdfInvoiceToBinary ?
-                    new List<string> { await _pdfService.SaveOrderToBinary(order, "") } : new List<string>();
+                var orderPaidAttachments = _orderSettings.AttachPdfInvoiceToOrderPaidEmail && _orderSettings.AttachPdfInvoiceToBinary ? [
+                        await _pdfService.SaveOrderToBinary(order, "")
+                    ]
+                    : new List<string>();
 
                 await _messageProviderService.SendOrderPaidCustomerMessage(order, customer, order.CustomerLanguageId,
                     orderPaidAttachmentFilePath, orderPaidAttachmentFileName, orderPaidAttachments);
@@ -73,13 +75,12 @@ namespace Grand.Business.Checkout.Commands.Handlers.Orders
                 await _messageProviderService.SendOrderPaidStoreOwnerMessage(order, customer, _languageSettings.DefaultAdminLanguageId);
                 if (order.OrderItems.Any(x => !string.IsNullOrEmpty(x.VendorId)))
                 {
-                    var vendors = await _mediator.Send(new GetVendorsInOrderQuery() { Order = order });
+                    var vendors = await _mediator.Send(new GetVendorsInOrderQuery { Order = order });
                     foreach (var vendor in vendors)
                     {
                         await _messageProviderService.SendOrderPaidVendorMessage(order, vendor, _languageSettings.DefaultAdminLanguageId);
                     }
                 }
-                //TODO add "order paid email sent" order note
             }
         }
     }

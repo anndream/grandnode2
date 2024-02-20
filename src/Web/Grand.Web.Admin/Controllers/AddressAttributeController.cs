@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.AddressAttributes)]
-    public partial class AddressAttributeController : BaseAdminController
+    public class AddressAttributeController : BaseAdminController
     {
         #region Fields
 
@@ -39,10 +39,16 @@ namespace Grand.Web.Admin.Controllers
 
         #region Address attributes
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]

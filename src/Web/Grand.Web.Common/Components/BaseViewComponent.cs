@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Grand.Web.Common.Components
 {
-    [BaseViewComponent(AdminAccess = false)]
     public abstract class BaseViewComponent : ViewComponent
     {
         public new IViewComponentResult View<TModel>(string viewName, TModel model)
@@ -13,10 +12,9 @@ namespace Grand.Web.Common.Components
 
         public new IViewComponentResult View<TModel>(TModel model)
         {
-            var viewJson = Request?.Headers["X-Response-View"];
-            if (viewJson?.Equals("Json") ?? false)
+            if(Request?.ContentType == "application/json")
             {
-                return new JsonContentViewComponentResult(JsonConvert.SerializeObject(model));
+                return new JsonContentViewComponentResult(JsonSerializer.Serialize(model));
             }
             return base.View<TModel>(model);
         }

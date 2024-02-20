@@ -2,44 +2,39 @@
 using Grand.Business.Core.Extensions;
 using Grand.Business.Core.Interfaces.Common.Directory;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Filters;
 using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Seo;
 using Grand.Infrastructure;
-using Grand.Web.Admin.Extensions;
+using Grand.Web.Admin.Extensions.Mapping;
 using Grand.Web.Admin.Models.Catalog;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.ProductAttributes)]
-    public partial class ProductAttributeController : BaseAdminController
+    public class ProductAttributeController : BaseAdminController
     {
         #region Fields
         private readonly IProductService _productService;
         private readonly IProductAttributeService _productAttributeService;
         private readonly ILanguageService _languageService;
         private readonly ITranslationService _translationService;
-        private readonly ICustomerActivityService _customerActivityService;
-        private readonly IStoreService _storeService;
         private readonly IWorkContext _workContext;
         private readonly IGroupService _groupService;
         private readonly SeoSettings _seoSettings;
 
-        #endregion Fields
+        #endregion Fields
 
         #region Constructors
 
-        public ProductAttributeController(IProductService productService,
+        public ProductAttributeController(
+            IProductService productService,
             IProductAttributeService productAttributeService,
             ILanguageService languageService,
             ITranslationService translationService,
-            ICustomerActivityService customerActivityService,
-            IStoreService storeService,
             IWorkContext workContext,
             IGroupService groupService,
             SeoSettings seoSettings)
@@ -48,8 +43,6 @@ namespace Grand.Web.Admin.Controllers
             _productAttributeService = productAttributeService;
             _languageService = languageService;
             _translationService = translationService;
-            _customerActivityService = customerActivityService;
-            _storeService = storeService;
             _workContext = workContext;
             _groupService = groupService;
             _seoSettings = seoSettings;
@@ -62,9 +55,15 @@ namespace Grand.Web.Admin.Controllers
         #region Attribute list / create / edit / delete
 
         //list
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
-        public IActionResult List() => View();
+        public IActionResult List()
+        {
+            return View();
+        }
 
         [PermissionAuthorizeAction(PermissionActionName.List)]
         [HttpPost]
@@ -101,15 +100,10 @@ namespace Grand.Web.Admin.Controllers
                 productAttribute.SeName = SeoExtensions.GetSeName(string.IsNullOrEmpty(productAttribute.SeName) ? productAttribute.Name : productAttribute.SeName, _seoSettings.ConvertNonWesternChars, _seoSettings.AllowUnicodeCharsInUrls, _seoSettings.SeoCharConversion);
                 if (await _groupService.IsStaff(_workContext.CurrentCustomer))
                 {
-                    model.Stores = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                    model.Stores = [_workContext.CurrentCustomer.StaffStoreId];
                 }
 
                 await _productAttributeService.InsertProductAttribute(productAttribute);
-
-                //activity log
-                _ = _customerActivityService.InsertActivity("AddNewProductAttribute", productAttribute.Id,
-                    _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.AddNewProductAttribute"), productAttribute.Name);
 
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.ProductAttributes.Added"));
                 return continueEditing ? RedirectToAction("Edit", new { id = productAttribute.Id }) : RedirectToAction("List");
@@ -153,14 +147,9 @@ namespace Grand.Web.Admin.Controllers
                 productAttribute.SeName = SeoExtensions.GetSeName(string.IsNullOrEmpty(productAttribute.SeName) ? productAttribute.Name : productAttribute.SeName, _seoSettings.ConvertNonWesternChars, _seoSettings.AllowUnicodeCharsInUrls, _seoSettings.SeoCharConversion);
                 if (await _groupService.IsStaff(_workContext.CurrentCustomer))
                 {
-                    model.Stores = new string[] { _workContext.CurrentCustomer.StaffStoreId };
+                    model.Stores = [_workContext.CurrentCustomer.StaffStoreId];
                 }
                 await _productAttributeService.UpdateProductAttribute(productAttribute);
-
-                //activity log
-                _ = _customerActivityService.InsertActivity("EditProductAttribute", productAttribute.Id,
-                    _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.EditProductAttribute"), productAttribute.Name);
 
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.ProductAttributes.Updated"));
                 if (continueEditing)
@@ -197,12 +186,6 @@ namespace Grand.Web.Admin.Controllers
             if (ModelState.IsValid)
             {
                 await _productAttributeService.DeleteProductAttribute(productAttribute);
-
-                //activity log
-                _ = _customerActivityService.InsertActivity("DeleteProductAttribute", productAttribute.Id,
-                    _workContext.CurrentCustomer, HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                    _translationService.GetResource("ActivityLog.DeleteProductAttribute"), productAttribute.Name);
-
                 Success(_translationService.GetResource("Admin.Catalog.Attributes.ProductAttributes.Deleted"));
                 return RedirectToAction("List");
             }
@@ -219,20 +202,17 @@ namespace Grand.Web.Admin.Controllers
         [HttpPost]
         public async Task<IActionResult> UsedByProducts(DataSourceRequest command, string productAttributeId)
         {
-            var orders = await _productService.GetProductsByProductAtributeId(
+            var orders = await _productService.GetProductsByProductAttributeId(
                 productAttributeId: productAttributeId,
                 pageIndex: command.Page - 1,
                 pageSize: command.PageSize);
             var gridModel = new DataSourceResult
             {
-                Data = orders.Select(x =>
+                Data = orders.Select(x => new ProductAttributeModel.UsedByProductModel
                 {
-                    return new ProductAttributeModel.UsedByProductModel
-                    {
-                        Id = x.Id,
-                        ProductName = x.Name,
-                        Published = x.Published
-                    };
+                    Id = x.Id,
+                    ProductName = x.Name,
+                    Published = x.Published
                 }),
                 Total = orders.TotalCount
             };
@@ -250,7 +230,7 @@ namespace Grand.Web.Admin.Controllers
             var gridModel = new DataSourceResult
             {
                 Data = values.Select(x => x.ToModel()),
-                Total = values.Count(),
+                Total = values.Count
             };
 
             return Json(gridModel);
@@ -298,7 +278,7 @@ namespace Grand.Web.Admin.Controllers
         [PermissionAuthorizeAction(PermissionActionName.Edit)]
         public async Task<IActionResult> PredefinedProductAttributeValueEditPopup(string id, string productAttributeId)
         {
-            var ppav = (await _productAttributeService.GetProductAttributeById(productAttributeId)).PredefinedProductAttributeValues.Where(x => x.Id == id).FirstOrDefault();
+            var ppav = (await _productAttributeService.GetProductAttributeById(productAttributeId)).PredefinedProductAttributeValues.FirstOrDefault(x => x.Id == id);
             if (ppav == null)
                 throw new ArgumentException("No product attribute value found with the specified id");
 
@@ -316,7 +296,7 @@ namespace Grand.Web.Admin.Controllers
         public async Task<IActionResult> PredefinedProductAttributeValueEditPopup(PredefinedProductAttributeValueModel model)
         {
             var productAttribute = await _productAttributeService.GetProductAttributeById(model.ProductAttributeId);
-            var ppav = productAttribute.PredefinedProductAttributeValues.Where(x => x.Id == model.Id).FirstOrDefault();
+            var ppav = productAttribute.PredefinedProductAttributeValues.FirstOrDefault(x => x.Id == model.Id);
             if (ppav == null)
                 throw new ArgumentException("No product attribute value found with the specified id");
 
@@ -338,7 +318,7 @@ namespace Grand.Web.Admin.Controllers
             if (ModelState.IsValid)
             {
                 var productAttribute = (await _productAttributeService.GetAllProductAttributes()).FirstOrDefault(x => x.PredefinedProductAttributeValues.Any(y => y.Id == id));
-                var ppav = productAttribute.PredefinedProductAttributeValues.Where(x => x.Id == id).FirstOrDefault();
+                var ppav = productAttribute?.PredefinedProductAttributeValues.FirstOrDefault(x => x.Id == id);
                 if (ppav == null)
                     throw new ArgumentException("No predefined product attribute value found with the specified id");
                 productAttribute.PredefinedProductAttributeValues.Remove(ppav);

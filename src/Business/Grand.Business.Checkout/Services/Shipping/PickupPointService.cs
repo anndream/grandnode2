@@ -2,7 +2,7 @@
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Shipping;
 using MediatR;
 
@@ -74,13 +74,12 @@ namespace Grand.Business.Checkout.Services.Shipping
 
 
         /// <summary>
-        /// Inserts a warehouse
+        /// Inserts a pickup point
         /// </summary>
-        /// <param name="warehouse">Warehouse</param>
+        /// <param name="pickupPoint">Pickup Point</param>
         public virtual async Task InsertPickupPoint(PickupPoint pickupPoint)
         {
-            if (pickupPoint == null)
-                throw new ArgumentNullException(nameof(pickupPoint));
+            ArgumentNullException.ThrowIfNull(pickupPoint);
 
             await _pickupPointsRepository.InsertAsync(pickupPoint);
 
@@ -92,13 +91,12 @@ namespace Grand.Business.Checkout.Services.Shipping
         }
 
         /// <summary>
-        /// Updates the warehouse
+        /// Updates the pickupPoint
         /// </summary>
-        /// <param name="warehouse">Warehouse</param>
+        /// <param name="pickupPoint">Pickup Point</param>
         public virtual async Task UpdatePickupPoint(PickupPoint pickupPoint)
         {
-            if (pickupPoint == null)
-                throw new ArgumentNullException(nameof(pickupPoint));
+            ArgumentNullException.ThrowIfNull(pickupPoint);
 
             await _pickupPointsRepository.UpdateAsync(pickupPoint);
 
@@ -110,13 +108,12 @@ namespace Grand.Business.Checkout.Services.Shipping
         }
 
         /// <summary>
-        /// Deletes a delivery date
+        /// Deletes a pickup point
         /// </summary>
-        /// <param name="deliveryDate">The delivery date</param>
+        /// <param name="pickupPoint">pickup point</param>
         public virtual async Task DeletePickupPoint(PickupPoint pickupPoint)
         {
-            if (pickupPoint == null)
-                throw new ArgumentNullException(nameof(pickupPoint));
+            ArgumentNullException.ThrowIfNull(pickupPoint);
 
             await _pickupPointsRepository.DeleteAsync(pickupPoint);
 

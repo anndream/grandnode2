@@ -1,5 +1,6 @@
+using Grand.Business.Common.Utilities;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Localization;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Caching;
@@ -7,20 +8,15 @@ using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using MediatR;
 using System.Xml;
+using System.Xml.Schema;
 
 namespace Grand.Business.Common.Services.Localization
 {
     /// <summary>
     /// Provides information about translations
     /// </summary>
-    public partial class TranslationService : ITranslationService
+    public class TranslationService : ITranslationService
     {
-        #region Constants
-
-        private Dictionary<string, string> _allTranslateResource = null;
-
-        #endregion
-
         #region Fields
 
         private readonly IRepository<TranslationResource> _translationRepository;
@@ -68,7 +64,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <summary>
         /// Gets a translate resource
         /// </summary>
-        /// <param name="Name">A string representing a name</param>
+        /// <param name="name">A string representing a name</param>
         /// <param name="languageId">Language identifier</param>
         /// <returns>Translate resource</returns>
         public virtual async Task<TranslationResource> GetTranslateResourceByName(string name, string languageId)
@@ -97,8 +93,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="translateResource">Translate resource</param>
         public virtual async Task InsertTranslateResource(TranslationResource translateResource)
         {
-            if (translateResource == null)
-                throw new ArgumentNullException(nameof(translateResource));
+            ArgumentNullException.ThrowIfNull(translateResource);
 
             translateResource.Name = translateResource.Name.ToLowerInvariant();
             await _translationRepository.InsertAsync(translateResource);
@@ -116,8 +111,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="translateResource">Translate resource</param>
         public virtual async Task UpdateTranslateResource(TranslationResource translateResource)
         {
-            if (translateResource == null)
-                throw new ArgumentNullException(nameof(translateResource));
+            ArgumentNullException.ThrowIfNull(translateResource);
 
             translateResource.Name = translateResource.Name.ToLowerInvariant();
             await _translationRepository.UpdateAsync(translateResource);
@@ -136,8 +130,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="translateResource">Translate resource</param>
         public virtual async Task DeleteTranslateResource(TranslationResource translateResource)
         {
-            if (translateResource == null)
-                throw new ArgumentNullException(nameof(translateResource));
+            ArgumentNullException.ThrowIfNull(translateResource);
 
             await _translationRepository.DeleteAsync(translateResource);
 
@@ -155,10 +148,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <returns>A string representing the requested resource string.</returns>
         public virtual string GetResource(string name)
         {
-            if (_workContext.WorkingLanguage != null)
-                return GetResource(name, _workContext.WorkingLanguage.Id);
-
-            return "";
+            return _workContext.WorkingLanguage != null ? GetResource(name, _workContext.WorkingLanguage.Id) : "";
         }
 
         /// <summary>
@@ -171,34 +161,28 @@ namespace Grand.Business.Common.Services.Localization
         /// <returns>A string representing the requested resource string.</returns>
         public virtual string GetResource(string name, string languageId, string defaultValue = "", bool returnEmptyIfNotFound = false)
         {
-            var result = string.Empty;
-            if (name == null) name = string.Empty;
-
+            name ??= string.Empty;
             name = name.Trim().ToLowerInvariant();
-            if (_allTranslateResource != null)
+            var key = string.Format(CacheKey.TRANSLATERESOURCES_ALL_KEY, languageId);
+            var allTranslateResource = _cacheBase.Get(key, () =>
             {
-                _allTranslateResource.TryGetValue(name, out result);
-            }
-            else
-            {
-                var key = string.Format(CacheKey.TRANSLATERESOURCES_ALL_KEY, languageId);
-                _allTranslateResource = _cacheBase.Get(key, () =>
-                {
-                    return
-                        GetAllResources(languageId)
-                            .GroupBy(r => r.Name)
-                            .ToDictionary(
-                                keySelector: g => g.Key,
-                                elementSelector: g => g.First().Value);
-                });
-                _allTranslateResource.TryGetValue(name, out result);
-            }
+                return
+                    GetAllResources(languageId)
+                        .GroupBy(r => r.Name)
+                        .ToDictionary(
+                            keySelector: g => g.Key,
+                            elementSelector: g => g.First().Value);
+            });
 
-            if (string.IsNullOrEmpty(result))
+            // Try to get the resource value by name
+            if (allTranslateResource.TryGetValue(name, out var result) && !string.IsNullOrEmpty(result))
             {
-                if (!string.IsNullOrEmpty(defaultValue)) result = defaultValue;
-                else if (!returnEmptyIfNotFound) result = name;
+                return result;
             }
+            
+            if (!string.IsNullOrEmpty(result)) return result;
+            if (!string.IsNullOrEmpty(defaultValue)) result = defaultValue;
+            else if (!returnEmptyIfNotFound) result = name;
             return result;
         }
 
@@ -209,8 +193,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <returns>Result in XML format</returns>
         public virtual async Task<string> ExportResourcesToXml(Language language)
         {
-            if (language == null)
-                throw new ArgumentNullException(nameof(language));
+            ArgumentNullException.ThrowIfNull(language);
             var sb = new StringBuilder();
 
             var xwSettings = new XmlWriterSettings {
@@ -218,8 +201,8 @@ namespace Grand.Business.Common.Services.Localization
                 Async = true
             };
 
-            using var stringWriter = new StringWriter(sb);
-            using var xmlWriter = XmlWriter.Create(stringWriter, xwSettings);
+            await using var stringWriter = new StringWriter(sb);
+            await using var xmlWriter = XmlWriter.Create(stringWriter, xwSettings);
             await xmlWriter.WriteStartDocumentAsync();
             xmlWriter.WriteStartElement("Language");
             xmlWriter.WriteAttributeString("Name", language.Name);
@@ -231,11 +214,11 @@ namespace Grand.Business.Common.Services.Localization
                 xmlWriter.WriteAttributeString("Name", resource.Name);
                 xmlWriter.WriteAttributeString("Area", resource.Area.ToString());
                 xmlWriter.WriteElementString("Value", null, resource.Value);
-                xmlWriter.WriteEndElement();
+                await xmlWriter.WriteEndElementAsync();
             }
 
-            xmlWriter.WriteEndElement();
-            xmlWriter.WriteEndDocument();
+            await xmlWriter.WriteEndElementAsync();
+            await xmlWriter.WriteEndDocumentAsync();
             await xmlWriter.FlushAsync();
             return stringWriter.ToString();
         }
@@ -247,57 +230,52 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="xml">XML</param>
         public virtual async Task ImportResourcesFromXml(Language language, string xml)
         {
-            if (language == null)
-                throw new ArgumentNullException(nameof(language));
+            ArgumentNullException.ThrowIfNull(language);
 
             if (string.IsNullOrEmpty(xml))
                 return;
 
-            var translateResources = new List<TranslationResource>();
-            //stored procedures aren't supported
-            var xmlDoc = new XmlDocument();
-            xmlDoc.LoadXml(xml);
+            var xmlDoc = LanguageXmlDocument(xml);
 
-            var nodes = xmlDoc.SelectNodes(@"//Language/Resource");
-            foreach (XmlNode node in nodes)
-            {
-                string name = node.Attributes["Name"].InnerText.Trim();
-                string area = node.Attributes["Area"]?.InnerText.Trim();
-                string value = "";
-                var valueNode = node.SelectSingleNode("Value");
-                if (valueNode != null)
-                    value = valueNode.InnerText;
-
-                if (String.IsNullOrEmpty(name))
-                    continue;
-
-                //bulk insert
-                var resource = (from l in _translationRepository.Table
-                                where l.Name == name.ToLowerInvariant() && l.LanguageId == language.Id
-                                select l).FirstOrDefault();
-
-                if (resource != null)
+            var nodes = xmlDoc.SelectNodes("//Language/Resource");
+            if (nodes != null)
+                foreach (XmlNode node in nodes)
                 {
-                    resource.Name = resource.Name.ToLowerInvariant();
-                    resource.Value = value;
-                    if (Enum.TryParse<TranslationResourceArea>(area, out var areaEnum))
-                        resource.Area = areaEnum;
-                    await _translationRepository.UpdateAsync(resource);
-                }
-                else
-                {
-                    Enum.TryParse<TranslationResourceArea>(area, out TranslationResourceArea areaEnum);
+                    var name = node.Attributes?["Name"]?.InnerText.Trim();
+                    var area = node.Attributes?["Area"]?.InnerText.Trim();
+                    var value = "";
+                    var valueNode = node.SelectSingleNode("Value");
+                    if (valueNode != null)
+                        value = valueNode.InnerText;
 
-                    translateResources.Add(new TranslationResource {
-                        LanguageId = language.Id,
-                        Name = name.ToLowerInvariant(),
-                        Value = value,
-                        Area = areaEnum
-                    });
+                    if (string.IsNullOrEmpty(name))
+                        continue;
+
+                    //bulk insert
+                    var resource = (from l in _translationRepository.Table
+                        where l.Name == name.ToLowerInvariant() && l.LanguageId == language.Id
+                        select l).FirstOrDefault();
+
+                    if (resource != null)
+                    {
+                        resource.Name = resource.Name.ToLowerInvariant();
+                        resource.Value = value;
+                        if (Enum.TryParse<TranslationResourceArea>(area, out var areaEnum))
+                            resource.Area = areaEnum;
+                        await _translationRepository.UpdateAsync(resource);
+                    }
+                    else
+                    {
+                        _ = Enum.TryParse(area, out TranslationResourceArea areaEnum);
+                        await _translationRepository.InsertAsync(new TranslationResource {
+                            LanguageId = language.Id,
+                            Name = name.ToLowerInvariant(),
+                            Value = value,
+                            Area = areaEnum,
+                            CreatedBy = _workContext.CurrentCustomer.Email
+                        });
+                    }
                 }
-            }
-            if (translateResources.Any())
-                await _translationRepository.InsertManyAsync(translateResources);
 
             //clear cache
             await _cacheBase.RemoveByPrefix(CacheKey.TRANSLATERESOURCES_PATTERN_KEY);
@@ -310,45 +288,54 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="xml">XML</param>
         public virtual async Task ImportResourcesFromXmlInstall(Language language, string xml)
         {
-            if (language == null)
-                throw new ArgumentNullException(nameof(language));
+            ArgumentNullException.ThrowIfNull(language);
 
-            if (String.IsNullOrEmpty(xml))
+            if (string.IsNullOrEmpty(xml))
                 return;
-
-            var xmlDoc = new XmlDocument();
-            xmlDoc.LoadXml(xml);
+            
+            var xmlDoc = LanguageXmlDocument(xml);
 
             var translateResources = new List<TranslationResource>();
 
-            var nodes = xmlDoc.SelectNodes(@"//Language/Resource");
-            foreach (XmlNode node in nodes)
-            {
-                string name = node.Attributes["Name"].InnerText.Trim();
-                string area = node.Attributes["Area"]?.InnerText.Trim();
-                string value = "";
-                var valueNode = node.SelectSingleNode("Value");
-                if (valueNode != null)
-                    value = valueNode.InnerText;
+            var nodes = xmlDoc.SelectNodes("//Language/Resource");
+            if (nodes != null)
+                foreach (XmlNode node in nodes)
+                {
+                    var name = node.Attributes?["Name"]?.InnerText.Trim();
+                    var area = node.Attributes?["Area"]?.InnerText.Trim();
+                    var value = "";
+                    var valueNode = node.SelectSingleNode("Value");
+                    if (valueNode != null)
+                        value = valueNode.InnerText;
 
-                if (string.IsNullOrEmpty(name))
-                    continue;
+                    if (string.IsNullOrEmpty(name))
+                        continue;
 
-                Enum.TryParse<TranslationResourceArea>(area, out TranslationResourceArea areaEnum);
+                    _ = Enum.TryParse(area, out TranslationResourceArea areaEnum);
 
-                translateResources.Add(
-                    new TranslationResource {
+                    await _translationRepository.InsertAsync(new TranslationResource {
                         LanguageId = language.Id,
                         Name = name.ToLowerInvariant(),
                         Value = value,
-                        Area = areaEnum
+                        Area = areaEnum,
+                        CreatedBy = "System"
                     });
-            }
-
-            await _translationRepository.InsertManyAsync(translateResources);
+                }
 
             //clear cache
             await _cacheBase.RemoveByPrefix(CacheKey.TRANSLATERESOURCES_PATTERN_KEY);
+        }
+        private static XmlDocument LanguageXmlDocument(string xml)
+        {
+            var schemas = new XmlSchemaSet();
+            schemas.Add("", XmlReader.Create(new StringReader(LanguageSchema.SchemaXsd)));
+
+            var xmlDoc = new XmlDocument { Schemas = schemas, XmlResolver = null };
+            xmlDoc.LoadXml(xml);
+
+            // Validate XML.
+            xmlDoc.Validate((_, e) => throw new XmlException("XML data does not conform to the schema", e.Exception));
+            return xmlDoc;
         }
 
         #endregion

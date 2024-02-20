@@ -1,6 +1,6 @@
 using Grand.Business.Core.Interfaces.Common.Configuration;
 using Grand.Domain.Configuration;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using System.Text.Json;
@@ -10,7 +10,7 @@ namespace Grand.Business.Common.Services.Configuration
     /// <summary>
     /// Setting manager
     /// </summary>
-    public partial class SettingService : ISettingService
+    public class SettingService : ISettingService
     {
         #region Fields
 
@@ -40,7 +40,7 @@ namespace Grand.Business.Common.Services.Configuration
         /// <summary>
         /// Gets a setting by identifier
         /// </summary>
-        /// <param name="settingId">Setting identifier</param>
+        /// <param name="name">Setting name</param>
         /// <returns>Setting</returns>
         private IList<Setting> GetSettingsByName(string name)
         {
@@ -61,8 +61,7 @@ namespace Grand.Business.Common.Services.Configuration
         /// <param name="clearCache">A value indicating whether to clear cache after setting update</param>
         public virtual async Task InsertSetting(Setting setting, bool clearCache = true)
         {
-            if (setting == null)
-                throw new ArgumentNullException(nameof(setting));
+            ArgumentNullException.ThrowIfNull(setting);
 
             await _settingRepository.InsertAsync(setting);
 
@@ -79,8 +78,7 @@ namespace Grand.Business.Common.Services.Configuration
         /// <param name="clearCache">A value indicating whether to clear cache after setting update</param>
         public virtual async Task UpdateSetting(Setting setting, bool clearCache = true)
         {
-            if (setting == null)
-                throw new ArgumentNullException(nameof(setting));
+            ArgumentNullException.ThrowIfNull(setting);
 
             await _settingRepository.UpdateAsync(setting);
 
@@ -96,8 +94,7 @@ namespace Grand.Business.Common.Services.Configuration
         /// <param name="setting">Setting</param>
         public virtual async Task DeleteSetting(Setting setting)
         {
-            if (setting == null)
-                throw new ArgumentNullException(nameof(setting));
+            ArgumentNullException.ThrowIfNull(setting);
 
             await _settingRepository.DeleteAsync(setting);
 
@@ -131,22 +128,14 @@ namespace Grand.Business.Common.Services.Configuration
                 return defaultValue;
 
             var keyCache = string.Format(CacheKey.SETTINGS_BY_KEY, key, storeId);
-            return _cacheBase.Get<T>(keyCache, () =>
+            return _cacheBase.Get(keyCache, () =>
             {
                 var settings = GetSettingsByName(key);
                 key = key.Trim().ToLowerInvariant();
-                if (settings.Any())
-                {
-                    var setting = settings.FirstOrDefault(x => x.StoreId == storeId);
-                    //load default value?
-                    if (setting == null)
-                        setting = settings.FirstOrDefault(x => string.IsNullOrEmpty(x.StoreId));
-
-                    if (setting != null)
-                        return JsonSerializer.Deserialize<T>(setting.Metadata);
-                }
-
-                return defaultValue;
+                if (!settings.Any()) return defaultValue;
+                
+                var setting = settings.FirstOrDefault(x => x.StoreId == storeId) ?? settings.FirstOrDefault(x => string.IsNullOrEmpty(x.StoreId));
+                return setting != null ? JsonSerializer.Deserialize<T>(setting.Metadata) : defaultValue;
             });
         }
 
@@ -160,8 +149,7 @@ namespace Grand.Business.Common.Services.Configuration
         /// <param name="clearCache">A value indicating whether to clear cache after setting update</param>
         public virtual async Task SetSetting<T>(string key, T value, string storeId = "", bool clearCache = true)
         {
-            if (key == null)
-                throw new ArgumentNullException("key");
+            ArgumentNullException.ThrowIfNull(key);
 
             key = key.Trim().ToLowerInvariant();
 
@@ -212,19 +200,17 @@ namespace Grand.Business.Common.Services.Configuration
         /// <param name="storeId">Store identifier for which settings should be loaded</param>
         public virtual ISettings LoadSetting(Type type, string storeId = "")
         {
-            string key = string.Format(CacheKey.SETTINGS_BY_KEY, type.Name, storeId);
+            var key = string.Format(CacheKey.SETTINGS_BY_KEY, type.Name, storeId);
             return _cacheBase.Get(key, () =>
             {
                 var settings = GetSettingsByName(type.Name);
-                if (settings.Any())
-                {
-                    var setting = settings.FirstOrDefault(x => x.StoreId == storeId);
+                if (!settings.Any()) return Activator.CreateInstance(type) as ISettings;
+                var setting = settings.FirstOrDefault(x => x.StoreId == storeId);
 
-                    if (setting == null && !string.IsNullOrEmpty(storeId))
-                        setting = settings.FirstOrDefault(x => string.IsNullOrEmpty(x.StoreId));
+                if (setting == null && !string.IsNullOrEmpty(storeId))
+                    setting = settings.FirstOrDefault(x => string.IsNullOrEmpty(x.StoreId));
 
-                    return JsonSerializer.Deserialize(setting.Metadata, type) as ISettings;
-                }
+                if (setting != null) return JsonSerializer.Deserialize(setting.Metadata, type) as ISettings;
                 return Activator.CreateInstance(type) as ISettings;
             });
         }
@@ -237,8 +223,8 @@ namespace Grand.Business.Common.Services.Configuration
         /// <param name="settings">Setting instance</param>
         public virtual async Task SaveSetting<T>(T settings, string storeId = "") where T : ISettings, new()
         {
-            var dbsettings = GetSettingsByName(typeof(T).Name);
-            var setting = dbsettings.Any() ? dbsettings.FirstOrDefault(x => x.StoreId == storeId) : null;
+            var dbSettings = GetSettingsByName(typeof(T).Name);
+            var setting = dbSettings.Any() ? dbSettings.FirstOrDefault(x => x.StoreId == storeId) : null;
             if (setting != null)
             {
                 //update

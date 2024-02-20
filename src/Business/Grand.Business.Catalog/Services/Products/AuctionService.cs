@@ -6,7 +6,7 @@ using Grand.Infrastructure.Extensions;
 using Grand.Domain;
 using Grand.Domain.Catalog;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Localization;
 using Grand.Domain.Stores;
 using MediatR;
@@ -16,7 +16,7 @@ namespace Grand.Business.Catalog.Services.Products
     /// <summary>
     /// Auction service
     /// </summary>
-    public partial class AuctionService : IAuctionService
+    public class AuctionService : IAuctionService
     {
         private readonly IRepository<Bid> _bidRepository;
         private readonly IRepository<Product> _productRepository;
@@ -34,9 +34,9 @@ namespace Grand.Business.Catalog.Services.Products
             _mediator = mediator;
         }
 
-        public virtual Task<Bid> GetBid(string Id)
+        public virtual Task<Bid> GetBid(string id)
         {
-            return _bidRepository.GetByIdAsync(Id);
+            return _bidRepository.GetByIdAsync(id);
         }
 
         public virtual async Task<Bid> GetLatestBid(string productId)
@@ -63,8 +63,7 @@ namespace Grand.Business.Catalog.Services.Products
 
         public virtual async Task InsertBid(Bid bid)
         {
-            if (bid == null)
-                throw new ArgumentNullException(nameof(bid));
+            ArgumentNullException.ThrowIfNull(bid);
 
             await _bidRepository.InsertAsync(bid);
             await _mediator.EntityInserted(bid);
@@ -72,34 +71,30 @@ namespace Grand.Business.Catalog.Services.Products
 
         public virtual async Task UpdateBid(Bid bid)
         {
-            if (bid == null)
-                throw new ArgumentNullException(nameof(bid));
+            ArgumentNullException.ThrowIfNull(bid);
 
             await _bidRepository.UpdateAsync(bid);
             await _mediator.EntityUpdated(bid);
         }
         public virtual async Task DeleteBid(Bid bid)
         {
-            if (bid == null)
-                throw new ArgumentNullException(nameof(bid));
+            ArgumentNullException.ThrowIfNull(bid);
 
             await _bidRepository.DeleteAsync(bid);
             await _mediator.EntityDeleted(bid);
 
             var productToUpdate = await _productRepository.GetByIdAsync(bid.ProductId);
-            var _bid = await GetBidsByProductId(bid.ProductId);
-            var highestBid = _bid.OrderByDescending(x => x.Amount).FirstOrDefault();
+            var bids = await GetBidsByProductId(bid.ProductId);
+            var highestBid = bids.MaxBy(x => x.Amount);
             if (productToUpdate != null)
             {
-                await UpdateHighestBid(productToUpdate, highestBid != null ? highestBid.Amount : 0, highestBid != null ? highestBid.CustomerId : "");
+                await UpdateHighestBid(productToUpdate, highestBid?.Amount ?? 0, highestBid != null ? highestBid.CustomerId : "");
             }
         }
         public virtual async Task UpdateHighestBid(Product product, double bid, string highestBidder)
         {
             product.HighestBid = bid;
             product.HighestBidder = highestBidder;
-            product.UpdatedOnUtc = DateTime.UtcNow;
-
             await _productRepository.UpdateAsync(product);
 
             await _cacheBase.RemoveAsync(string.Format(CacheKey.PRODUCTS_BY_ID_KEY, product.Id));
@@ -114,11 +109,10 @@ namespace Grand.Business.Catalog.Services.Products
                         !x.AuctionEnded && x.AvailableEndDateTimeUtc < DateTime.UtcNow).ToList());
         }
 
-        public virtual async Task UpdateAuctionEnded(Product product, bool ended, bool enddate = false)
+        public virtual async Task UpdateAuctionEnded(Product product, bool ended, bool endDate = false)
         {
             product.AuctionEnded = ended;
-            product.UpdatedOnUtc = DateTime.UtcNow;
-            if (enddate)
+            if (endDate)
                 product.AvailableEndDateTimeUtc = DateTime.UtcNow;
 
             await _productRepository.UpdateAsync(product);
@@ -127,8 +121,6 @@ namespace Grand.Business.Catalog.Services.Products
 
             await _mediator.EntityUpdated(product);
         }
-
-
         /// <summary>
         /// New bid
         /// </summary>
@@ -140,7 +132,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="amount"></param>
         public virtual async Task NewBid(Customer customer, Product product, Store store, Language language, string warehouseId, double amount)
         {
-            var latestbid = await GetLatestBid(product.Id);
+            var latest = await GetLatestBid(product.Id);
             await InsertBid(new Bid
             {
                 Date = DateTime.UtcNow,
@@ -148,17 +140,16 @@ namespace Grand.Business.Catalog.Services.Products
                 CustomerId = customer.Id,
                 ProductId = product.Id,
                 StoreId = store.Id,
-                WarehouseId = warehouseId,
+                WarehouseId = warehouseId
             });
 
-            if (latestbid != null)
+            if (latest != null)
             {
-                if (latestbid.CustomerId != customer.Id)
+                if (latest.CustomerId != customer.Id)
                 {
-                    await _mediator.Send(new SendOutBidCustomerCommand()
-                    {
+                    await _mediator.Send(new SendOutBidCustomerCommand {
                         Product = product,
-                        Bid = latestbid,
+                        Bid = latest,
                         Language = language
                     });
                 }
@@ -170,10 +161,10 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Cancel bid
         /// </summary>
-        /// <param name="OrderId">OrderId</param>
+        /// <param name="orderId">OrderId</param>
         public virtual async Task CancelBidByOrder(string orderId)
         {
-            var bid = _bidRepository.Table.Where(x => x.OrderId == orderId).FirstOrDefault();
+            var bid = await _bidRepository.GetOneAsync(x => x.OrderId == orderId);
             if (bid != null)
             {
                 await _bidRepository.DeleteAsync(bid);

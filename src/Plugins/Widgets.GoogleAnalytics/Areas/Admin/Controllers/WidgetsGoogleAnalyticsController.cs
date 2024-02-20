@@ -1,23 +1,19 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Configuration;
 using Grand.Business.Core.Interfaces.Common.Localization;
-using Grand.Business.Core.Interfaces.Common.Logging;
 using Grand.Business.Core.Interfaces.Common.Stores;
 using Grand.Business.Core.Utilities.Common.Security;
-using Grand.Web.Common.Controllers;
-using Grand.Web.Common.Filters;
-using Grand.Web.Common.Security.Authorization;
 using Grand.Domain.Common;
 using Grand.Domain.Customers;
 using Grand.Infrastructure;
+using Grand.Web.Common.Controllers;
+using Grand.Web.Common.Security.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Widgets.GoogleAnalytics.Models;
 
-namespace Widgets.GoogleAnalytics.Controllers
+namespace Widgets.GoogleAnalytics.Areas.Admin.Controllers
 {
-    [Area("Admin")]
-    [AuthorizeAdmin]
     [PermissionAuthorize(PermissionSystemName.Widgets)]
-    public class WidgetsGoogleAnalyticsController : BasePluginController
+    public class WidgetsGoogleAnalyticsController : BaseAdminPluginController
     {
         private readonly IWorkContext _workContext;
         private readonly IStoreService _storeService;
@@ -27,7 +23,6 @@ namespace Widgets.GoogleAnalytics.Controllers
         public WidgetsGoogleAnalyticsController(IWorkContext workContext,
             IStoreService storeService,
             ISettingService settingService,
-            ILogger logger,
             ITranslationService translationService)
         {
             _workContext = workContext;
@@ -39,7 +34,7 @@ namespace Widgets.GoogleAnalytics.Controllers
         {
             var stores = await storeService.GetAllStores();
             if (stores.Count < 2)
-                return stores.FirstOrDefault().Id;
+                return stores.FirstOrDefault()!.Id;
 
             var storeId = workContext.CurrentCustomer.GetUserFieldFromEntity<string>(SystemCustomerFieldNames.AdminAreaStoreScopeConfiguration);
             var store = await storeService.GetStoreById(storeId);
@@ -52,17 +47,18 @@ namespace Widgets.GoogleAnalytics.Controllers
             //load settings for a chosen store scope
             var storeScope = await GetActiveStore(_storeService, _workContext);
             var googleAnalyticsSettings = _settingService.LoadSetting<GoogleAnalyticsEcommerceSettings>(storeScope);
-            var model = new ConfigurationModel();
-            model.GoogleId = googleAnalyticsSettings.GoogleId;
-            model.TrackingScript = googleAnalyticsSettings.TrackingScript;
-            model.EcommerceScript = googleAnalyticsSettings.EcommerceScript;
-            model.EcommerceDetailScript = googleAnalyticsSettings.EcommerceDetailScript;
-            model.IncludingTax = googleAnalyticsSettings.IncludingTax;
-            model.AllowToDisableConsentCookie = googleAnalyticsSettings.AllowToDisableConsentCookie;
-            model.ConsentDefaultState = googleAnalyticsSettings.ConsentDefaultState;
-            model.ConsentName = googleAnalyticsSettings.ConsentName;
-            model.ConsentDescription = googleAnalyticsSettings.ConsentDescription;
-            model.StoreScope = storeScope;
+            var model = new ConfigurationModel {
+                GoogleId = googleAnalyticsSettings.GoogleId,
+                TrackingScript = googleAnalyticsSettings.TrackingScript,
+                EcommerceScript = googleAnalyticsSettings.EcommerceScript,
+                EcommerceDetailScript = googleAnalyticsSettings.EcommerceDetailScript,
+                IncludingTax = googleAnalyticsSettings.IncludingTax,
+                AllowToDisableConsentCookie = googleAnalyticsSettings.AllowToDisableConsentCookie,
+                ConsentDefaultState = googleAnalyticsSettings.ConsentDefaultState,
+                ConsentName = googleAnalyticsSettings.ConsentName,
+                ConsentDescription = googleAnalyticsSettings.ConsentDescription,
+                StoreScope = storeScope
+            };
 
             return View(model);
         }

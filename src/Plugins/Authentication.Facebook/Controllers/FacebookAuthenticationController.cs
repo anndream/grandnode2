@@ -44,7 +44,7 @@ namespace Authentication.Facebook.Controllers
 
             //configure login callback action
             var authenticationProperties = new AuthenticationProperties {
-                RedirectUri = Url.Action("FacebookLoginCallback", "FacebookAuthentication", new { returnUrl = returnUrl })
+                RedirectUri = Url.Action("FacebookLoginCallback", "FacebookAuthentication", new { returnUrl })
             };
 
             return Challenge(authenticationProperties, FacebookDefaults.AuthenticationScheme);
@@ -73,7 +73,7 @@ namespace Authentication.Facebook.Controllers
         public IActionResult FacebookSignInFailed(string error_code, string error_message, string state)
         {
             //handle exception and display message to user
-            var model = new FailedModel() {
+            var model = new FailedModel {
                 ErrorCode = error_code,
                 ErrorMessage = error_message
             };

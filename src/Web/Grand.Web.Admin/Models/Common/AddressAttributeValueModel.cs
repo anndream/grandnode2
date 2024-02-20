@@ -4,13 +4,8 @@ using Grand.Infrastructure.Models;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class AddressAttributeValueModel : BaseEntityModel, ILocalizedModel<AddressAttributeValueLocalizedModel>
+    public class AddressAttributeValueModel : BaseEntityModel, ILocalizedModel<AddressAttributeValueLocalizedModel>
     {
-        public AddressAttributeValueModel()
-        {
-            Locales = new List<AddressAttributeValueLocalizedModel>();
-        }
-
         public string AddressAttributeId { get; set; }
 
         [GrandResourceDisplayName("Admin.Address.AddressAttributes.Values.Fields.Name")]
@@ -23,11 +18,10 @@ namespace Grand.Web.Admin.Models.Common
         [GrandResourceDisplayName("Admin.Address.AddressAttributes.Values.Fields.DisplayOrder")]
         public int DisplayOrder { get; set; }
 
-        public IList<AddressAttributeValueLocalizedModel> Locales { get; set; }
-
+        public IList<AddressAttributeValueLocalizedModel> Locales { get; set; } = new List<AddressAttributeValueLocalizedModel>();
     }
 
-    public partial class AddressAttributeValueLocalizedModel : ILocalizedModelLocal
+    public class AddressAttributeValueLocalizedModel : ILocalizedModelLocal
     {
         public string LanguageId { get; set; }
 

@@ -1,7 +1,6 @@
 ﻿using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Interfaces.Marketing.Contacts;
-using Grand.Infrastructure;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Security.Authorization;
 using Grand.Web.Admin.Interfaces;
@@ -11,25 +10,25 @@ using Microsoft.AspNetCore.Mvc;
 namespace Grand.Web.Admin.Controllers
 {
     [PermissionAuthorize(PermissionSystemName.MessageContactForm)]
-    public partial class ContactFormController : BaseAdminController
+    public class ContactFormController : BaseAdminController
     {
         private readonly IContactUsService _contactUsService;
         private readonly IContactFormViewModelService _contactFormViewModelService;
         private readonly ITranslationService _translationService;
-        private readonly IWorkContext _workContext;
 
         public ContactFormController(IContactUsService contactUsService,
             IContactFormViewModelService contactFormViewModelService,
-            ITranslationService translationService,
-            IWorkContext workContext)
+            ITranslationService translationService)
         {
             _contactUsService = contactUsService;
             _contactFormViewModelService = contactFormViewModelService;
             _translationService = translationService;
-            _workContext = workContext;
         }
 
-        public IActionResult Index() => RedirectToAction("List");
+        public IActionResult Index()
+        {
+            return RedirectToAction("List");
+        }
 
         public async Task<IActionResult> List()
         {
@@ -56,59 +55,32 @@ namespace Grand.Web.Admin.Controllers
             var contactform = await _contactUsService.GetContactUsById(id);
             if (contactform == null)
                 return RedirectToAction("List");
-
-            if (_workContext.CurrentVendor != null)
-            {
-                if (contactform.VendorId != _workContext.CurrentVendor.Id)
-                    return RedirectToAction("List");
-            }
+            
             var model = await _contactFormViewModelService.PrepareContactFormModel(contactform);
             return View(model);
         }
 
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.Delete)]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(ContactFormDeleteModel model)
         {
-            var contactform = await _contactUsService.GetContactUsById(id);
-            if (contactform == null)
-                //No email found with the specified id
-                return RedirectToAction("List");
-
-            if (_workContext.CurrentVendor != null)
-            {
-                if (contactform.VendorId != _workContext.CurrentVendor.Id)
-                    ModelState.AddModelError("", "This is not your contact us form");
-            }
-
+            var contactForm = await _contactUsService.GetContactUsById(model.Id);
             if (ModelState.IsValid)
             {
-                await _contactUsService.DeleteContactUs(contactform);
+                await _contactUsService.DeleteContactUs(contactForm);
 
                 Success(_translationService.GetResource("Admin.System.ContactForm.Deleted"));
                 return RedirectToAction("List");
             }
             Error(ModelState);
-            return RedirectToAction("Details", new { id = id });
+            return RedirectToAction("Details", new { model.Id });
         }
 
         [HttpPost]
         [PermissionAuthorizeAction(PermissionActionName.Delete)]
         public async Task<IActionResult> DeleteAll()
         {
-            if (_workContext.CurrentVendor != null)
-            {
-                var contactforms = await _contactUsService.GetAllContactUs(
-                vendorId: _workContext.CurrentVendor.Id,
-                pageIndex: 0,
-                pageSize: int.MaxValue);
-                foreach (var item in contactforms)
-                {
-                    await _contactUsService.DeleteContactUs(item);
-                }
-            }
-            else
-                await _contactUsService.ClearTable();
+            await _contactUsService.ClearTable();
 
             Success(_translationService.GetResource("Admin.System.ContactForm.DeletedAll"));
             return RedirectToAction("List");

@@ -1,6 +1,6 @@
 ﻿using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
@@ -32,8 +32,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="customerGroupProduct">Customer group product</param>
         public virtual async Task DeleteCustomerGroupProduct(CustomerGroupProduct customerGroupProduct)
         {
-            if (customerGroupProduct == null)
-                throw new ArgumentNullException(nameof(customerGroupProduct));
+            ArgumentNullException.ThrowIfNull(customerGroupProduct);
 
             await _customerGroupProductRepository.DeleteAsync(customerGroupProduct);
 
@@ -52,8 +51,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="customerGroupProduct">Customer group product</param>
         public virtual async Task InsertCustomerGroupProduct(CustomerGroupProduct customerGroupProduct)
         {
-            if (customerGroupProduct == null)
-                throw new ArgumentNullException(nameof(customerGroupProduct));
+            ArgumentNullException.ThrowIfNull(customerGroupProduct);
 
             await _customerGroupProductRepository.InsertAsync(customerGroupProduct);
 
@@ -71,8 +69,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <param name="customerGroupProduct">Customer group product</param>
         public virtual async Task UpdateCustomerGroupProduct(CustomerGroupProduct customerGroupProduct)
         {
-            if (customerGroupProduct == null)
-                throw new ArgumentNullException(nameof(customerGroupProduct));
+            ArgumentNullException.ThrowIfNull(customerGroupProduct);
 
             await _customerGroupProductRepository.UpdateAsync(customerGroupProduct);
 
@@ -92,7 +89,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <returns>Customer group products</returns>
         public virtual async Task<IList<CustomerGroupProduct>> GetCustomerGroupProducts(string customerGroupId)
         {
-            string key = string.Format(CacheKey.CUSTOMERGROUPSPRODUCTS_ROLE_KEY, customerGroupId);
+            var key = string.Format(CacheKey.CUSTOMERGROUPSPRODUCTS_ROLE_KEY, customerGroupId);
             return await _cacheBase.GetAsync(key, async () =>
             {
                 return await Task.FromResult(_customerGroupProductRepository
@@ -118,7 +115,7 @@ namespace Grand.Business.Catalog.Services.Products
         /// <summary>
         /// Gets customer groups product
         /// </summary>
-        /// <param name="Id">id</param>
+        /// <param name="id">Ident</param>
         /// <returns>Customer group product</returns>
         public virtual async Task<CustomerGroupProduct> GetCustomerGroupProductById(string id)
         {

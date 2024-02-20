@@ -4,9 +4,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Common
 {
-    public partial class LoginModel : BaseModel
+    public class LoginModel : BaseModel
     {
-
         [DataType(DataType.EmailAddress)]
         [GrandResourceDisplayName("Account.Login.Fields.Email")]
         public string Email { get; set; }
@@ -23,6 +22,6 @@ namespace Grand.Web.Admin.Models.Common
         public bool RememberMe { get; set; }
 
         public bool DisplayCaptcha { get; set; }
-
+        public ICaptchaValidModel Captcha { get; set; } = new CaptchaModel();
     }
 }

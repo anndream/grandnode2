@@ -1,26 +1,23 @@
-﻿using DiscountRules.HasAllProducts.Models;
+﻿using DiscountRules.Standard.Models;
 using Grand.Business.Core.Interfaces.Catalog.Discounts;
 using Grand.Business.Core.Interfaces.Catalog.Products;
 using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Business.Core.Interfaces.Common.Stores;
-using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Business.Core.Interfaces.Customers;
+using Grand.Business.Core.Utilities.Common.Security;
 using Grand.Domain.Catalog;
 using Grand.Domain.Discounts;
 using Grand.Infrastructure;
 using Grand.Web.Common.Controllers;
 using Grand.Web.Common.DataSource;
 using Grand.Web.Common.Extensions;
-using Grand.Web.Common.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace DiscountRules.HasAllProducts.Controllers
+namespace DiscountRules.Standard.Areas.Admin.Controllers
 {
-    [Area("Admin")]
-    [AuthorizeAdmin]
-    public class HasAllProductsController : BasePluginController
+    public class HasAllProductsController : BaseAdminPluginController
     {
         private readonly IDiscountService _discountService;
         private readonly IPermissionService _permissionService;
@@ -67,14 +64,15 @@ namespace DiscountRules.HasAllProducts.Controllers
                 restrictedProductIds = discountRequirement.Metadata;
             }
 
-            var model = new RequirementModel {
+            var model = new RequirementAllProductsModel {
                 RequirementId = !string.IsNullOrEmpty(discountRequirementId) ? discountRequirementId : "",
                 DiscountId = discountId,
                 Products = restrictedProductIds
             };
 
             //add a prefix
-            ViewData.TemplateInfo.HtmlFieldPrefix = string.Format("DiscountRulesHasAllProducts{0}-{1}", discount.Id, !string.IsNullOrEmpty(discountRequirementId) ? discountRequirementId : "");
+            ViewData.TemplateInfo.HtmlFieldPrefix =
+                $"DiscountRulesHasAllProducts{discount.Id}-{(!string.IsNullOrEmpty(discountRequirementId) ? discountRequirementId : "")}";
 
             return View(model);
         }
@@ -119,7 +117,7 @@ namespace DiscountRules.HasAllProducts.Controllers
             if (!await _permissionService.Authorize(StandardPermission.ManageProducts))
                 return Content("Access denied");
 
-            var model = new RequirementModel.AddProductModel {
+            var model = new RequirementAllProductsModel.AddProductModel {
                 //a vendor should have access only to his products
                 IsLoggedInAsVendor = _workContext.CurrentVendor != null
             };
@@ -127,12 +125,12 @@ namespace DiscountRules.HasAllProducts.Controllers
             //stores
             model.AvailableStores.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
             foreach (var s in await _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id.ToString() });
+                model.AvailableStores.Add(new SelectListItem { Text = s.Shortcut, Value = s.Id });
 
             //vendors
             model.AvailableVendors.Add(new SelectListItem { Text = _translationService.GetResource("Admin.Common.All"), Value = "" });
             foreach (var v in await _vendorService.GetAllVendors(showHidden: true))
-                model.AvailableVendors.Add(new SelectListItem { Text = v.Name, Value = v.Id.ToString() });
+                model.AvailableVendors.Add(new SelectListItem { Text = v.Name, Value = v.Id });
 
             //product types
             model.AvailableProductTypes = ProductType.SimpleProduct.ToSelectList(HttpContext, false).ToList();
@@ -147,7 +145,7 @@ namespace DiscountRules.HasAllProducts.Controllers
 
         [HttpPost]
         [AutoValidateAntiforgeryToken]
-        public async Task<IActionResult> ProductAddPopupList(DataSourceRequest command, RequirementModel.AddProductModel model)
+        public async Task<IActionResult> ProductAddPopupList(DataSourceRequest command, RequirementAllProductsModel.AddProductModel model)
         {
             if (!await _permissionService.Authorize(StandardPermission.ManageProducts))
                 return Content("Access denied");
@@ -172,13 +170,14 @@ namespace DiscountRules.HasAllProducts.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 )).products;
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x => new RequirementModel.ProductModel {
-                Id = x.Id,
-                Name = x.Name,
-                Published = x.Published
-            });
-            gridModel.Total = products.TotalCount;
+            var gridModel = new DataSourceResult {
+                Data = products.Select(x => new RequirementAllProductsModel.ProductModel {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Published = x.Published
+                }),
+                Total = products.TotalCount
+            };
 
             return new JsonResult(gridModel);
         }
@@ -192,38 +191,36 @@ namespace DiscountRules.HasAllProducts.Controllers
             if (!await _permissionService.Authorize(StandardPermission.ManageProducts))
                 return new JsonResult(new { Text = result });
 
-            if (!String.IsNullOrWhiteSpace(productIds))
+            if (string.IsNullOrWhiteSpace(productIds)) return new JsonResult(new { Text = result });
+            var ids = new List<string>();
+            var rangeArray = productIds
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .ToList();
+
+            //we support three ways of specifying products:
+            //1. The comma-separated list of product identifiers (e.g. 77, 123, 156).
+            //2. The comma-separated list of product identifiers with quantities.
+            //      {Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
+            //3. The comma-separated list of product identifiers with quantity range.
+            //      {Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
+            foreach (var str1 in rangeArray)
             {
-                var ids = new List<string>();
-                var rangeArray = productIds
-                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x.Trim())
-                    .ToList();
+                var str2 = str1;
+                //we do not display specified quantities and ranges
+                //parse only product names
+                if (str2.Contains(':'))
+                    str2 = str2[..str2.IndexOf(":", StringComparison.Ordinal)];
 
-                //we support three ways of specifying products:
-                //1. The comma-separated list of product identifiers (e.g. 77, 123, 156).
-                //2. The comma-separated list of product identifiers with quantities.
-                //      {Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
-                //3. The comma-separated list of product identifiers with quantity range.
-                //      {Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
-                foreach (string str1 in rangeArray)
-                {
-                    var str2 = str1;
-                    //we do not display specified quantities and ranges
-                    //parse only product names
-                    if (str2.Contains(":"))
-                        str2 = str2.Substring(0, str2.IndexOf(":"));
+                ids.Add(str2);
+            }
 
-                    ids.Add(str2);
-                }
-
-                var products = await _productService.GetProductsByIds(ids.ToArray(), true);
-                for (int i = 0; i <= products.Count - 1; i++)
-                {
-                    result += products[i].Name;
-                    if (i != products.Count - 1)
-                        result += ", ";
-                }
+            var products = await _productService.GetProductsByIds(ids.ToArray(), true);
+            for (var i = 0; i <= products.Count - 1; i++)
+            {
+                result += products[i].Name;
+                if (i != products.Count - 1)
+                    result += ", ";
             }
 
             return new JsonResult(new { Text = result });

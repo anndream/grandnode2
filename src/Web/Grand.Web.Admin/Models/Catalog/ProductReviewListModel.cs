@@ -5,13 +5,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Catalog
 {
-    public partial class ProductReviewListModel : BaseModel
+    public class ProductReviewListModel : BaseModel
     {
-        public ProductReviewListModel()
-        {
-            AvailableStores = new List<SelectListItem>();
-        }
-
         [GrandResourceDisplayName("Admin.Catalog.ProductReviews.List.CreatedOnFrom")]
         [UIHint("DateNullable")]
         public DateTime? CreatedOnFrom { get; set; }
@@ -30,6 +25,6 @@ namespace Grand.Web.Admin.Models.Catalog
         [GrandResourceDisplayName("Admin.Catalog.ProductReviews.List.SearchProduct")]
         public string SearchProductId { get; set; }
 
-        public IList<SelectListItem> AvailableStores { get; set; }
+        public IList<SelectListItem> AvailableStores { get; set; } = new List<SelectListItem>();
     }
 }

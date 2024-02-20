@@ -4,25 +4,16 @@ using Grand.Web.Models.Common;
 
 namespace Grand.Web.Models.Orders
 {
-    public partial class MerchandiseReturnModel : BaseModel
+    public class MerchandiseReturnModel : BaseModel
     {
-        public MerchandiseReturnModel()
-        {
-            Items = new List<OrderItemModel>();
-            AvailableReturnReasons = new List<MerchandiseReturnReasonModel>();
-            AvailableReturnActions = new List<MerchandiseReturnActionModel>();
-            ExistingAddresses = new List<AddressModel>();
-            NewAddress = new AddressModel();
-        }
-
         public string OrderId { get; set; }
         public int OrderNumber { get; set; }
         public string OrderCode { get; set; }
-        public IList<OrderItemModel> Items { get; set; }
-        
-        public IList<MerchandiseReturnReasonModel> AvailableReturnReasons { get; set; }
+        public IList<OrderItemModel> Items { get; set; } = new List<OrderItemModel>();
 
-        public IList<MerchandiseReturnActionModel> AvailableReturnActions { get; set; }
+        public IList<MerchandiseReturnReasonModel> AvailableReturnReasons { get; set; } = new List<MerchandiseReturnReasonModel>();
+
+        public IList<MerchandiseReturnActionModel> AvailableReturnActions { get; set; } = new List<MerchandiseReturnActionModel>();
 
         [GrandResourceDisplayName("MerchandiseReturns.Comments")]
         public string Comments { get; set; }
@@ -33,12 +24,12 @@ namespace Grand.Web.Models.Orders
 
         public string Error { get; set; }
 
-        public IList<AddressModel> ExistingAddresses { get; set; }
+        public IList<AddressModel> ExistingAddresses { get; set; } = new List<AddressModel>();
 
         public bool NewAddressPreselected { get; set; }
 
-        public AddressModel NewAddress { get; set; }
-
+        public AddressModel MerchandiseReturnNewAddress { get; set; } = new();
+        public string PickupAddressId { get; set; }
         public bool ShowPickupAddress { get; set; }
 
         public bool ShowPickupDate { get; set; }
@@ -47,7 +38,7 @@ namespace Grand.Web.Models.Orders
 
         #region Nested classes
 
-        public partial class OrderItemModel : BaseEntityModel
+        public class OrderItemModel : BaseEntityModel
         {
             public string ProductId { get; set; }
 
@@ -61,7 +52,7 @@ namespace Grand.Web.Models.Orders
             public string AttributeInfo { get; set; }
 
             public string UnitPrice { get; set; }
-
+            public bool IncludingTax { get; set; }
             public int Quantity { get; set; }
 
             [GrandResourceDisplayName("MerchandiseReturns.ReturnReason")]
@@ -71,11 +62,11 @@ namespace Grand.Web.Models.Orders
             public string MerchandiseReturnActionId { get; set; }
         }
 
-        public partial class MerchandiseReturnReasonModel : BaseEntityModel
+        public class MerchandiseReturnReasonModel : BaseEntityModel
         {
             public string Name { get; set; }
         }
-        public partial class MerchandiseReturnActionModel : BaseEntityModel
+        public class MerchandiseReturnActionModel : BaseEntityModel
         {
             public string Name { get; set; }
         }

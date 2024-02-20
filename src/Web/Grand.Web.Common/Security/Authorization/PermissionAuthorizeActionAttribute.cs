@@ -16,14 +16,13 @@ namespace Grand.Web.Common.Security.Authorization
             PermissionAction = actionName;
         }
 
-        // Get or set the permision property by manipulating
+        // Get or set the permission property by manipulating
         public string PermissionAction { get; set; }
 
         public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
         {
             //ignore filter (the action available even when navigation is not allowed)
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
+            ArgumentNullException.ThrowIfNull(context);
 
             if (string.IsNullOrEmpty(PermissionAction))
                 return;
@@ -42,7 +41,7 @@ namespace Grand.Web.Common.Security.Authorization
                 return;
 
             //authorize permission of access to the admin area
-            if (!await permissionService.Authorize(StandardPermission.AccessAdminPanel))
+            if (!await permissionService.Authorize(StandardPermission.ManageAccessAdminPanel))
                 context.Result = new RedirectToRouteResult("AdminLogin", new RouteValueDictionary());
             else
             {
@@ -54,7 +53,6 @@ namespace Grand.Web.Common.Security.Authorization
                     context.Result = new JsonResult(new DataSourceResult { Errors = $"Access denied to the resource {context.HttpContext.Request.Path}" });
                 }
             }
-            return;
         }
     }
 }

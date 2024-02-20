@@ -1,14 +1,14 @@
 ﻿using Grand.Business.Core.Interfaces.Messages;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Messages;
 using MediatR;
 using Grand.Domain.Common;
 
 namespace Grand.Business.Messages.Services
 {
-    public partial class QueuedEmailService : IQueuedEmailService
+    public class QueuedEmailService : IQueuedEmailService
     {
         private readonly IRepository<QueuedEmail> _queuedEmailRepository;
         private readonly IMediator _mediator;
@@ -31,8 +31,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="queuedEmail">Queued email</param>        
         public virtual async Task InsertQueuedEmail(QueuedEmail queuedEmail)
         {
-            if (queuedEmail == null)
-                throw new ArgumentNullException(nameof(queuedEmail));
+            ArgumentNullException.ThrowIfNull(queuedEmail);
 
             await _queuedEmailRepository.InsertAsync(queuedEmail);
 
@@ -46,8 +45,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="queuedEmail">Queued email</param>
         public virtual async Task UpdateQueuedEmail(QueuedEmail queuedEmail)
         {
-            if (queuedEmail == null)
-                throw new ArgumentNullException(nameof(queuedEmail));
+            ArgumentNullException.ThrowIfNull(queuedEmail);
 
             await _queuedEmailRepository.UpdateAsync(queuedEmail);
 
@@ -61,8 +59,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="queuedEmail">Queued email</param>
         public virtual async Task DeleteQueuedEmail(QueuedEmail queuedEmail)
         {
-            if (queuedEmail == null)
-                throw new ArgumentNullException(nameof(queuedEmail));
+            ArgumentNullException.ThrowIfNull(queuedEmail);
 
             await _queuedEmailRepository.DeleteAsync(queuedEmail);
 
@@ -76,8 +73,7 @@ namespace Grand.Business.Messages.Services
         /// <param name="email">email</param>
         public virtual async Task DeleteCustomerEmail(string email)
         {
-            if (email == null)
-                throw new ArgumentNullException("email");
+            ArgumentNullException.ThrowIfNull(email);
 
             var deleteCustomerEmail = _queuedEmailRepository.Table.Where(x => x.To == email);
 
@@ -110,13 +106,8 @@ namespace Grand.Business.Messages.Services
                         select qe;
             var queuedEmails = query.ToList();
             //sort by passed identifiers
-            var sortedQueuedEmails = new List<QueuedEmail>();
-            foreach (string id in queuedEmailIds)
-            {
-                var queuedEmail = queuedEmails.Find(x => x.Id == id);
-                if (queuedEmail != null)
-                    sortedQueuedEmails.Add(queuedEmail);
-            }
+            var sortedQueuedEmails = 
+                queuedEmailIds.Select(id => queuedEmails.Find(x => x.Id == id)).Where(queuedEmail => queuedEmail != null).ToList();
             return await Task.FromResult(sortedQueuedEmails);
         }
 
@@ -174,16 +165,10 @@ namespace Grand.Business.Messages.Services
             if (maxSendTries > 0)
                 query = query.Where(qe => qe.SentTries < maxSendTries);
 
-            if (loadNewest)
-            {
-                //load the newest records
-                query = query.OrderByDescending(qe => qe.CreatedOnUtc);
-            }
-            else
-            {
+            //load the newest records
+            query = loadNewest ? query.OrderByDescending(qe => qe.CreatedOnUtc) :
                 //load by priority
-                query = query.OrderByDescending(qe => qe.PriorityId).ThenBy(qe => qe.CreatedOnUtc);
-            }
+                query.OrderByDescending(qe => qe.PriorityId).ThenBy(qe => qe.CreatedOnUtc);
             return await PagedList<QueuedEmail>.Create(query, pageIndex, pageSize);
         }
 

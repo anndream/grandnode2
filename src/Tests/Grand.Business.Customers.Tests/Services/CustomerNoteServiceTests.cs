@@ -1,6 +1,6 @@
 ﻿using Grand.Business.Customers.Services;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Infrastructure.Events;
 using MediatR;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -22,7 +22,20 @@ namespace Grand.Business.Customers.Tests.Services
             _mediatorMock = new Mock<IMediator>();
             _noteService = new CustomerNoteService(_repositoryMock.Object, _mediatorMock.Object);
         }
+        [TestMethod()]
+        public async Task GetCustomerNoteTest()
+        {
+            await _noteService.GetCustomerNote("1");
+            _repositoryMock.Verify(c => c.GetByIdAsync(It.IsAny<string>()), Times.Once);
 
+        }
+        [TestMethod()]
+        public async Task GetCustomerNoteTest_Null()
+        {
+            await _noteService.GetCustomerNote("");
+            _repositoryMock.Verify(c => c.GetByIdAsync(It.IsAny<string>()), Times.Never);
+
+        }
         [TestMethod()]
         public async Task InsertCustomerNote_ValidArguments_InvokeRepositoryAndPublishEvent()
         {

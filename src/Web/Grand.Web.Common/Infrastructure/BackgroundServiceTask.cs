@@ -1,31 +1,20 @@
-﻿using Grand.Business.Core.Extensions;
-using Grand.Business.Core.Interfaces.Common.Logging;
-using Grand.Business.Core.Interfaces.System.ScheduleTasks;
+﻿using Grand.Business.Core.Interfaces.System.ScheduleTasks;
 using Grand.Infrastructure;
 using Grand.Domain.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Grand.Web.Common.Infrastructure
 {
     public class BackgroundServiceTask : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
-        private string _taskType;
-        public BackgroundServiceTask(string tasktype, IServiceProvider serviceProvider)
+        private readonly string _taskType;
+        public BackgroundServiceTask(string taskType, IServiceProvider serviceProvider)
         {
-            _taskType = tasktype;
+            _taskType = taskType;
             _serviceProvider = serviceProvider;
-        }
-
-        public override Task StartAsync(CancellationToken cancellationToken)
-        {
-            return base.StartAsync(cancellationToken);
-        }
-
-        public override Task StopAsync(CancellationToken cancellationToken)
-        {
-            return base.StopAsync(cancellationToken);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,18 +25,18 @@ namespace Grand.Web.Common.Infrastructure
                 {
                     using var scope = _serviceProvider.CreateScope();
                     var serviceProvider = scope.ServiceProvider;
-                    var logger = serviceProvider.GetService<ILogger>();
+                    var logger = serviceProvider.GetService<ILogger<BackgroundServiceTask>>();
                     var scheduleTaskService = serviceProvider.GetService<IScheduleTaskService>();
                     var task = await scheduleTaskService.GetTaskByType(_taskType);
                     if (task == null)
                     {
-                        _ = logger.Information($"Task {_taskType} is not exists in the database");
+                        logger.LogInformation("Task {TaskType} is not exists in the database", _taskType);
                         break;
                     }
 
                     var machineName = Environment.MachineName;
                     var timeInterval = task.TimeInterval > 0 ? task.TimeInterval : 1;
-                    if (task.Enabled && (string.IsNullOrEmpty(task.LeasedByMachineName) || (machineName == task.LeasedByMachineName)))
+                    if (task.Enabled && (string.IsNullOrEmpty(task.LeasedByMachineName) || machineName == task.LeasedByMachineName))
                     {
                         var typeofTask = Type.GetType(_taskType);
                         if (typeofTask != null)
@@ -58,13 +47,14 @@ namespace Grand.Web.Common.Infrastructure
 
                                 //assign current customer (background task) / current store (from task)
                                 await WorkContext(serviceProvider, task);
-                                bool runTask = true;
+                                var runTask = true;
                                 if(task.LastStartUtc.HasValue)
                                 {
-                                    if (DateTime.UtcNow < task.LastStartUtc.Value.AddMinutes(task.TimeInterval))
+                                    var dateTimeNow = DateTime.UtcNow; 
+                                    if (dateTimeNow < task.LastStartUtc.Value.AddMinutes(task.TimeInterval))
                                     {
                                         runTask = false;
-                                        timeInterval = (int)(DateTime.UtcNow - task.LastStartUtc.Value).TotalMinutes;
+                                        timeInterval = (int)(task.LastStartUtc.Value.AddMinutes(task.TimeInterval) - dateTimeNow).TotalMinutes;
                                     }
                                     else
                                     {
@@ -88,7 +78,7 @@ namespace Grand.Web.Common.Infrastructure
                                     {
                                         task.LastNonSuccessEndUtc = DateTime.UtcNow;
                                         task.Enabled = !task.StopOnError;
-                                        await logger.InsertLog(Domain.Logging.LogLevel.Error, $"Error while running the '{task.ScheduleTaskName}' schedule task", exc.Message);
+                                        logger.LogError(exc, "Error while running the \'{TaskScheduleTaskName}\' schedule task", task.ScheduleTaskName);
                                     }
                                 }
                             }
@@ -96,14 +86,14 @@ namespace Grand.Web.Common.Infrastructure
                             {
                                 task.Enabled = !task.StopOnError;
                                 task.LastNonSuccessEndUtc = DateTime.UtcNow;
-                                await logger.InsertLog(Domain.Logging.LogLevel.Error, $"Type {_taskType} is not registered");
+                                logger.LogError("Type {TaskType} is not registered", _taskType);
                             }
                         }
                         else
                         {
                             task.Enabled = !task.StopOnError;
                             task.LastNonSuccessEndUtc = DateTime.UtcNow;
-                            await logger.InsertLog(Domain.Logging.LogLevel.Error, $"Type {_taskType} is null (type not exists)");
+                            logger.LogError("Type {TaskType} is null (type not exists)", _taskType);
                         }
                         await scheduleTaskService.UpdateTask(task);
                         await Task.Delay(TimeSpan.FromMinutes(timeInterval), stoppingToken);
@@ -112,16 +102,16 @@ namespace Grand.Web.Common.Infrastructure
                         break;
 
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Serilog.Log.Logger.Error(ex, "BackgroundServiceTask");
                     await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 }
 
 
             }
         }
-        protected async Task WorkContext(IServiceProvider serviceProvider, ScheduleTask scheduleTask)
+
+        private async Task WorkContext(IServiceProvider serviceProvider, ScheduleTask scheduleTask)
         {
             var workContext = serviceProvider.GetRequiredService<IWorkContext>();
             var storeHelper = serviceProvider.GetRequiredService<IStoreHelper>();

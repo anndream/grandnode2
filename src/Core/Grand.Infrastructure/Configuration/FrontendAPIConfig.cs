@@ -2,8 +2,9 @@
 {
     public class FrontendAPIConfig
     {
-        public static string Scheme => "GrandWebBearerScheme";
+        public static string AuthenticationScheme => "FrontAuthentication";
         public bool Enabled { get; set; }
+        public bool JsonContentType { get; set; }
         public string SecretKey { get; set; }
         public bool ValidateIssuer { get; set; }
         public string ValidIssuer { get; set; }

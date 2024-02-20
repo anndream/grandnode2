@@ -1,13 +1,13 @@
 using Grand.Business.Core.Interfaces.Cms;
 using Grand.Business.Core.Interfaces.Common.Security;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Pages;
 using Grand.Infrastructure;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
+using Grand.Infrastructure.Configuration;
 using Grand.Infrastructure.Extensions;
-using Grand.SharedKernel.Extensions;
 using MediatR;
 
 namespace Grand.Business.Cms.Services
@@ -15,7 +15,7 @@ namespace Grand.Business.Cms.Services
     /// <summary>
     /// Page service
     /// </summary>
-    public partial class PageService : IPageService
+    public class PageService : IPageService
     {
         #region Fields
 
@@ -24,7 +24,8 @@ namespace Grand.Business.Cms.Services
         private readonly IAclService _aclService;
         private readonly IMediator _mediator;
         private readonly ICacheBase _cacheBase;
-
+        private readonly AccessControlConfig _accessControlConfig;
+        
         #endregion
 
         #region Ctor
@@ -33,13 +34,14 @@ namespace Grand.Business.Cms.Services
             IWorkContext workContext,
             IAclService aclService,
             IMediator mediator,
-            ICacheBase cacheBase)
+            ICacheBase cacheBase, AccessControlConfig accessControlConfig)
         {
             _pageRepository = pageRepository;
             _workContext = workContext;
             _aclService = aclService;
             _mediator = mediator;
             _cacheBase = cacheBase;
+            _accessControlConfig = accessControlConfig;
         }
 
         #endregion
@@ -53,7 +55,7 @@ namespace Grand.Business.Cms.Services
         /// <returns>Page</returns>
         public virtual Task<Page> GetPageById(string pageId)
         {
-            string key = string.Format(CacheKey.PAGES_BY_ID_KEY, pageId);
+            var key = string.Format(CacheKey.PAGES_BY_ID_KEY, pageId);
             return _cacheBase.GetAsync(key, () => _pageRepository.GetByIdAsync(pageId));
         }
 
@@ -68,7 +70,7 @@ namespace Grand.Business.Cms.Services
             if (string.IsNullOrEmpty(systemName))
                 return null;
 
-            string key = string.Format(CacheKey.PAGES_BY_SYSTEMNAME, systemName, storeId);
+            var key = string.Format(CacheKey.PAGES_BY_SYSTEMNAME, systemName, storeId);
             return await _cacheBase.GetAsync(key, async () =>
             {
 
@@ -78,7 +80,7 @@ namespace Grand.Business.Cms.Services
                 query = query.Where(t => t.SystemName.ToLower() == systemName.ToLower());
                 query = query.OrderBy(t => t.Id);
                 var pages = await Task.FromResult(query.ToList());
-                if (!String.IsNullOrEmpty(storeId))
+                if (!string.IsNullOrEmpty(storeId))
                 {
                     pages = pages.Where(x => _aclService.Authorize(x, storeId)).ToList();
                 }
@@ -90,10 +92,11 @@ namespace Grand.Business.Cms.Services
         /// Gets all pages
         /// </summary>
         /// <param name="storeId">Store identifier; pass "" to load all records</param>
+        /// <param name="ignoreAcl"></param>
         /// <returns>Pages</returns>
-        public virtual async Task<IList<Page>> GetAllPages(string storeId, bool ignorAcl = false)
+        public virtual async Task<IList<Page>> GetAllPages(string storeId, bool ignoreAcl = false)
         {
-            string key = string.Format(CacheKey.PAGES_ALL_KEY, storeId, ignorAcl);
+            var key = string.Format(CacheKey.PAGES_ALL_KEY, storeId, ignoreAcl);
             return await _cacheBase.GetAsync(key, async () =>
             {
                 var query = from p in _pageRepository.Table
@@ -101,25 +104,24 @@ namespace Grand.Business.Cms.Services
 
                 query = query.OrderBy(t => t.DisplayOrder).ThenBy(t => t.SystemName);
 
-                if ((!String.IsNullOrEmpty(storeId) && !CommonHelper.IgnoreStoreLimitations) ||
-                    (!ignorAcl && !CommonHelper.IgnoreAcl))
+                if ((string.IsNullOrEmpty(storeId) || _accessControlConfig.IgnoreStoreLimitations) &&
+                    (ignoreAcl || _accessControlConfig.IgnoreAcl)) return await Task.FromResult(query.ToList());
                 {
-                    if (!ignorAcl && !CommonHelper.IgnoreAcl)
+                    if (!ignoreAcl && !_accessControlConfig.IgnoreAcl)
                     {
                         var allowedCustomerGroupsIds = _workContext.CurrentCustomer.GetCustomerGroupIds();
                         query = from p in query
-                                where !p.LimitedToGroups || allowedCustomerGroupsIds.Any(x => p.CustomerGroups.Contains(x))
-                                select p;
+                            where !p.LimitedToGroups || allowedCustomerGroupsIds.Any(x => p.CustomerGroups.Contains(x))
+                            select p;
                     }
                     //Store acl
-                    if (!String.IsNullOrEmpty(storeId) && !CommonHelper.IgnoreStoreLimitations)
-                    {
-                        query = from p in query
-                                where !p.LimitedToStores || p.Stores.Contains(storeId)
-                                select p;
+                    if (string.IsNullOrEmpty(storeId) || _accessControlConfig.IgnoreStoreLimitations)
+                        return await Task.FromResult(query.ToList());
+                    query = from p in query
+                        where !p.LimitedToStores || p.Stores.Contains(storeId)
+                        select p;
 
-                        query = query.OrderBy(t => t.SystemName);
-                    }
+                    query = query.OrderBy(t => t.SystemName);
                 }
                 return await Task.FromResult(query.ToList());
             });
@@ -131,8 +133,7 @@ namespace Grand.Business.Cms.Services
         /// <param name="page">Page</param>
         public virtual async Task InsertPage(Page page)
         {
-            if (page == null)
-                throw new ArgumentNullException(nameof(page));
+            ArgumentNullException.ThrowIfNull(page);
 
             await _pageRepository.InsertAsync(page);
 
@@ -148,8 +149,7 @@ namespace Grand.Business.Cms.Services
         /// <param name="page">Page</param>
         public virtual async Task UpdatePage(Page page)
         {
-            if (page == null)
-                throw new ArgumentNullException(nameof(page));
+            ArgumentNullException.ThrowIfNull(page);
 
             await _pageRepository.UpdateAsync(page);
 
@@ -165,8 +165,7 @@ namespace Grand.Business.Cms.Services
         /// <param name="page">Page</param>
         public virtual async Task DeletePage(Page page)
         {
-            if (page == null)
-                throw new ArgumentNullException(nameof(page));
+            ArgumentNullException.ThrowIfNull(page);
 
             await _pageRepository.DeleteAsync(page);
 

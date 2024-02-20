@@ -1,5 +1,5 @@
 ﻿using Grand.Business.Core.Interfaces.Checkout.Orders;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Orders;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
@@ -26,8 +26,7 @@ namespace Grand.Business.Checkout.Services.Orders
 
         public virtual async Task<IList<OrderStatus>> GetAll()
         {
-            string key = string.Format(CacheKey.ORDER_STATUS_ALL);
-            var orderstatuses = await _cacheBase.GetAsync(CacheKey.ORDER_STATUS_ALL, async () =>
+            var orderStatuses = await _cacheBase.GetAsync(CacheKey.ORDER_STATUS_ALL, async () =>
             {
                 var query = from p in _orderStatusRepository.Table
                             select p;
@@ -36,7 +35,7 @@ namespace Grand.Business.Checkout.Services.Orders
                 return await Task.FromResult(query.ToList());
             });
 
-            return orderstatuses;
+            return orderStatuses;
         }
         public virtual async Task<OrderStatus> GetById(string id)
         {
@@ -49,8 +48,7 @@ namespace Grand.Business.Checkout.Services.Orders
 
         public virtual async Task Insert(OrderStatus orderStatus)
         {
-            if (orderStatus == null)
-                throw new ArgumentNullException(nameof(orderStatus));
+            ArgumentNullException.ThrowIfNull(orderStatus);
 
             //insert order status
             await _orderStatusRepository.InsertAsync(orderStatus);
@@ -64,8 +62,7 @@ namespace Grand.Business.Checkout.Services.Orders
 
         public virtual async Task Update(OrderStatus orderStatus)
         {
-            if (orderStatus == null)
-                throw new ArgumentNullException(nameof(orderStatus));
+            ArgumentNullException.ThrowIfNull(orderStatus);
 
             //update order status
             await _orderStatusRepository.UpdateAsync(orderStatus);
@@ -78,8 +75,7 @@ namespace Grand.Business.Checkout.Services.Orders
         }
         public virtual async Task Delete(OrderStatus orderStatus)
         {
-            if (orderStatus == null)
-                throw new ArgumentNullException(nameof(orderStatus));
+            ArgumentNullException.ThrowIfNull(orderStatus);
 
             if (orderStatus.IsSystem)
                 throw new Exception("You can't delete system status");

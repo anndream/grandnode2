@@ -3,14 +3,9 @@ using Grand.Web.Common.Models;
 
 namespace Grand.Web.Admin.Models.Settings
 {
-    public partial class StoreScopeModel : BaseModel
+    public class StoreScopeModel : BaseModel
     {
-        public StoreScopeModel()
-        {
-            Stores = new List<StoreModel>();
-        }
-
         public string StoreId { get; set; }
-        public IList<StoreModel> Stores { get; set; }
+        public IList<StoreModel> Stores { get; set; } = new List<StoreModel>();
     }
 }

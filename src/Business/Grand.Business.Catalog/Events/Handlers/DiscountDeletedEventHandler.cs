@@ -1,5 +1,5 @@
 ﻿using Grand.Domain.Catalog;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Discounts;
 using Grand.Domain.Vendors;
 using Grand.Infrastructure.Caching;
@@ -48,41 +48,46 @@ namespace Grand.Business.Catalog.Events.Handlers
         {
             var discount = notification.Entity;
 
-            if (discount.DiscountTypeId == DiscountType.AssignedToSkus)
+            switch (discount.DiscountTypeId)
             {
-                //delete on the product
-                await _productRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
+                case DiscountType.AssignedToSkus:
+                    //delete on the product
+                    await _productRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
 
-                await _cacheBase.RemoveByPrefix(CacheKey.PRODUCTS_PATTERN_KEY);
-            }
-
-            if (discount.DiscountTypeId == DiscountType.AssignedToCategories)
-            {
-                //delete on the category
-                await _categoryRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
-                //clear cache
-                await _cacheBase.RemoveByPrefix(CacheKey.CATEGORIES_PATTERN_KEY);
-            }
-            if (discount.DiscountTypeId == DiscountType.AssignedToBrands)
-            {
-                //delete on the brand
-                await _brandRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
-                //clear cache
-                await _cacheBase.RemoveByPrefix(CacheKey.BRANDS_PATTERN_KEY);
-            }
-            if (discount.DiscountTypeId == DiscountType.AssignedToCollections)
-            {
-                //delete on the collection
-                await _collectionRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
-                //clear cache
-                await _cacheBase.RemoveByPrefix(CacheKey.COLLECTIONS_PATTERN_KEY);
-            }
-            if (discount.DiscountTypeId == DiscountType.AssignedToVendors)
-            {
-                //delete on the vendor
-                await _vendorRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
-                //clear cache
-                await _cacheBase.RemoveByPrefix(CacheKey.PRODUCTS_PATTERN_KEY);
+                    await _cacheBase.RemoveByPrefix(CacheKey.PRODUCTS_PATTERN_KEY);
+                    break;
+                case DiscountType.AssignedToCategories:
+                    //delete on the category
+                    await _categoryRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
+                    //clear cache
+                    await _cacheBase.RemoveByPrefix(CacheKey.CATEGORIES_PATTERN_KEY);
+                    break;
+                case DiscountType.AssignedToBrands:
+                    //delete on the brand
+                    await _brandRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
+                    //clear cache
+                    await _cacheBase.RemoveByPrefix(CacheKey.BRANDS_PATTERN_KEY);
+                    break;
+                case DiscountType.AssignedToCollections:
+                    //delete on the collection
+                    await _collectionRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
+                    //clear cache
+                    await _cacheBase.RemoveByPrefix(CacheKey.COLLECTIONS_PATTERN_KEY);
+                    break;
+                case DiscountType.AssignedToVendors:
+                    //delete on the vendor
+                    await _vendorRepository.Pull(string.Empty, x => x.AppliedDiscounts, discount.Id);
+                    //clear cache
+                    await _cacheBase.RemoveByPrefix(CacheKey.PRODUCTS_PATTERN_KEY);
+                    break;
+                case DiscountType.AssignedToOrderTotal:
+                    break;
+                case DiscountType.AssignedToShipping:
+                    break;
+                case DiscountType.AssignedToOrderSubTotal:
+                    break;
+                case DiscountType.AssignedToAllProducts:
+                    break;
             }
 
             //remove coupon codes

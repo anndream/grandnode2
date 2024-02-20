@@ -52,7 +52,7 @@
                     <span id="lblShippedDate">
                         @if (Model.ShippedDate.HasValue)
                         {
-                            <text>@Model.ShippedDate.Value.ToString()</text>
+                            @Model.ShippedDate.Value.ToString(CultureInfo.InvariantCulture)
                         }
                         else
                         {
@@ -78,7 +78,7 @@
                     <span id="lblDeliveryDate">
                         @if (Model.DeliveryDate.HasValue)
                         {
-                            <text>@Model.DeliveryDate.Value.ToString()</text>
+                            @Model.DeliveryDate.Value.ToString(CultureInfo.InvariantCulture)
                         }
                         else
                         {
@@ -102,7 +102,7 @@
     </div>
 </div>
 
-<table class="table table-bordered table-striped table-hover">
+<table class="table table-striped table-hover">
     <tr>
         <td>
             <strong>@Loc["Admin.Orders.Shipments.Products"]</strong>
@@ -140,13 +140,13 @@
                             <td>
                                 <div style="padding-left: 10px; padding-right: 10px;">
                                     <em><a href="@Url.Action("Edit", "Product", new { id = item.ProductId, area = Constants.AreaAdmin })">@item.ProductName</a></em>
-                                    @if (!String.IsNullOrEmpty(item.AttributeInfo))
+                                    @if (!string.IsNullOrEmpty(item.AttributeInfo))
                                     {
                                         <p>
                                             @Html.Raw(item.AttributeInfo)
                                         </p>
                                     }
-                                    @if (!String.IsNullOrEmpty(item.RentalInfo))
+                                    @if (!string.IsNullOrEmpty(item.RentalInfo))
                                     {
                                         <p>
                                             @Html.Raw(item.RentalInfo)

@@ -4,7 +4,7 @@ using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
 using Grand.Domain;
 using Grand.Domain.Customers;
-using Grand.Domain.Data;
+using Grand.Data;
 using MediatR;
 
 namespace Grand.Business.Marketing.Services.Customers
@@ -12,7 +12,7 @@ namespace Grand.Business.Marketing.Services.Customers
     /// <summary>
     /// Customer tag service
     /// </summary>
-    public partial class CustomerTagService : ICustomerTagService
+    public class CustomerTagService : ICustomerTagService
     {
         #region Fields
 
@@ -63,8 +63,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerTag">Customer tag</param>
         public virtual async Task DeleteCustomerTag(CustomerTag customerTag)
         {
-            if (customerTag == null)
-                throw new ArgumentNullException(nameof(customerTag));
+            ArgumentNullException.ThrowIfNull(customerTag);
 
             //update customer
             await _customerRepository.Pull(string.Empty, x => x.CustomerTags, customerTag.Id);
@@ -128,8 +127,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerTag">Customer tag</param>
         public virtual async Task InsertCustomerTag(CustomerTag customerTag)
         {
-            if (customerTag == null)
-                throw new ArgumentNullException(nameof(customerTag));
+            ArgumentNullException.ThrowIfNull(customerTag);
 
             await _customerTagRepository.InsertAsync(customerTag);
 
@@ -159,8 +157,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerTag">Customer tag</param>
         public virtual async Task UpdateCustomerTag(CustomerTag customerTag)
         {
-            if (customerTag == null)
-                throw new ArgumentNullException(nameof(customerTag));
+            ArgumentNullException.ThrowIfNull(customerTag);
 
             await _customerTagRepository.UpdateAsync(customerTag);
 
@@ -175,11 +172,10 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <returns>Number of customers</returns>
         public virtual async Task<int> GetCustomerCount(string customerTagId)
         {
-            var query = _customerRepository.Table.
-                Where(x => x.CustomerTags.Contains(customerTagId)).
-                GroupBy(p => p, (k, s) => new { Counter = s.Count() }).ToList();
-            if (query.Count > 0)
-                return query.FirstOrDefault().Counter;
+            var count = _customerRepository.Table.
+                Count(x => x.CustomerTags.Contains(customerTagId));
+            if (count > 0)
+                return count;
             return await Task.FromResult(0);
         }
 
@@ -193,11 +189,11 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <returns>Customer tag products</returns>
         public virtual async Task<IList<CustomerTagProduct>> GetCustomerTagProducts(string customerTagId)
         {
-            string key = string.Format(CacheKey.CUSTOMERTAGPRODUCTS_ROLE_KEY, customerTagId);
+            var key = string.Format(CacheKey.CUSTOMERTAGPRODUCTS_ROLE_KEY, customerTagId);
             return await _cacheBase.GetAsync(key, async () =>
             {
                 var query = from cr in _customerTagProductRepository.Table
-                            where (cr.CustomerTagId == customerTagId)
+                            where cr.CustomerTagId == customerTagId
                             orderby cr.DisplayOrder
                             select cr;
                 return await Task.FromResult(query.ToList());
@@ -222,7 +218,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <summary>
         /// Gets customer tag product
         /// </summary>
-        /// <param name="Id">id</param>
+        /// <param name="id">id</param>
         /// <returns>Customer tag product</returns>
         public virtual Task<CustomerTagProduct> GetCustomerTagProductById(string id)
         {
@@ -235,8 +231,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerTagProduct">Customer tag product</param>
         public virtual async Task InsertCustomerTagProduct(CustomerTagProduct customerTagProduct)
         {
-            if (customerTagProduct == null)
-                throw new ArgumentNullException(nameof(customerTagProduct));
+            ArgumentNullException.ThrowIfNull(customerTagProduct);
 
             await _customerTagProductRepository.InsertAsync(customerTagProduct);
 
@@ -254,8 +249,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerTagProduct">Customer tag product</param>
         public virtual async Task UpdateCustomerTagProduct(CustomerTagProduct customerTagProduct)
         {
-            if (customerTagProduct == null)
-                throw new ArgumentNullException(nameof(customerTagProduct));
+            ArgumentNullException.ThrowIfNull(customerTagProduct);
 
             await _customerTagProductRepository.UpdateAsync(customerTagProduct);
 
@@ -273,8 +267,7 @@ namespace Grand.Business.Marketing.Services.Customers
         /// <param name="customerTagProduct">Customer tag product</param>
         public virtual async Task DeleteCustomerTagProduct(CustomerTagProduct customerTagProduct)
         {
-            if (customerTagProduct == null)
-                throw new ArgumentNullException(nameof(customerTagProduct));
+            ArgumentNullException.ThrowIfNull(customerTagProduct);
 
             await _customerTagProductRepository.DeleteAsync(customerTagProduct);
 

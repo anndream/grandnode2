@@ -5,10 +5,11 @@ using Grand.Web.Common.Link;
 using Grand.Web.Common.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
+using Grand.Web.Common.Validators;
 
 namespace Grand.Web.Admin.Models.Catalog
 {
-    public partial class BrandModel : BaseEntityModel, ILocalizedModel<BrandLocalizedModel>, IGroupLinkModel, IStoreLinkModel
+    public class BrandModel : BaseEntityModel, ILocalizedModel<BrandLocalizedModel>, IGroupLinkModel, IStoreLinkModel
     {
         public BrandModel()
         {
@@ -20,13 +21,15 @@ namespace Grand.Web.Admin.Models.Catalog
             AvailableBrandLayouts = new List<SelectListItem>();
             AvailableSortOptions = new List<SelectListItem>();
         }
-
+        
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.Name")]
         public string Name { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.Description")]
         public string Description { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.BottomDescription")]
         public string BottomDescription { get; set; }
 
@@ -34,12 +37,15 @@ namespace Grand.Web.Admin.Models.Catalog
         public string BrandLayoutId { get; set; }
         public IList<SelectListItem> AvailableBrandLayouts { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.MetaKeywords")]
         public string MetaKeywords { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.MetaDescription")]
         public string MetaDescription { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.MetaTitle")]
         public string MetaTitle { get; set; }
 
@@ -96,49 +102,36 @@ namespace Grand.Web.Admin.Models.Catalog
         //discounts
         public List<DiscountModel> AvailableDiscounts { get; set; }
         public string[] SelectedDiscountIds { get; set; }
-
-        #region Nested classes
-        
-        public partial class ActivityLogModel : BaseEntityModel
-        {
-            [GrandResourceDisplayName("Admin.Catalog.Brands.ActivityLog.ActivityLogType")]
-            public string ActivityLogTypeName { get; set; }
-            [GrandResourceDisplayName("Admin.Catalog.Brands.ActivityLog.Comment")]
-            public string Comment { get; set; }
-            [GrandResourceDisplayName("Admin.Catalog.Brands.ActivityLog.CreatedOn")]
-            public DateTime CreatedOn { get; set; }
-            [GrandResourceDisplayName("Admin.Catalog.Brands.ActivityLog.Customer")]
-            public string CustomerId { get; set; }
-            public string CustomerEmail { get; set; }
-        }
-
-        #endregion
     }
 
-    public partial class BrandLocalizedModel : ILocalizedModelLocal, ISlugModelLocal
+    public class BrandLocalizedModel : ILocalizedModelLocal, ISlugModelLocal
     {
         public string LanguageId { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.Name")]
         public string Name { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.Description")]
         public string Description { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.BottomDescription")]
         public string BottomDescription { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.MetaKeywords")]
         public string MetaKeywords { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.MetaDescription")]
         public string MetaDescription { get; set; }
 
+        [NoScripts]
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.MetaTitle")]
         public string MetaTitle { get; set; }
 
         [GrandResourceDisplayName("Admin.Catalog.Brands.Fields.SeName")]
-
         public string SeName { get; set; }
 
     }

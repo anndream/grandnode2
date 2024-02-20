@@ -2,7 +2,7 @@ using Grand.Business.Core.Interfaces.Common.Localization;
 using Grand.Infrastructure.Caching;
 using Grand.Infrastructure.Caching.Constants;
 using Grand.Infrastructure.Extensions;
-using Grand.Domain.Data;
+using Grand.Data;
 using Grand.Domain.Localization;
 using MediatR;
 
@@ -11,7 +11,7 @@ namespace Grand.Business.Common.Services.Localization
     /// <summary>
     /// Language service
     /// </summary>
-    public partial class LanguageService : ILanguageService
+    public class LanguageService : ILanguageService
     {
         #region Fields
 
@@ -51,7 +51,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <returns>Languages</returns>
         public virtual async Task<IList<Language>> GetAllLanguages(bool showHidden = false, string storeId = "")
         {
-            string key = string.Format(CacheKey.LANGUAGES_ALL_KEY, showHidden);
+            var key = string.Format(CacheKey.LANGUAGES_ALL_KEY, showHidden);
             var languages = await _cacheBase.GetAsync(key, async () =>
             {
                 var query = from p in _languageRepository.Table
@@ -80,7 +80,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <returns>Language</returns>
         public virtual Task<Language> GetLanguageById(string languageId)
         {
-            string key = string.Format(CacheKey.LANGUAGES_BY_ID_KEY, languageId);
+            var key = string.Format(CacheKey.LANGUAGES_BY_ID_KEY, languageId);
             return _cacheBase.GetAsync(key, () => _languageRepository.GetByIdAsync(languageId));
         }
 
@@ -111,8 +111,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="language">Language</param>
         public virtual async Task InsertLanguage(Language language)
         {
-            if (language == null)
-                throw new ArgumentNullException(nameof(language));
+            ArgumentNullException.ThrowIfNull(language);
 
             await _languageRepository.InsertAsync(language);
 
@@ -129,8 +128,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="language">Language</param>
         public virtual async Task UpdateLanguage(Language language)
         {
-            if (language == null)
-                throw new ArgumentNullException(nameof(language));
+            ArgumentNullException.ThrowIfNull(language);
 
             //update language
             await _languageRepository.UpdateAsync(language);
@@ -147,8 +145,7 @@ namespace Grand.Business.Common.Services.Localization
         /// <param name="language">Language</param>
         public virtual async Task DeleteLanguage(Language language)
         {
-            if (language == null)
-                throw new ArgumentNullException(nameof(language));
+            ArgumentNullException.ThrowIfNull(language);
 
             await _languageRepository.DeleteAsync(language);
 

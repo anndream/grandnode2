@@ -6,46 +6,29 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Grand.Web.Admin.Models.Settings
 {
-    public partial class GeneralCommonSettingsModel : BaseModel
+    public class GeneralCommonSettingsModel : BaseModel
     {
-        public GeneralCommonSettingsModel()
-        {
-            StoreInformationSettings = new StoreInformationSettingsModel();
-            CommonSettings = new CommonSettingsModel();
-            DateTimeSettings = new DateTimeSettingsModel();
-            SeoSettings = new SeoSettingsModel();
-            SecuritySettings = new SecuritySettingsModel();
-            PdfSettings = new PdfSettingsModel();
-            GoogleAnalyticsSettings = new GoogleAnalyticsSettingsModel();
-            DisplayMenuSettings = new DisplayMenuSettingsModel();
-        }
         public string ActiveStore { get; set; }
-        public StoreInformationSettingsModel StoreInformationSettings { get; set; }
-        public CommonSettingsModel CommonSettings { get; set; }
-        public DateTimeSettingsModel DateTimeSettings { get; set; }
-        public SeoSettingsModel SeoSettings { get; set; }
-        public SecuritySettingsModel SecuritySettings { get; set; }
-        public PdfSettingsModel PdfSettings { get; set; }
-        public GoogleAnalyticsSettingsModel GoogleAnalyticsSettings { get; set; }
-        public DisplayMenuSettingsModel DisplayMenuSettings { get; set; }
-        
+        public StoreInformationSettingsModel StoreInformationSettings { get; set; } = new();
+        public CommonSettingsModel CommonSettings { get; set; } = new();
+        public DateTimeSettingsModel DateTimeSettings { get; set; } = new();
+        public SeoSettingsModel SeoSettings { get; set; } = new();
+        public SecuritySettingsModel SecuritySettings { get; set; } = new();
+        public PdfSettingsModel PdfSettings { get; set; } = new();
+        public DisplayMenuSettingsModel DisplayMenuSettings { get; set; } = new();
+
 
         #region Nested classes
 
-        public partial class StoreInformationSettingsModel : BaseModel
+        public class StoreInformationSettingsModel : BaseModel
         {
-            public StoreInformationSettingsModel()
-            {
-                this.AvailableStoreThemes = new List<ThemeConfigurationModel>();
-            }
-
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.StoreClosed")]
             public bool StoreClosed { get; set; }
 
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.DefaultStoreTheme")]
 
             public string DefaultStoreTheme { get; set; }
-            public IList<ThemeConfigurationModel> AvailableStoreThemes { get; set; }
+            public IList<ThemeConfigurationModel> AvailableStoreThemes { get; set; } = new List<ThemeConfigurationModel>();
 
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.AllowCustomerToSelectTheme")]
             public bool AllowCustomerToSelectTheme { get; set; }
@@ -86,10 +69,9 @@ namespace Grand.Web.Admin.Models.Settings
 
             #region Nested classes
 
-            public partial class ThemeConfigurationModel
+            public class ThemeConfigurationModel
             {
                 public string ThemeName { get; set; }
-                public string ThemeVersion { get; set; }
                 public string ThemeTitle { get; set; }
                 public string PreviewImageUrl { get; set; }
                 public string PreviewText { get; set; }
@@ -100,7 +82,7 @@ namespace Grand.Web.Admin.Models.Settings
             #endregion
         }
 
-        public partial class CommonSettingsModel : BaseModel
+        public class CommonSettingsModel : BaseModel
         {
            
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.StoreInDatabaseContactUsForm")]
@@ -117,9 +99,6 @@ namespace Grand.Web.Admin.Models.Settings
 
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.AllowToSelectStore")]
             public bool AllowToSelectStore { get; set; }
-
-            [GrandResourceDisplayName("Admin.Settings.GeneralCommon.Log404Errors")]
-            public bool Log404Errors { get; set; }
 
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.PopupForTermsOfServiceLinks")]
             public bool PopupForTermsOfServiceLinks { get; set; }
@@ -141,21 +120,16 @@ namespace Grand.Web.Admin.Models.Settings
 
 
         }
-        public partial class DateTimeSettingsModel : BaseModel
+        public class DateTimeSettingsModel : BaseModel
         {
-            public DateTimeSettingsModel()
-            {
-                AvailableTimeZones = new List<SelectListItem>();
-            }
-
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.DefaultStoreTimeZone")]
             public string DefaultStoreTimeZoneId { get; set; }
 
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.DefaultStoreTimeZone")]
-            public IList<SelectListItem> AvailableTimeZones { get; set; }
+            public IList<SelectListItem> AvailableTimeZones { get; set; } = new List<SelectListItem>();
         }
 
-        public partial class SeoSettingsModel : BaseModel
+        public class SeoSettingsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.PageTitleSeparator")]
 
@@ -212,13 +186,8 @@ namespace Grand.Web.Admin.Models.Settings
 
         }
 
-        public partial class SecuritySettingsModel : BaseModel
+        public class SecuritySettingsModel : BaseModel
         {
-            public SecuritySettingsModel()
-            {
-                this.AvailableReCaptchaVersions = new List<SelectListItem>();
-            }
-
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.AdminAreaAllowedIpAddresses")]
             public string AdminAreaAllowedIpAddresses { get; set; }
 
@@ -279,10 +248,10 @@ namespace Grand.Web.Admin.Models.Settings
 
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.reCaptchaVersion")]
             public GoogleReCaptchaVersion ReCaptchaVersion { get; set; }
-            public IList<SelectListItem> AvailableReCaptchaVersions { get; set; }
+            public IList<SelectListItem> AvailableReCaptchaVersions { get; set; } = new List<SelectListItem>();
         }
 
-        public partial class PdfSettingsModel : BaseModel
+        public class PdfSettingsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.PdfLogo")]
             [UIHint("Picture")]
@@ -298,20 +267,7 @@ namespace Grand.Web.Admin.Models.Settings
             public string InvoiceFooterText { get; set; }
         }
 
-        public partial class GoogleAnalyticsSettingsModel : BaseModel
-        {
-            [GrandResourceDisplayName("Admin.Settings.GeneralCommon.GoogleAnalyticsPrivateKey")]
-            public string GaprivateKey { get; set; }
-
-            [GrandResourceDisplayName("Admin.Settings.GeneralCommon.GoogleAnalyticsServiceAccountEmail")]
-            public string GaserviceAccountEmail { get; set; }
-
-            [GrandResourceDisplayName("Admin.Settings.GeneralCommon.GoogleAnalyticsViewID")]
-            public string GaviewID { get; set; }
-
-        }
-
-        public partial class DisplayMenuSettingsModel : BaseModel
+        public class DisplayMenuSettingsModel : BaseModel
         {
             [GrandResourceDisplayName("Admin.Settings.GeneralCommon.DisplayMenuSettings.DisplayHomePageMenu")]
             public bool DisplayHomePageMenu { get; set; }

@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Grand.Web.Admin.Services
 {
-    public partial class ElFinderViewModelService : IElFinderViewModelService
+    public class ElFinderViewModelService : IElFinderViewModelService
     {
         private readonly IDriver _driver;
         private readonly IConnector _connector;
@@ -54,7 +54,7 @@ namespace Grand.Web.Admin.Services
             }
             _fullPathToUpload = uploaded.PhysicalPath;
 
-            _urlpathUploded = (string.IsNullOrEmpty(CommonPath.Param) ? $"/": $"/{CommonPath.Param}/")
+            _urlpathUploded = (string.IsNullOrEmpty(CommonPath.Param) ? "/": $"/{CommonPath.Param}/")
                                 + uploaded.Path.Replace("\\", "/") + "/";
 
             var thumbs = _mediaFileStore.GetDirectoryInfo(CommonPath.ImageThumbPath);
@@ -65,21 +65,15 @@ namespace Grand.Web.Admin.Services
             }
             _fullPathToThumbs = thumbs.PhysicalPath;
 
-            _urlThumb = $"{_linkGenerator.GetPathByAction(_httpContextAccessor.HttpContext, "Thumb", "ElFinder", new { area = "Admin" })}/";
+            _urlThumb = $"{_linkGenerator.GetPathByAction(_httpContextAccessor.HttpContext!, "Thumb", "ElFinder", new { area = "Admin" })}/";
         }
 
         protected virtual bool NotAllowedExtensions(string extensions)
         {
             var allowedFileTypes = new List<string>();
-            if (string.IsNullOrEmpty(_mediaSettings.AllowedFileTypes))
-                allowedFileTypes = new List<string> { ".gif", ".jpg", ".jpeg", ".png", ".bmp", ".webp" };
-            else
-                allowedFileTypes = _mediaSettings.AllowedFileTypes.Split(',').Select(x => x.Trim().ToLowerInvariant()).ToList();
+            allowedFileTypes = string.IsNullOrEmpty(_mediaSettings.AllowedFileTypes) ? [".gif", ".jpg", ".jpeg", ".png", ".bmp", ".webp"] : _mediaSettings.AllowedFileTypes.Split(',').Select(x => x.Trim().ToLowerInvariant()).ToList();
 
-            if (allowedFileTypes.Contains(extensions))
-                return false;
-
-            return true;
+            return !allowedFileTypes.Contains(extensions);
         }
 
         public virtual async Task SetupConnectorAsync()
@@ -91,24 +85,21 @@ namespace Grand.Web.Admin.Services
                 _urlThumb) {
                 Name = "Volume",
                 MaxUploadConnections = 3,
-                MaxUploadSizeInMb = 4
-            };
-            volume.ObjectAttributes = new List<FilteredObjectAttribute>() {
-                new FilteredObjectAttribute()
-                {
-                    FileFilter = (file) => {
-                        return NotAllowedExtensions(file.Extension);
-                    },
-                    ObjectFilter = (obj) =>
-                    {
-                        var extensions = Path.GetExtension(obj.FullName);
-                        if(!string.IsNullOrEmpty(extensions))
-                            return NotAllowedExtensions(extensions);
+                MaxUploadSizeInMb = 4,
+                ObjectAttributes = new List<FilteredObjectAttribute> {
+                    new FilteredObjectAttribute {
+                        FileFilter = file => NotAllowedExtensions(file.Extension),
+                        ObjectFilter = obj =>
+                        {
+                            var extensions = Path.GetExtension(obj.FullName);
+                            if(!string.IsNullOrEmpty(extensions))
+                                return NotAllowedExtensions(extensions);
 
-                        return false;
-                    },
-                    ShowOnly = false, Access = false, Visible = false, Write = false, Read = false
-                },
+                            return false;
+                        },
+                        ShowOnly = false, Access = false, Visible = false, Write = false, Read = false
+                    }
+                }
             };
             _connector.AddVolume(volume);
             await volume.Driver.SetupVolumeAsync(volume);
